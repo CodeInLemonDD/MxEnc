@@ -1,0 +1,1 @@
+C:\Users\17993\Projects\MxEnc-Alpha-2.0.0\mxenc\rust_core\target\release\mxenc_core.lib: C:\Users\17993\Projects\MxEnc-Alpha-2.0.0\mxenc\rust_core\src\crypto.rs C:\Users\17993\Projects\MxEnc-Alpha-2.0.0\mxenc\rust_core\src\frb_generated.rs C:\Users\17993\Projects\MxEnc-Alpha-2.0.0\mxenc\rust_core\src\lib.rs
