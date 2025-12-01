@@ -1,0 +1,8 @@
+# Flutter Rust Bridge 配置文件
+# 用于生成 Rust 和 Dart 之间的桥接代码
+
+rust_input: crate::lib
+rust_root: rust_core
+dart_output: lib/bridge_generated
+c_output: rust_core/src/frb_generated.rs
+
