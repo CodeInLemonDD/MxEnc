@@ -1,7 +1,7 @@
 import 'dart:typed_data';
-import 'bridge_generated/lib.dart' as api;
 import 'utils/mxenc_dart.dart';
 import 'bridge_generated/frb_generated.dart';
+import 'utils/progress.dart';
 
 // 文件类型枚举
 enum MxEncFileType {
@@ -36,6 +36,11 @@ abstract class RustBridge {
     required String password,
   });
 
+  Stream<ProgressEvent> decryptFileProgress({
+    required Uint8List mxencData,
+    required String password,
+  });
+
   Future<String> parseMxencHeader({required Uint8List mxencData});
 
   Future<(String, MxEncFileType)> parseMxencHeaderExtended({
@@ -52,6 +57,10 @@ abstract class RustBridge {
     await RustLib.init(forceSameCodegenVersion: false);
     return _RustBridgeFrb();
   }
+
+  static RustBridge mock() {
+    return _RustBridgeFrb();
+  }
 }
 
 class _RustBridgeFrb implements RustBridge {
@@ -61,15 +70,7 @@ class _RustBridgeFrb implements RustBridge {
     required String password,
     required String originalFilename,
   }) async {
-    try {
-      return api.encryptFile(
-        plaintext: plaintext,
-        password: password,
-        originalFilename: originalFilename,
-      );
-    } catch (_) {
-      return MxencDart.encrypt(plaintext: plaintext, password: password, originalFilename: originalFilename);
-    }
+    return MxencDart.encrypt(plaintext: plaintext, password: password, originalFilename: originalFilename);
   }
 
   @override
@@ -80,23 +81,13 @@ class _RustBridgeFrb implements RustBridge {
     required MxEncFileType fileType,
     Uint8List? metadata,
   }) async {
-    try {
-      return api.encryptFileWithMetadata(
-        plaintext: plaintext,
-        password: password,
-        originalFilename: originalFilename,
-        fileType: fileType.value,
-        metadata: metadata,
-      );
-    } catch (_) {
-      return MxencDart.encrypt(
-        plaintext: plaintext,
-        password: password,
-        originalFilename: originalFilename,
-        fileType: fileType.value,
-        metadata: metadata,
-      );
-    }
+    return MxencDart.encrypt(
+      plaintext: plaintext,
+      password: password,
+      originalFilename: originalFilename,
+      fileType: fileType.value,
+      metadata: metadata,
+    );
   }
 
   @override
@@ -104,65 +95,74 @@ class _RustBridgeFrb implements RustBridge {
     required Uint8List mxencData,
     required String password,
   }) async {
+    return MxencDart.decrypt(mxencData: mxencData, password: password);
+  }
+
+  @override
+  Stream<ProgressEvent> decryptFileProgress({
+    required Uint8List mxencData,
+    required String password,
+  }) async* {
+    yield const ProgressEvent(phase: ProgressPhase.readHeader, percent: 0.05, label: '读取文件');
     try {
-      return api.decryptFile(
-        mxencData: mxencData,
-        password: password,
-      );
+      await parseMxencFullHeader(mxencData: mxencData);
+      yield const ProgressEvent(phase: ProgressPhase.readHeader, percent: 0.10, label: '解析头部');
     } catch (_) {
-      return MxencDart.decrypt(mxencData: mxencData, password: password);
+      yield const ProgressEvent(phase: ProgressPhase.readHeader, percent: 0.10, label: '解析头部');
     }
+    yield const ProgressEvent(phase: ProgressPhase.deriveKey, percent: 0.20, label: '派生密钥');
+
+    double p = 0.20;
+    while (p < 0.90) {
+      await Future.delayed(const Duration(milliseconds: 200));
+      p += 0.05;
+      if (p > 0.90) p = 0.90;
+      yield ProgressEvent(phase: ProgressPhase.decrypt, percent: p, label: '解密中');
+    }
+
+    (String, Uint8List) result;
+    try {
+      result = await decryptFile(mxencData: mxencData, password: password);
+    } catch (e) {
+      rethrow;
+    }
+    yield const ProgressEvent(phase: ProgressPhase.decode, percent: 0.98, label: '解码中');
+    yield ProgressEvent(
+      phase: ProgressPhase.done,
+      percent: 1.0,
+      label: '完成',
+      filename: result.$1,
+      data: result.$2,
+    );
   }
 
   @override
   Future<String> parseMxencHeader({required Uint8List mxencData}) async {
-    try {
-      return api.parseMxencHeader(mxencData: mxencData);
-    } catch (_) {
-      final h = MxencDart.parseHeader(mxencData);
-      return h['filename'] as String;
-    }
+    final h = MxencDart.parseHeader(mxencData);
+    return h['filename'] as String;
   }
 
   @override
   Future<(String, MxEncFileType)> parseMxencHeaderExtended({
     required Uint8List mxencData,
   }) async {
-    try {
-      final result = api.parseMxencHeaderExtended(mxencData: mxencData);
-      final filename = result.$1;
-      final fileType = _fromIntFileType(result.$2);
-      return (filename, fileType);
-    } catch (_) {
-      final h = MxencDart.parseHeader(mxencData);
-      return (h['filename'] as String, _fromIntFileType(h['fileType'] as int));
-    }
+    final h = MxencDart.parseHeader(mxencData);
+    return (h['filename'] as String, _fromIntFileType(h['fileType'] as int));
   }
 
   @override
   Future<(String, MxEncFileType, Uint8List)> parseMxencFullHeader({
     required Uint8List mxencData,
   }) async {
-    try {
-      final result = api.parseMxencFullHeader(mxencData: mxencData);
-      final filename = result.$1;
-      final fileType = _fromIntFileType(result.$2);
-      final metadata = result.$3;
-      return (filename, fileType, metadata);
-    } catch (_) {
-      final h = MxencDart.parseHeader(mxencData);
-      return (h['filename'] as String, _fromIntFileType(h['fileType'] as int), h['metadata'] as Uint8List);
-    }
+    final h = MxencDart.parseHeader(mxencData);
+    return (h['filename'] as String, _fromIntFileType(h['fileType'] as int), h['metadata'] as Uint8List);
   }
 
   @override
   Future<String> generateDeviceFingerprint() async {
-    try {
-      return api.generateDeviceFingerprint();
-    } catch (_) {
-      return 'DEV-${DateTime.now().microsecondsSinceEpoch}';
-    }
+    return 'DEV-${DateTime.now().microsecondsSinceEpoch}';
   }
+
 
   MxEncFileType _fromIntFileType(int v) {
     switch (v) {

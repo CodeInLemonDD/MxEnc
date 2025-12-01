@@ -1,11 +1,12 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'dart:io';
-import 'dart:typed_data';
 import 'package:path/path.dart' as path;
 import '../rust_bridge.dart';
+import '../utils/progress.dart';
 import '../utils/dynamic_watermark.dart';
 import '../models/novel.dart';
 import 'novel_detail_screen.dart';
@@ -15,6 +16,8 @@ import '../utils/storage_service.dart';
 import '../utils/user_service.dart';
 import '../utils/auth_service.dart';
 import '../utils/mxenc_dart.dart';
+import '../utils/keyboard_utils.dart';
+import '../widgets/loading_dialog.dart';
 import 'comic_reader_screen.dart';
 import 'rich_reader_screen.dart';
 
@@ -113,8 +116,9 @@ class _ViewerScreenState extends State<ViewerScreen> {
       final (filename, fileType) = await widget.rustBridge
           .parseMxencHeaderExtended(mxencData: fileBytes);
 
+      final decoded = _decodeFilenameUnicode(filename);
       setState(() {
-        _originalFilename = filename;
+        _originalFilename = _normalizePreviewFilename(decoded);
         _fileType = fileType;
       });
 
@@ -148,6 +152,7 @@ class _ViewerScreenState extends State<ViewerScreen> {
   }
 
   Future<void> _decryptFile() async {
+    KeyboardUtils.hide(context);
     if (_selectedFile == null) {
       setState(() {
         _errorMessage = '请先选择文件';
@@ -162,6 +167,10 @@ class _ViewerScreenState extends State<ViewerScreen> {
       return;
     }
 
+    final loading = LoadingController(0);
+    // 非阻塞显示加载对话框
+    // ignore: discarded_futures
+    showLoadingDialog(context, controller: loading, label: '解密中');
     setState(() {
       _isDecrypting = true;
       _errorMessage = null;
@@ -171,39 +180,29 @@ class _ViewerScreenState extends State<ViewerScreen> {
       _progress = 0.1;
       _progressLabel = '读取文件';
     });
+    loading.set(_progress);
 
     try {
       final fileBytes = await _selectedFile!.readAsBytes();
 
-      // 调用Rust解密函数
-      _progress = 0.4;
-      _progressLabel = '解析头部';
-      setState(() {});
-      final result = await widget.rustBridge.decryptFile(
+      final stream = widget.rustBridge.decryptFileProgress(
         mxencData: fileBytes,
         password: _passwordController.text,
       );
-      _progress = 0.7;
-      _progressLabel = '解密中';
-      setState(() {});
-
-      final originalFilename = result.$1;
-      final decryptedBytes = result.$2;
+      await for (final ev in stream) {
+        _progress = ev.percent;
+        _progressLabel = ev.label;
+        setState(() {});
+        loading.set(_progress);
+        if (ev.phase == ProgressPhase.done && ev.data != null && ev.filename != null) {
+          final originalFilename = _normalizePreviewFilename(_decodeFilenameUnicode(ev.filename!));
+          final decryptedBytes = ev.data!;
 
       // 根据文件类型处理内容
       if (_fileType == MxEncFileType.novel) {
-        String novelTitle = originalFilename;
-        String author = '未知作者';
-        try {
-          final s = utf8.decode(decryptedBytes);
-          final obj = jsonDecode(s);
-          if (obj is Map && obj.containsKey('chapters')) {
-            novelTitle = (obj['title'] ?? novelTitle).toString();
-            author = (obj['author'] ?? author).toString();
-          }
-        } catch (_) {
-          // ignore
-        }
+        final parsed = await compute(decodeNovelMeta, decryptedBytes);
+        final novelTitle = parsed.$1.isEmpty ? originalFilename : parsed.$1;
+        final author = parsed.$2.isEmpty ? '未知作者' : parsed.$2;
 
         if (mounted) {
           setState(() {
@@ -241,13 +240,11 @@ class _ViewerScreenState extends State<ViewerScreen> {
           );
           NovelData? novel;
           try {
-            final s = utf8.decode(decryptedBytes, allowMalformed: true);
-            final obj = jsonDecode(s);
-            if (obj is Map<String, dynamic>) {
-              novel = NovelData.fromJson(obj);
-            }
+            final obj = await compute(decodeNovelFull, decryptedBytes);
+            novel = NovelData.fromJson(obj);
           } catch (_) {}
-          Navigator.push(
+          if (!mounted) return;
+          Navigator.pushReplacement(
             context,
             MaterialPageRoute(
               builder: (context) => NovelDetailScreen(item: item, novel: novel),
@@ -257,14 +254,15 @@ class _ViewerScreenState extends State<ViewerScreen> {
         }
       } else if (_fileType == MxEncFileType.comic) {
         try {
-          final packed = MxencDart.unpackComicContainer(decryptedBytes);
+          final packed = await compute(unpackComicEntry, decryptedBytes);
           final manifest = packed['manifest'] as Map<String, dynamic>;
           final start = packed['start'] as int;
           if (mounted) {
             setState(() {
               _isDecrypting = false;
             });
-            Navigator.push(
+            if (!mounted) return;
+            Navigator.pushReplacement(
               context,
               MaterialPageRoute(
                 builder: (context) => ComicReaderScreen(
@@ -281,14 +279,15 @@ class _ViewerScreenState extends State<ViewerScreen> {
         } catch (_) {}
       } else if (_fileType == MxEncFileType.richNovel) {
         try {
-          final packed = MxencDart.unpackRichNovelContainer(decryptedBytes);
+          final packed = await compute(unpackRichEntry, decryptedBytes);
           final manifest = packed['manifest'] as Map<String, dynamic>;
           final start = packed['start'] as int;
           if (mounted) {
             setState(() {
               _isDecrypting = false;
             });
-            Navigator.push(
+            if (!mounted) return;
+            Navigator.pushReplacement(
               context,
               MaterialPageRoute(
                 builder: (context) => RichReaderScreen(
@@ -308,7 +307,7 @@ class _ViewerScreenState extends State<ViewerScreen> {
         _previewImage = decryptedBytes;
       } else if (_isTextFile(originalFilename)) {
         try {
-          final s = utf8.decode(decryptedBytes);
+          final s = await compute(decodeUtf8Safe, decryptedBytes);
           if (mounted) {
             setState(() {
               _textContent = s;
@@ -317,14 +316,20 @@ class _ViewerScreenState extends State<ViewerScreen> {
         } catch (_) {}
       }
 
-      if (mounted) {
-        setState(() {
-          _originalFilename = originalFilename;
-          _decryptedContent = decryptedBytes;
-          _isDecrypting = false;
-          _progress = 1.0;
-          _progressLabel = '完成';
-        });
+          if (mounted) {
+            setState(() {
+              _originalFilename = originalFilename;
+              _decryptedContent = decryptedBytes;
+              _isDecrypting = false;
+              _progress = 1.0;
+              _progressLabel = '完成';
+            });
+            if (Navigator.canPop(context)) {
+              Navigator.of(context).pop();
+            }
+          }
+          break;
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -332,6 +337,10 @@ class _ViewerScreenState extends State<ViewerScreen> {
           _errorMessage = '解密失败: $e';
           _isDecrypting = false;
         });
+        if (Navigator.canPop(context)) {
+          Navigator.of(context).pop();
+        }
+        KeyboardUtils.hide(context);
       }
     }
   }
@@ -468,7 +477,7 @@ class _ViewerScreenState extends State<ViewerScreen> {
     return Scaffold(
       appBar: _decryptedContent != null
           ? AppBar(
-              title: Text('查看: ${_originalFilename!.split('/').last}'),
+              title: Text('查看: ${path.basename(_originalFilename!)}'),
               backgroundColor: Theme.of(context).colorScheme.inversePrimary,
               actions: [
                 IconButton(
@@ -547,7 +556,9 @@ class _ViewerScreenState extends State<ViewerScreen> {
               margin: const EdgeInsets.symmetric(vertical: 12),
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: Colors.grey.shade100,
+                color: Theme.of(context).brightness == Brightness.dark
+                      ? Colors.grey.shade800
+                      : Colors.grey.shade100,
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Column(
@@ -555,7 +566,7 @@ class _ViewerScreenState extends State<ViewerScreen> {
                 children: [
                   Text('已选择: ${path.basename(_selectedFile!.path)}'),
                   if (_originalFilename != null)
-                    Text('原始文件: $_originalFilename'),
+                    Text('原始文件: ${path.basename(_originalFilename!)}'),
                 ],
               ),
             ),
@@ -589,6 +600,8 @@ class _ViewerScreenState extends State<ViewerScreen> {
               ),
               obscureText: _obscurePassword,
               enabled: !_isDecrypting,
+              textInputAction: TextInputAction.done,
+              onSubmitted: (_) => KeyboardUtils.hide(context),
             ),
           ),
           const SizedBox(height: 24),
@@ -721,4 +734,48 @@ class _ViewerScreenState extends State<ViewerScreen> {
       ],
     );
   }
+
+  String _decodeFilenameUnicode(String input) {
+    try {
+      if (input.contains('%')) {
+        final decoded = Uri.decodeComponent(input);
+        if (decoded != input) return decoded;
+      }
+    } catch (_) {}
+    try {
+      final hasHigh = input.codeUnits.any((c) => c >= 0x80);
+      if (hasHigh) {
+        final decoded = utf8.decode(input.codeUnits, allowMalformed: true);
+        if (decoded.isNotEmpty) return decoded;
+      }
+    } catch (_) {}
+    return input;
+  }
+
+  String _normalizePreviewFilename(String input) {
+    final base = path.basename(input);
+    final bad = base.isEmpty || base.contains('�');
+    if (bad && _selectedFile != null) {
+      return path.basename(_selectedFile!.path);
+    }
+    return base;
+  }
+}
+
+// isolate helpers must be top-level
+Map<String, dynamic> unpackComicEntry(Uint8List payload) => MxencDart.unpackComicContainer(payload);
+Map<String, dynamic> unpackRichEntry(Uint8List payload) => MxencDart.unpackRichNovelContainer(payload);
+Map<String, dynamic> _decodeJson(Uint8List data) => jsonDecode(utf8.decode(data, allowMalformed: true)) as Map<String, dynamic>;
+String decodeUtf8Safe(Uint8List data) => utf8.decode(data, allowMalformed: true);
+Map<String, dynamic> decodeNovelFull(Uint8List data) => _decodeJson(data);
+(String, String) decodeNovelMeta(Uint8List data) {
+  try {
+    final obj = _decodeJson(data);
+    if (obj.containsKey('chapters')) {
+      final title = (obj['title'] ?? '').toString();
+      final author = (obj['author'] ?? '').toString();
+      return (title, author);
+    }
+  } catch (_) {}
+  return ('', '');
 }

@@ -56,6 +56,11 @@ class MyApp extends StatelessWidget {
           seedColor: themeProvider.seedColor ?? Colors.deepPurple,
         ),
         useMaterial3: true,
+        progressIndicatorTheme: ProgressIndicatorThemeData(
+          color: Colors.deepPurple,
+          linearTrackColor: Colors.deepPurple.withValues(alpha: 0.15),
+          circularTrackColor: Colors.deepPurple.withValues(alpha: 0.12),
+        ),
         textTheme: TextTheme(
           headlineLarge: TextStyle(
             fontSize: 28,
@@ -145,12 +150,11 @@ class _MainPageState extends State<MainPage> {
       final done = await _userService.isOobeDone();
       final complete = await _userService.isProfileComplete();
       if (!done || !complete) {
-        if (mounted) {
-          await Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => const OobeScreen()),
-          );
-        }
+        if (!mounted) return;
+        await Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const OobeScreen()),
+        );
       }
     } catch (_) {}
   }
@@ -170,13 +174,11 @@ class _MainPageState extends State<MainPage> {
 
   void _handleEncryptPress() async {
     bool hasPermission = await _authService.isPremiumUser();
-
-    if (context.mounted) {
-      if (hasPermission) {
-        Navigator.pushNamed(context, '/encrypt_entry');
-      } else {
-        Navigator.pushNamed(context, '/permission');
-      }
+    if (!mounted) return;
+    if (hasPermission) {
+      Navigator.pushNamed(context, '/encrypt_entry');
+    } else {
+      Navigator.pushNamed(context, '/permission');
     }
   }
 
@@ -296,7 +298,7 @@ class _MainPageState extends State<MainPage> {
               Text(
                 '安全、便捷的文件加密工具',
                 style: theme.textTheme.bodyMedium?.copyWith(
-                  color: theme.colorScheme.onSurface.withOpacity(0.6),
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
                 ),
               ),
               const SizedBox(height: 48),

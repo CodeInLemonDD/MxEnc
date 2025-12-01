@@ -6,6 +6,8 @@ import 'package:path_provider/path_provider.dart';
 import '../rust_bridge.dart';
 import '../utils/auth_service.dart';
 import '../utils/user_service.dart';
+import '../utils/keyboard_utils.dart';
+import '../widgets/loading_dialog.dart';
 import 'dart:convert';
 import 'dart:typed_data';
 
@@ -69,6 +71,10 @@ class _EncryptImageScreenState extends State<EncryptImageScreen> {
   }
 
   Future<void> _encryptImage() async {
+    KeyboardUtils.hide(context);
+    final loading = LoadingController(0);
+    // ignore: discarded_futures
+    showLoadingDialog(context, controller: loading, label: '加密中');
     if (!_hasPermission) {
       if (mounted) {
         Navigator.pushReplacementNamed(context, '/permission');
@@ -100,6 +106,7 @@ class _EncryptImageScreenState extends State<EncryptImageScreen> {
       _progress = 0.1;
       _progressLabel = '读取图片';
     });
+    loading.set(_progress);
 
     Uint8List encrypted;
     String filename;
@@ -125,6 +132,7 @@ class _EncryptImageScreenState extends State<EncryptImageScreen> {
         _progress = 0.4;
         _progressLabel = '加密中';
       });
+      loading.set(_progress);
       encrypted = await widget.rustBridge.encryptFileWithMetadata(
         plaintext: bytes,
         password: _passwordController.text,
@@ -151,6 +159,7 @@ class _EncryptImageScreenState extends State<EncryptImageScreen> {
         _progress = 0.8;
         _progressLabel = '保存文件';
       });
+      loading.set(_progress);
       if (Platform.isAndroid) {
         final dir = await FilePicker.platform.getDirectoryPath(dialogTitle: '选择保存位置');
         if (dir != null && dir.isNotEmpty) {
@@ -179,6 +188,9 @@ class _EncryptImageScreenState extends State<EncryptImageScreen> {
           _progress = 1.0;
           _progressLabel = '完成';
         });
+        if (Navigator.canPop(context)) {
+          Navigator.of(context).pop();
+        }
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('图片已加密并保存到: $savePath')),
         );
@@ -201,6 +213,10 @@ class _EncryptImageScreenState extends State<EncryptImageScreen> {
           _progress = 0.0;
           _progressLabel = '';
         });
+        if (Navigator.canPop(context)) {
+          Navigator.of(context).pop();
+        }
+        KeyboardUtils.hide(context);
       }
     }
   }
@@ -250,6 +266,8 @@ class _EncryptImageScreenState extends State<EncryptImageScreen> {
                   ),
                   obscureText: _obscurePassword,
                   enabled: !_isEncrypting,
+                  textInputAction: TextInputAction.done,
+                  onSubmitted: (_) => KeyboardUtils.hide(context),
                 ),
                 const SizedBox(height: 12),
                 TextField(
@@ -266,6 +284,8 @@ class _EncryptImageScreenState extends State<EncryptImageScreen> {
                   ),
                   obscureText: _obscureConfirmPassword,
                   enabled: !_isEncrypting,
+                  textInputAction: TextInputAction.done,
+                  onSubmitted: (_) => KeyboardUtils.hide(context),
                 ),
                 const SizedBox(height: 16),
                 ElevatedButton(

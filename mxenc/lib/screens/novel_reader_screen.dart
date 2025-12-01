@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import '../models/chapter.dart';
 import '../utils/storage_service.dart';
 import 'dart:typed_data';
+import '../utils/dynamic_watermark.dart';
+import '../utils/auth_service.dart';
 
 class NovelReaderScreen extends StatefulWidget {
   final Chapter chapter; // 章节信息
@@ -35,12 +37,14 @@ class _NovelReaderScreenState extends State<NovelReaderScreen> {
   bool _showSettings = false;
   bool _showNavigation = false;
   double _progress = 0.0; // 阅读进度
+  String? _deviceId;
 
   @override
   void initState() {
     super.initState();
     // 启用防截图功能
     _enableSecureMode();
+    _loadDeviceId();
   }
 
   // 滚动控制器
@@ -59,6 +63,13 @@ class _NovelReaderScreenState extends State<NovelReaderScreen> {
   void _enableSecureMode() {
     // 在不同平台启用防截图功能
     // 实际应用中需要通过平台通道实现
+  }
+
+  Future<void> _loadDeviceId() async {
+    try {
+      final id = await AuthService().getDeviceId();
+      if (mounted) setState(() { _deviceId = id; });
+    } catch (_) {}
   }
 
   // 切换夜间模式
@@ -176,6 +187,14 @@ class _NovelReaderScreenState extends State<NovelReaderScreen> {
           if (_showNavigation) _buildTopNavigation(),
           if (_showNavigation) _buildBottomNavigation(),
           if (_showSettings) _buildSettingsPanel(),
+          if (_deviceId != null)
+            DynamicWatermark(
+              receiverId: (() {
+                final v = _deviceId!;
+                return v.length > 8 ? '${v.substring(0,4)}****${v.substring(v.length-4)}' : v;
+              })(),
+              opacity: 0.25,
+            ),
           Positioned(
             left: 12,
             bottom: 12,
@@ -313,9 +332,9 @@ class _NovelReaderScreenState extends State<NovelReaderScreen> {
         gradient: LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
-          colors: _isNightMode
-              ? [Colors.black87, Colors.black.withOpacity(0)]
-              : [Colors.white, Colors.transparent],
+              colors: _isNightMode
+                  ? [Colors.black87, Colors.black.withValues(alpha: 0.0)]
+                  : [Colors.white, Colors.transparent],
         ),
       ),
       padding: const EdgeInsets.fromLTRB(16, 40, 16, 0),
@@ -343,7 +362,7 @@ class _NovelReaderScreenState extends State<NovelReaderScreen> {
                 widget.author,
                 style: TextStyle(
                   fontSize: 12,
-                  color: _textColor.withOpacity(0.8),
+                  color: _textColor.withValues(alpha: 0.8),
                 ),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
@@ -375,7 +394,7 @@ class _NovelReaderScreenState extends State<NovelReaderScreen> {
             begin: Alignment.bottomCenter,
             end: Alignment.topCenter,
             colors: _isNightMode
-                ? [Colors.black87, Colors.black.withOpacity(0)]
+                ? [Colors.black87, Colors.black.withValues(alpha: 0.0)]
                 : [Colors.white, Colors.transparent],
           ),
         ),

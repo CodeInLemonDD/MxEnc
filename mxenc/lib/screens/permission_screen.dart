@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../utils/auth_service.dart';
 import '../utils/license_service.dart';
+import 'dart:async';
 
 class PermissionScreen extends StatefulWidget {
   const PermissionScreen({super.key});
@@ -16,11 +17,14 @@ class _PermissionScreenState extends State<PermissionScreen> {
   final LicenseService _licenseService = LicenseService();
   final TextEditingController _licenseController = TextEditingController();
   bool _activating = false;
+  int? _remainingSec;
+  Timer? _timer;
 
   @override
   void initState() {
     super.initState();
     _loadDeviceId();
+    _startTimer();
   }
 
   Future<void> _loadDeviceId() async {
@@ -42,12 +46,33 @@ class _PermissionScreenState extends State<PermissionScreen> {
 
   Future<void> _copyToClipboard() async {
     await Clipboard.setData(ClipboardData(text: deviceId));
-    
-    if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('序列号已复制到剪贴板')),
-      );
-    }
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('序列号已复制到剪贴板')),
+    );
+  }
+
+  void _startTimer() {
+    _timer?.cancel();
+    _timer = Timer.periodic(const Duration(seconds: 1), (_) => _updateRemaining());
+  }
+
+  Future<void> _updateRemaining() async {
+    try {
+      final obj = await _licenseService.decodeLicense();
+      if (obj == null) {
+        if (mounted) setState(() { _remainingSec = null; });
+        return;
+      }
+      final exp = int.tryParse((obj['exp'] ?? '').toString()) ?? 0;
+      if (exp <= 0) {
+        if (mounted) setState(() { _remainingSec = null; });
+        return;
+      }
+      final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+      final remain = exp - now;
+      if (mounted) setState(() { _remainingSec = remain > 0 ? remain : 0; });
+    } catch (_) {}
   }
 
   Future<void> _activate() async {
@@ -58,7 +83,9 @@ class _PermissionScreenState extends State<PermissionScreen> {
       final ok = await _licenseService.isLicenseValid(deviceId: deviceId);
       if (ok) {
         await _authService.setPremiumUser(true);
+        await _updateRemaining();
         if (mounted) {
+          if (!mounted) return;
           ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('激活成功')));
           Navigator.pop(context);
         }
@@ -94,7 +121,7 @@ class _PermissionScreenState extends State<PermissionScreen> {
                 height: 100,
                 decoration: BoxDecoration(
                   color: Theme.of(context).brightness == Brightness.dark
-                      ? Colors.red.withOpacity(0.2)
+                      ? Colors.red.withValues(alpha: 0.2)
                       : Colors.red.shade100,
                   borderRadius: BorderRadius.circular(50),
                 ),
@@ -156,6 +183,17 @@ class _PermissionScreenState extends State<PermissionScreen> {
                         fontFamily: 'Monospace',
                       ),
                     ),
+                    const SizedBox(height: 8),
+                    if (_remainingSec != null)
+                      Text(
+                        _remainingSec! > 0
+                            ? _fmtRemain(_remainingSec!)
+                            : '已过期',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: _remainingSec! > 0 ? Colors.green : Colors.red,
+                        ),
+                      ),
                   ],
                 ),
               ),
@@ -194,6 +232,14 @@ class _PermissionScreenState extends State<PermissionScreen> {
             ],
           ),
         ),
-    );
+      );
+    }
+
+  String _fmtRemain(int sec) {
+    final d = sec ~/ 86400;
+    final h = (sec % 86400) ~/ 3600;
+    final m = (sec % 3600) ~/ 60;
+    final s = sec % 60;
+    return '剩余时间 $d天 $h小时 $m分 $s秒';
   }
 }

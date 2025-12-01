@@ -7,6 +7,7 @@ import 'frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
 // These functions are ignored because they are not marked as `pub`: `init_once`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `clone`, `fmt`, `fmt`
 
 int getFileTypeGeneric() => RustLib.instance.api.crateGetFileTypeGeneric();
 
@@ -15,6 +16,10 @@ int getFileTypeImage() => RustLib.instance.api.crateGetFileTypeImage();
 int getFileTypeNovel() => RustLib.instance.api.crateGetFileTypeNovel();
 
 int getFileTypeOther() => RustLib.instance.api.crateGetFileTypeOther();
+
+int getFileTypeComic() => RustLib.instance.api.crateGetFileTypeComic();
+
+int getFileTypeRichNovel() => RustLib.instance.api.crateGetFileTypeRichNovel();
 
 String getFileTypeDescription({required int fileType}) =>
     RustLib.instance.api.crateGetFileTypeDescription(fileType: fileType);
@@ -74,3 +79,40 @@ String parseMxencHeader({required List<int> mxencData}) =>
 /// 用于水印标识
 String generateDeviceFingerprint() =>
     RustLib.instance.api.crateGenerateDeviceFingerprint();
+
+Stream<ProgressEvent> decryptFileWithProgress({
+  required List<int> mxencData,
+  required String password,
+}) => RustLib.instance.api.crateDecryptFileWithProgress(
+  mxencData: mxencData,
+  password: password,
+);
+
+Future<int> frbGetRustContentHash() =>
+    RustLib.instance.api.crateFrbGetRustContentHash();
+
+class ProgressEvent {
+  final ProgressPhase phase;
+  final double percent;
+  final String label;
+
+  const ProgressEvent({
+    required this.phase,
+    required this.percent,
+    required this.label,
+  });
+
+  @override
+  int get hashCode => phase.hashCode ^ percent.hashCode ^ label.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is ProgressEvent &&
+          runtimeType == other.runtimeType &&
+          phase == other.phase &&
+          percent == other.percent &&
+          label == other.label;
+}
+
+enum ProgressPhase { readHeader, deriveKey, decrypt, decode, done }

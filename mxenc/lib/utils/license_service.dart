@@ -19,6 +19,18 @@ class LicenseService {
     return p.getString(_licenseKey);
   }
 
+  Future<Map<String, dynamic>?> decodeLicense() async {
+    try {
+      final lic = await getLicense();
+      if (lic == null || lic.isEmpty) return null;
+      final decoded = utf8.decode(base64Url.decode(lic));
+      final obj = jsonDecode(decoded) as Map<String, dynamic>;
+      return obj;
+    } catch (_) {
+      return null;
+    }
+  }
+
   Future<void> setSecretOverride(String secret) async {
     final p = await _prefs();
     await p.setString(_secretOverrideKey, secret);

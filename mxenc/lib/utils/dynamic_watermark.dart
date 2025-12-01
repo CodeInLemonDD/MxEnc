@@ -132,7 +132,7 @@ class WatermarkPainter extends CustomPainter {
       text: TextSpan(
         text: text,
         style: TextStyle(
-          color: Colors.black.withOpacity(opacity),
+          color: Colors.black.withValues(alpha: opacity),
           fontSize: 18,
           fontWeight: FontWeight.bold,
         ),

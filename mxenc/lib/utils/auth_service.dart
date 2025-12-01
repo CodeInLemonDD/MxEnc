@@ -59,13 +59,18 @@ class AuthService {
     String? deviceId = _prefs.getString(_deviceIdKey);
     
     if (deviceId == null) {
-      // 如果没有存储，生成新的并保存
       String prefix = 'UNK-';
-      if (Platform.isWindows) prefix = 'WIN-';
-      else if (Platform.isAndroid) prefix = 'AND-';
-      else if (Platform.isIOS) prefix = 'IOS-';
-      else if (Platform.isMacOS) prefix = 'MAC-';
-      else if (Platform.isLinux) prefix = 'LIN-';
+      if (Platform.isWindows) {
+        prefix = 'WIN-';
+      } else if (Platform.isAndroid) {
+        prefix = 'AND-';
+      } else if (Platform.isIOS) {
+        prefix = 'IOS-';
+      } else if (Platform.isMacOS) {
+        prefix = 'MAC-';
+      } else if (Platform.isLinux) {
+        prefix = 'LIN-';
+      }
       try {
         final rustBridge = await RustBridge.init();
         final fp = await rustBridge.generateDeviceFingerprint();

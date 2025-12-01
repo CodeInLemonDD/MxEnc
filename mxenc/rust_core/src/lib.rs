@@ -152,5 +152,28 @@ pub fn generate_device_fingerprint() -> String {
     crypto::generate_device_fingerprint()
 }
 
-#[no_mangle]
-pub extern "C" fn frb_get_rust_content_hash() -> i32 { -1697727903 }
+#[derive(Clone, Debug)]
+pub enum ProgressPhase { ReadHeader, DeriveKey, Decrypt, Decode, Done }
+
+#[derive(Clone, Debug)]
+pub struct ProgressEvent { pub phase: ProgressPhase, pub percent: f32, pub label: String }
+
+#[frb]
+pub fn decrypt_file_with_progress(
+    mxenc_data: Vec<u8>,
+    password: String,
+    sink: frb_generated::StreamSink<ProgressEvent>,
+) -> Result<(), String> {
+    init_once();
+    let _ = sink.add(ProgressEvent { phase: ProgressPhase::ReadHeader, percent: 0.05, label: "读取文件".to_string() });
+    let _ = sink.add(ProgressEvent { phase: ProgressPhase::ReadHeader, percent: 0.10, label: "解析头部".to_string() });
+    let _ = sink.add(ProgressEvent { phase: ProgressPhase::DeriveKey, percent: 0.20, label: "派生密钥".to_string() });
+    let _ = sink.add(ProgressEvent { phase: ProgressPhase::Decrypt, percent: 0.90, label: "解密中".to_string() });
+    let _ = match crypto::MxEncFile::decrypt(&mxenc_data, &password) {
+        Ok(_) => (),
+        Err(e) => return Err(e.to_string()),
+    };
+    let _ = sink.add(ProgressEvent { phase: ProgressPhase::Decode, percent: 0.98, label: "解码中".to_string() });
+    let _ = sink.add(ProgressEvent { phase: ProgressPhase::Done, percent: 1.00, label: "完成".to_string() });
+    Ok(())
+}

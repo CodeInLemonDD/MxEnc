@@ -4,13 +4,13 @@ import 'package:permission_handler/permission_handler.dart';
 import 'dart:io';
 import 'package:path/path.dart' as path;
 import 'package:path_provider/path_provider.dart';
-import 'dart:typed_data';
 import 'package:flutter/services.dart';
 import 'cover_editor_screen.dart';
 import '../rust_bridge.dart';
 import '../utils/mxenc_dart.dart';
 import '../utils/user_service.dart';
 import '../utils/auth_service.dart';
+import '../utils/keyboard_utils.dart';
 
 class RichEditorScreen extends StatefulWidget {
   final RustBridge? rustBridge;
@@ -170,6 +170,7 @@ class _RichEditorScreenState extends State<RichEditorScreen> {
                           );
                           if (res != null && res.files.single.path != null) {
                             final path = res.files.single.path!;
+                            if (!context.mounted) return;
                             final cropped = await Navigator.push<Uint8List>(
                               context,
                               MaterialPageRoute(
@@ -312,6 +313,7 @@ class _RichEditorScreenState extends State<RichEditorScreen> {
       if (savePath == null) return;
     }
     String password = '';
+    if (!mounted) return;
     await showDialog(
       context: context,
       builder: (context) {
@@ -322,6 +324,8 @@ class _RichEditorScreenState extends State<RichEditorScreen> {
             controller: ctrl,
             obscureText: true,
             decoration: const InputDecoration(labelText: '密码'),
+            textInputAction: TextInputAction.done,
+            onSubmitted: (_) => KeyboardUtils.hide(context),
           ),
           actions: [
             TextButton(
@@ -333,6 +337,7 @@ class _RichEditorScreenState extends State<RichEditorScreen> {
             TextButton(
               onPressed: () {
                 password = ctrl.text;
+                KeyboardUtils.hide(context);
                 Navigator.pop(context);
               },
               child: const Text('确定'),

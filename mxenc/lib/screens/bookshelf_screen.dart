@@ -5,6 +5,10 @@ import 'novel_detail_screen.dart';
 import 'image_preview_screen.dart';
 import 'viewer_screen.dart';
 import '../utils/storage_service.dart';
+import 'package:flutter/foundation.dart';
+import 'comic_reader_screen.dart';
+import 'rich_reader_screen.dart';
+import '../widgets/loading_dialog.dart';
 
 // 定义书籍/图片项目模型
 class BookshelfItem {
@@ -170,14 +174,7 @@ class _BookshelfScreenState extends State<BookshelfScreen> {
   // 处理项目点击
   void _onItemTap(BookshelfItem item) {
     if (item.isComic == true || item.isRichNovel == true) {
-      final file = File(item.filePath);
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) =>
-              ViewerScreen(rustBridge: widget.rustBridge, initialFile: file),
-        ),
-      );
+      _openEncryptedContainerDirect(item);
       return;
     }
     if (item.isNovel) {
@@ -190,6 +187,98 @@ class _BookshelfScreenState extends State<BookshelfScreen> {
         context,
         MaterialPageRoute(builder: (context) => ImagePreviewScreen(item: item)),
       );
+    }
+  }
+
+  Future<void> _openEncryptedContainerDirect(BookshelfItem item) async {
+    try {
+      final pwd = await StorageService.getItemPassword(item.filePath) ?? '';
+      String password = pwd;
+      if (password.isEmpty) {
+        if (!mounted) return;
+        final input = await showDialog<String>(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) {
+            final ctrl = TextEditingController();
+            return AlertDialog(
+              title: const Text('输入密码'),
+              content: TextField(controller: ctrl, obscureText: true, decoration: const InputDecoration(labelText: '密码')),
+              actions: [
+                TextButton(onPressed: () => Navigator.pop(context), child: const Text('取消')),
+                TextButton(onPressed: () => Navigator.pop(context, ctrl.text), child: const Text('确定')),
+              ],
+            );
+          },
+        );
+        if (input == null || input.isEmpty) return;
+        password = input;
+      }
+
+      final fileBytes = await File(item.filePath).readAsBytes();
+      final controller = LoadingController(0);
+      // 非阻塞加载对话框
+      // ignore: discarded_futures
+      if (!mounted) return;
+      showLoadingDialog(context, controller: controller, label: '解密中');
+      controller.set(0.1);
+      final result = await widget.rustBridge.decryptFile(mxencData: fileBytes, password: password);
+      controller.set(0.9);
+      final decrypted = result.$2;
+
+      if (item.isComic == true) {
+        final packed = await compute(unpackComicEntry, decrypted);
+        final manifest = packed['manifest'] as Map<String, dynamic>;
+        final start = packed['start'] as int;
+        if (mounted) {
+          if (Navigator.canPop(context)) Navigator.pop(context);
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => ComicReaderScreen(
+                manifest: manifest,
+                payload: decrypted,
+                start: start,
+                sourcePath: item.filePath,
+                password: password,
+              ),
+            ),
+          );
+        }
+        return;
+      }
+
+      if (item.isRichNovel == true) {
+        final packed = await compute(unpackRichEntry, decrypted);
+        final manifest = packed['manifest'] as Map<String, dynamic>;
+        final start = packed['start'] as int;
+        if (mounted) {
+          if (Navigator.canPop(context)) Navigator.pop(context);
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => RichReaderScreen(
+                manifest: manifest,
+                payload: decrypted,
+                start: start,
+                sourcePath: item.filePath,
+                password: password,
+              ),
+            ),
+          );
+        }
+        return;
+      }
+
+      if (mounted) {
+        if (Navigator.canPop(context)) Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('无法识别的内容类型')));
+      }
+    } catch (e) {
+      if (mounted) {
+        if (Navigator.canPop(context)) Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('解密失败: $e')));
+      }
     }
   }
 
@@ -473,7 +562,7 @@ class _BookshelfScreenState extends State<BookshelfScreen> {
                       color: theme.colorScheme.surfaceContainerHighest,
                       boxShadow: [
                         BoxShadow(
-                          color: theme.colorScheme.shadow.withOpacity(0.1),
+                          color: theme.colorScheme.shadow.withValues(alpha: 0.1),
                           spreadRadius: 0,
                           blurRadius: 4,
                           offset: const Offset(0, 2),

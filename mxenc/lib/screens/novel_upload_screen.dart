@@ -13,6 +13,7 @@ import 'oobe_screen.dart';
 import 'cover_editor_screen.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
+import '../utils/keyboard_utils.dart';
 
 // 章节数据模型
 class Chapter {
@@ -95,8 +96,8 @@ class _NovelUploadScreenState extends State<NovelUploadScreen> {
   bool _isCheckingPermission = true;
   String? _workspaceId;
   Timer? _autosaveTimer;
-  double _progress = 0.0;
-  String _progressLabel = '';
+  final double _progress = 0.0;
+  final String _progressLabel = '';
 
   @override
   void initState() {
@@ -168,6 +169,7 @@ class _NovelUploadScreenState extends State<NovelUploadScreen> {
 
     if (result != null) {
       final file = File(result.files.single.path!);
+      if (!mounted) return;
       final cropped = await Navigator.push<Uint8List?>(
         context,
         MaterialPageRoute(builder: (_) => CoverEditorScreen(sourceFile: file)),
@@ -852,6 +854,8 @@ class _NovelUploadScreenState extends State<NovelUploadScreen> {
                           ),
                           obscureText: _obscurePassword,
                           enabled: !_isExporting,
+                          textInputAction: TextInputAction.done,
+                          onSubmitted: (_) => KeyboardUtils.hide(context),
                         ),
                         const SizedBox(height: 16),
                         TextField(
@@ -881,6 +885,8 @@ class _NovelUploadScreenState extends State<NovelUploadScreen> {
                           ),
                           obscureText: _obscureConfirmPassword,
                           enabled: !_isExporting,
+                          textInputAction: TextInputAction.done,
+                          onSubmitted: (_) => KeyboardUtils.hide(context),
                         ),
                       ],
                     ),

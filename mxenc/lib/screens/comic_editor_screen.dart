@@ -4,12 +4,12 @@ import 'package:permission_handler/permission_handler.dart';
 import 'dart:io';
 import 'package:path/path.dart' as path;
 import 'package:path_provider/path_provider.dart';
-import 'dart:typed_data';
 import 'package:flutter/services.dart';
 import '../rust_bridge.dart';
 import '../utils/mxenc_dart.dart';
 import '../utils/user_service.dart';
 import '../utils/auth_service.dart';
+import '../utils/keyboard_utils.dart';
 import 'cover_editor_screen.dart';
 
 class ComicEditorScreen extends StatefulWidget {
@@ -135,6 +135,7 @@ class _ComicEditorScreenState extends State<ComicEditorScreen> {
                           );
                           if (res != null && res.files.single.path != null) {
                             final path = res.files.single.path!;
+                            if (!context.mounted) return;
                             final cropped = await Navigator.push<Uint8List>(
                               context,
                               MaterialPageRoute(
@@ -257,6 +258,7 @@ class _ComicEditorScreenState extends State<ComicEditorScreen> {
       if (savePath == null) return;
     }
     String password = '';
+    if (!mounted) return;
     await showDialog(
       context: context,
       builder: (context) {
@@ -267,6 +269,8 @@ class _ComicEditorScreenState extends State<ComicEditorScreen> {
             controller: ctrl,
             obscureText: true,
             decoration: const InputDecoration(labelText: '密码'),
+            textInputAction: TextInputAction.done,
+            onSubmitted: (_) => KeyboardUtils.hide(context),
           ),
           actions: [
             TextButton(
@@ -278,6 +282,7 @@ class _ComicEditorScreenState extends State<ComicEditorScreen> {
             TextButton(
               onPressed: () {
                 password = ctrl.text;
+                KeyboardUtils.hide(context);
                 Navigator.pop(context);
               },
               child: const Text('确定'),

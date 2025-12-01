@@ -66,6 +66,7 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
     });
     await _settingsService.setNightMode(_isNightMode);
     try {
+      if (!mounted) return;
       final tp = Provider.of<ThemeProvider>(context, listen: false);
       await tp.setDarkMode(_isNightMode);
     } catch (_) {}
@@ -127,6 +128,7 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
     });
     await _settingsService.setTheme(theme);
     try {
+      if (!mounted) return;
       final tp = Provider.of<ThemeProvider>(context, listen: false);
       final map = {
         '默认': Colors.deepPurple,
@@ -184,6 +186,7 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
                   const ClipboardData(text: '1211239054'),
                 );
                 _showToast('群号已复制到剪贴板');
+                if (!context.mounted) return;
                 Navigator.pop(context);
               },
               child: const Text('复制群号'),
@@ -220,9 +223,8 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
             try {
               final us = UserService();
               await us.setOobeDone(false);
-              if (mounted) {
-                Navigator.push(context, MaterialPageRoute(builder: (_) => const OobeScreen()));
-              }
+              if (!context.mounted) return;
+              Navigator.push(context, MaterialPageRoute(builder: (_) => const OobeScreen()));
             } catch (_) {}
           },
         )
@@ -256,7 +258,7 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: theme.colorScheme.outline.withOpacity(0.12)),
+        side: BorderSide(color: theme.colorScheme.outline.withValues(alpha: 0.12)),
       ),
       child: Padding(
         padding: const EdgeInsets.all(20),
@@ -295,7 +297,7 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
                       Text(
                         _isPremiumUser ? '拥有全部功能权限' : '需要作者授权',
                         style: theme.textTheme.bodyMedium?.copyWith(
-                          color: theme.colorScheme.onSurface.withOpacity(0.6),
+                          color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
                         ),
                       ),
                     ],
@@ -334,7 +336,7 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
                         Text(
                           '设备ID',
                           style: theme.textTheme.bodySmall?.copyWith(
-                            color: theme.colorScheme.onSurface.withOpacity(0.6),
+                            color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
                           ),
                         ),
                         const SizedBox(height: 4),
@@ -373,7 +375,7 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: theme.colorScheme.outline.withOpacity(0.12)),
+        side: BorderSide(color: theme.colorScheme.outline.withValues(alpha: 0.12)),
       ),
       child: Column(
         children: [
@@ -436,12 +438,12 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
       subtitle: Text(
         subtitle,
         style: theme.textTheme.bodySmall?.copyWith(
-          color: theme.colorScheme.onSurface.withOpacity(0.6),
+          color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
         ),
       ),
       trailing: Icon(
         Icons.chevron_right,
-        color: theme.colorScheme.onSurface.withOpacity(0.4),
+        color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
       ),
       onTap: onTap,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -455,7 +457,7 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: theme.colorScheme.outline.withOpacity(0.12)),
+        side: BorderSide(color: theme.colorScheme.outline.withValues(alpha: 0.12)),
       ),
       child: Column(
         children: [
@@ -510,9 +512,9 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(value, style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurface.withOpacity(0.6))),
+          Text(value, style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurface.withValues(alpha: 0.6))),
           const SizedBox(width: 8),
-          Icon(Icons.chevron_right, color: theme.colorScheme.onSurface.withOpacity(0.4)),
+          Icon(Icons.chevron_right, color: theme.colorScheme.onSurface.withValues(alpha: 0.4)),
         ],
       ),
       onTap: onTap,
@@ -550,12 +552,12 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
       leading: Container(
         width: 40,
         height: 40,
-        decoration: BoxDecoration(borderRadius: BorderRadius.circular(20), color: Colors.orange.withOpacity(0.2)),
+        decoration: BoxDecoration(borderRadius: BorderRadius.circular(20), color: Colors.orange.withValues(alpha: 0.2)),
         alignment: Alignment.center,
         child: Icon(Icons.bug_report, size: 20, color: Colors.orange[700]),
       ),
       title: const Text('Debug 授权'),
-      subtitle: Text('测试时启用授权以使用加密功能', style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurface.withOpacity(0.5), fontSize: 11)),
+      subtitle: Text('测试时启用授权以使用加密功能', style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurface.withValues(alpha: 0.5), fontSize: 11)),
       trailing: Switch(value: _isPremiumUser, onChanged: (_) => _toggleDebugAuth()),
       onTap: _toggleDebugAuth,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -612,7 +614,7 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: theme.colorScheme.outline.withOpacity(0.12)),
+        side: BorderSide(color: theme.colorScheme.outline.withValues(alpha: 0.12)),
       ),
       child: ListTile(
         leading: Container(
@@ -623,8 +625,8 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
           child: Icon(Icons.group_outlined, size: 20, color: theme.colorScheme.onPrimaryContainer),
         ),
         title: const Text('用户群'),
-        subtitle: Text('1211239054', style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurface.withOpacity(0.6))),
-        trailing: Icon(Icons.chevron_right, color: theme.colorScheme.onSurface.withOpacity(0.4)),
+        subtitle: Text('1211239054', style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurface.withValues(alpha: 0.6))),
+        trailing: Icon(Icons.chevron_right, color: theme.colorScheme.onSurface.withValues(alpha: 0.4)),
         onTap: _showQQGroupInfo,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),

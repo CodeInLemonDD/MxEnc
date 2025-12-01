@@ -17,12 +17,12 @@ class MxencDart {
     return gen.process(Uint8List.fromList(password.codeUnits));
   }
   static Uint8List _aesGcmEncrypt(Uint8List key, Uint8List nonce, Uint8List data) {
-    final cipher = GCMBlockCipher(AESFastEngine());
+    final cipher = GCMBlockCipher(AESEngine());
     cipher.init(true, AEADParameters(KeyParameter(key), 128, nonce, Uint8List(0)));
     return cipher.process(data);
   }
   static Uint8List _aesGcmDecrypt(Uint8List key, Uint8List nonce, Uint8List data) {
-    final cipher = GCMBlockCipher(AESFastEngine());
+    final cipher = GCMBlockCipher(AESEngine());
     cipher.init(false, AEADParameters(KeyParameter(key), 128, nonce, Uint8List(0)));
     return cipher.process(data);
   }
@@ -44,7 +44,7 @@ class MxencDart {
     final nonce = mxenc.sublist(offset, offset + 12); offset += 12;
     final ciphertext = mxenc.sublist(offset);
     return {
-      'filename': String.fromCharCodes(nameBytes),
+      'filename': utf8.decode(nameBytes, allowMalformed: true),
       'fileType': fileType,
       'metadata': meta,
       'salt': salt,
@@ -57,7 +57,7 @@ class MxencDart {
     final nonce = _rand(12);
     final key = _pbkdf2(password, salt, 32);
     final ct = _aesGcmEncrypt(key, nonce, plaintext);
-    final nameBytes = Uint8List.fromList(originalFilename.codeUnits);
+    final nameBytes = Uint8List.fromList(utf8.encode(originalFilename));
     final meta = metadata ?? Uint8List(0);
     final out = BytesBuilder();
     out.add(magic);

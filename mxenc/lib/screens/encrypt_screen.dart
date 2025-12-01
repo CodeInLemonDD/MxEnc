@@ -4,6 +4,8 @@ import 'dart:io';
 import 'dart:typed_data';
 import 'package:path/path.dart' as path;
 import 'package:path_provider/path_provider.dart';
+import '../utils/keyboard_utils.dart';
+import '../widgets/loading_dialog.dart';
 import '../rust_bridge.dart';
 import '../utils/auth_service.dart';
 
@@ -67,6 +69,10 @@ class _EncryptScreenState extends State<EncryptScreen> {
   }
 
   Future<void> _encryptFile() async {
+    KeyboardUtils.hide(context);
+    final loading = LoadingController(0);
+    // ignore: discarded_futures
+    showLoadingDialog(context, controller: loading, label: '加密中');
     // 再次检查权限（以防在页面打开后权限发生变化）
     if (!_hasPermission) {
       if (mounted) {
@@ -102,6 +108,7 @@ class _EncryptScreenState extends State<EncryptScreen> {
       _progress = 0.1;
       _progressLabel = '读取文件';
     });
+    loading.set(_progress);
 
     Uint8List encryptedBytes;
     try {
@@ -112,6 +119,7 @@ class _EncryptScreenState extends State<EncryptScreen> {
         _progress = 0.4;
         _progressLabel = '加密中';
       });
+      loading.set(_progress);
       encryptedBytes = await widget.rustBridge.encryptFileWithMetadata(
         plaintext: fileBytes,
         password: _passwordController.text,
@@ -139,6 +147,7 @@ class _EncryptScreenState extends State<EncryptScreen> {
         _progress = 0.8;
         _progressLabel = '保存文件';
       });
+      loading.set(_progress);
       if (Platform.isAndroid) {
         final dir = await FilePicker.platform.getDirectoryPath(
           dialogTitle: '选择保存位置',
@@ -176,6 +185,9 @@ class _EncryptScreenState extends State<EncryptScreen> {
           _progress = 1.0;
           _progressLabel = '完成';
         });
+        if (Navigator.canPop(context)) {
+          Navigator.of(context).pop();
+        }
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('文件已加密并保存到: $encryptedFilePath')),
         );
@@ -198,6 +210,10 @@ class _EncryptScreenState extends State<EncryptScreen> {
           _progress = 0.0;
           _progressLabel = '';
         });
+        KeyboardUtils.hide(context);
+        if (Navigator.canPop(context)) {
+          Navigator.of(context).pop();
+        }
       }
     }
   }
@@ -303,6 +319,8 @@ class _EncryptScreenState extends State<EncryptScreen> {
                   ),
                   obscureText: _obscurePassword,
                   enabled: !_isEncrypting,
+                  textInputAction: TextInputAction.done,
+                  onSubmitted: (_) => KeyboardUtils.hide(context),
                 ),
                 const SizedBox(height: 16),
 
@@ -333,6 +351,8 @@ class _EncryptScreenState extends State<EncryptScreen> {
                   ),
                   obscureText: _obscureConfirmPassword,
                   enabled: !_isEncrypting,
+                  textInputAction: TextInputAction.done,
+                  onSubmitted: (_) => KeyboardUtils.hide(context),
                 ),
                 const SizedBox(height: 24),
 

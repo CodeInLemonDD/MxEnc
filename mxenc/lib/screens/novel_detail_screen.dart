@@ -139,7 +139,7 @@ class _NovelDetailScreenState extends State<NovelDetailScreen> {
         color: theme.colorScheme.surface,
         boxShadow: [
           BoxShadow(
-            color: theme.colorScheme.shadow.withOpacity(0.1),
+            color: theme.colorScheme.shadow.withValues(alpha: 0.1),
             spreadRadius: 0,
             blurRadius: 4,
             offset: const Offset(0, 2),
@@ -158,7 +158,7 @@ class _NovelDetailScreenState extends State<NovelDetailScreen> {
               color: theme.colorScheme.surfaceContainerHighest,
               boxShadow: [
                 BoxShadow(
-                  color: theme.colorScheme.shadow.withOpacity(0.1),
+                  color: theme.colorScheme.shadow.withValues(alpha: 0.1),
                   spreadRadius: 0,
                   blurRadius: 4,
                   offset: const Offset(0, 2),
@@ -206,7 +206,7 @@ class _NovelDetailScreenState extends State<NovelDetailScreen> {
                             vertical: 4,
                           ),
                           decoration: BoxDecoration(
-                            color: theme.colorScheme.primary.withOpacity(0.12),
+                            color: theme.colorScheme.primary.withValues(alpha: 0.12),
                             borderRadius: BorderRadius.circular(15),
                           ),
                           child: Text(
@@ -262,7 +262,7 @@ class _NovelDetailScreenState extends State<NovelDetailScreen> {
         color: theme.colorScheme.surface,
         border: Border(
           bottom: BorderSide(
-            color: theme.colorScheme.outline.withOpacity(0.12),
+            color: theme.colorScheme.outline.withValues(alpha: 0.12),
           ),
         ),
       ),
@@ -292,7 +292,7 @@ class _NovelDetailScreenState extends State<NovelDetailScreen> {
                   style: theme.textTheme.bodyMedium?.copyWith(
                     color: _showDirectory
                         ? theme.colorScheme.primary
-                        : theme.colorScheme.onSurface.withOpacity(0.6),
+                        : theme.colorScheme.onSurface.withValues(alpha: 0.6),
                     fontWeight: _showDirectory
                         ? FontWeight.w600
                         : FontWeight.normal,
@@ -325,7 +325,7 @@ class _NovelDetailScreenState extends State<NovelDetailScreen> {
                   style: theme.textTheme.bodyMedium?.copyWith(
                     color: !_showDirectory
                         ? theme.colorScheme.primary
-                        : theme.colorScheme.onSurface.withOpacity(0.6),
+                        : theme.colorScheme.onSurface.withValues(alpha: 0.6),
                     fontWeight: !_showDirectory
                         ? FontWeight.w600
                         : FontWeight.normal,

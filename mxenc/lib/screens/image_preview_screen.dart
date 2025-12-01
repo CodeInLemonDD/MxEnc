@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'dart:io';
 import 'package:mxenc/screens/bookshelf_screen.dart';
-import 'dart:typed_data';
 import '../utils/storage_service.dart';
 import '../utils/dynamic_watermark.dart';
 
@@ -134,7 +133,7 @@ class _ImagePreviewScreenState extends State<ImagePreviewScreen> {
     setState(() {
       _scale = next;
       _previousScale = next;
-      _controller.value = Matrix4.identity()..scale(_scale);
+      _controller.value = Matrix4.diagonal3Values(_scale, _scale, 1.0);
     });
   }
 
@@ -249,9 +248,9 @@ class _ImagePreviewScreenState extends State<ImagePreviewScreen> {
             // 更新位置
             final offset =
                 _previousOffset + details.focalPoint - _initialFocalPoint;
-            _controller.value = Matrix4.identity()
-              ..translate(offset.dx, offset.dy)
-              ..scale(_scale);
+            final t = Matrix4.identity()..setTranslationRaw(offset.dx, offset.dy, 0);
+            final s = Matrix4.diagonal3Values(_scale, _scale, 1.0);
+            _controller.value = t.multiplied(s);
           },
           onInteractionEnd: (_) {
             _previousScale = _scale;
@@ -262,9 +261,9 @@ class _ImagePreviewScreenState extends State<ImagePreviewScreen> {
               setState(() {
                 _scale = 5.0;
                 _previousScale = 5.0;
-                _controller.value = Matrix4.identity()
-                  ..translate(_previousOffset.dx, _previousOffset.dy)
-                  ..scale(_scale);
+                final t = Matrix4.identity()..setTranslationRaw(_previousOffset.dx, _previousOffset.dy, 0);
+                final s = Matrix4.diagonal3Values(_scale, _scale, 1.0);
+                _controller.value = t.multiplied(s);
               });
             }
           },
@@ -350,7 +349,7 @@ class _ImagePreviewScreenState extends State<ImagePreviewScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
-          color: Colors.black.withOpacity(0.6),
+          color: Colors.black.withValues(alpha: 0.6),
           borderRadius: BorderRadius.circular(16),
         ),
         child: const Text(

@@ -96,7 +96,7 @@ class _OobeScreenState extends State<OobeScreen> {
               elevation: 0,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(16),
-                side: BorderSide(color: theme.colorScheme.outline.withOpacity(0.12)),
+                side: BorderSide(color: theme.colorScheme.outline.withValues(alpha: 0.12)),
               ),
               child: Padding(
                 padding: const EdgeInsets.all(16),

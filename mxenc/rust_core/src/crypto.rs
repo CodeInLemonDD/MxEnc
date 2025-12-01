@@ -233,6 +233,8 @@ impl MxEncFile {
             0 => FileType::Generic,
             1 => FileType::Image,
             2 => FileType::Novel,
+            3 => FileType::Comic,
+            4 => FileType::RichNovel,
             _ => FileType::Other,
         };
         

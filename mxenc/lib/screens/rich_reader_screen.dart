@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'dart:typed_data';
 import 'package:provider/provider.dart';
 import 'package:flutter/services.dart';
 import '../utils/storage_service.dart';
@@ -47,10 +46,11 @@ class _RichReaderScreenState extends State<RichReaderScreen> {
   void initState() {
     super.initState();
     _scrollController.addListener(() {
-      if (_overlayVisible)
+      if (_overlayVisible) {
         setState(() {
           _overlayVisible = false;
         });
+      }
     });
     () async {
       try {
@@ -145,7 +145,7 @@ class _RichReaderScreenState extends State<RichReaderScreen> {
           children: [
             ListView.builder(
               key: PageStorageKey(
-                'rich_reader_${widget.sourcePath}_${_chapterIndex}',
+                'rich_reader_${widget.sourcePath}_$_chapterIndex',
               ),
               controller: _scrollController,
               physics: const ClampingScrollPhysics(),
@@ -307,34 +307,37 @@ class _RichReaderScreenState extends State<RichReaderScreen> {
                                 ),
                             ],
                             onChanged: (v) {
-                              if (v != null)
+                              if (v != null) {
                                 setState(() {
                                   _chapterIndex = v;
                                 });
+                              }
                             },
                           ),
                         ),
                         IconButton(
                           onPressed: () {
-                            if (_chapters.isNotEmpty)
+                            if (_chapters.isNotEmpty) {
                               setState(() {
                                 _chapterIndex = (_chapterIndex + 1).clamp(
                                   0,
                                   _chapters.length - 1,
                                 );
                               });
+                            }
                           },
                           icon: const Icon(Icons.skip_next),
                         ),
                         IconButton(
                           onPressed: () {
-                            if (_chapters.isNotEmpty)
+                            if (_chapters.isNotEmpty) {
                               setState(() {
                                 _chapterIndex = (_chapterIndex - 1).clamp(
                                   0,
                                   _chapters.length - 1,
                                 );
                               });
+                            }
                           },
                           icon: const Icon(Icons.skip_previous),
                         ),

@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/services.dart';
+import 'package:flutter/foundation.dart';
 
 /// 平台特定的安全功能
 class PlatformSecure {
@@ -16,7 +17,7 @@ class PlatformSecure {
       // 其他平台暂不支持
     } catch (e) {
       // 忽略错误，确保应用不会崩溃
-      print('启用防截图模式失败: $e');
+      debugPrint('启用防截图模式失败: $e');
     }
   }
 
@@ -31,7 +32,7 @@ class PlatformSecure {
       // 其他平台暂不支持
     } catch (e) {
       // 忽略错误，确保应用不会崩溃
-      print('禁用防截图模式失败: $e');
+      debugPrint('禁用防截图模式失败: $e');
     }
   }
 }

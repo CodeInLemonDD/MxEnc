@@ -17,10 +17,10 @@ Future<String> generateDeviceFingerprint() =>
 Future<void> getFileTypeDescription({required FileType fileType}) =>
     RustLib.instance.api.crateCryptoGetFileTypeDescription(fileType: fileType);
 
-// Rust type: RustOpaqueMoi<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<[u8]>>
+// Rust type: RustOpaqueNom<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<[u8]>>
 abstract class U8 implements RustOpaqueInterface {}
 
-enum FileType { generic, image, novel, other }
+enum FileType { generic, image, novel, comic, richNovel, other }
 
 /// MxEnc 文件格式处理器
 class MxEncFile {

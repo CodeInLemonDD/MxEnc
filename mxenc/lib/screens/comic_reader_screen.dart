@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
-import 'dart:typed_data';
 import 'package:provider/provider.dart';
 import 'package:flutter/services.dart';
 import '../utils/storage_service.dart';
 import '../utils/theme_provider.dart';
 import '../utils/dynamic_watermark.dart';
 import '../utils/auth_service.dart';
+import '../widgets/favorite_button.dart';
 
 class ComicReaderScreen extends StatefulWidget {
   final Map<String, dynamic> manifest;
@@ -43,10 +43,11 @@ class _ComicReaderScreenState extends State<ComicReaderScreen> {
   void initState() {
     super.initState();
     _scrollController.addListener(() {
-      if (_overlayVisible)
+      if (_overlayVisible) {
         setState(() {
           _overlayVisible = false;
         });
+      }
     });
     () async {
       try {
@@ -137,7 +138,7 @@ class _ComicReaderScreenState extends State<ComicReaderScreen> {
         child: Stack(
           children: [
             ListView.builder(
-              key: PageStorageKey('comic_reader_${widget.sourcePath}'),
+              key: PageStorageKey('comic_reader_${widget.sourcePath}_chapter_$_chapterIndex'),
               controller: _scrollController,
               physics: const ClampingScrollPhysics(),
               itemCount: images.length,
@@ -153,7 +154,11 @@ class _ComicReaderScreenState extends State<ComicReaderScreen> {
                   final bytes = widget.payload.sublist(off, off + len);
                   return Padding(
                     padding: const EdgeInsets.all(8.0),
-                    child: Image.memory(bytes, fit: BoxFit.contain),
+                    child: InteractiveViewer(
+                      minScale: 0.5,
+                      maxScale: 5.0,
+                      child: Image.memory(bytes, fit: BoxFit.contain),
+                    ),
                   );
                 }
                 return const SizedBox.shrink();
@@ -196,10 +201,7 @@ class _ComicReaderScreenState extends State<ComicReaderScreen> {
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
-                        IconButton(
-                          onPressed: _addToShelf,
-                          icon: const Icon(Icons.bookmark_add),
-                        ),
+                        FavoriteButton(onPressed: _addToShelf),
                       ],
                     ),
                   ),
@@ -242,34 +244,52 @@ class _ComicReaderScreenState extends State<ComicReaderScreen> {
                                 ),
                             ],
                             onChanged: (v) {
-                              if (v != null)
+                              if (v != null) {
                                 setState(() {
                                   _chapterIndex = v;
                                 });
+                                WidgetsBinding.instance.addPostFrameCallback((_) {
+                                  if (_scrollController.hasClients) {
+                                    _scrollController.jumpTo(0);
+                                  }
+                                });
+                              }
                             },
                           ),
                         ),
                         IconButton(
                           onPressed: () {
-                            if (chapters.isNotEmpty)
+                            if (chapters.isNotEmpty) {
                               setState(() {
                                 _chapterIndex = (_chapterIndex + 1).clamp(
                                   0,
                                   chapters.length - 1,
                                 );
                               });
+                            }
+                            WidgetsBinding.instance.addPostFrameCallback((_) {
+                              if (_scrollController.hasClients) {
+                                _scrollController.jumpTo(0);
+                              }
+                            });
                           },
                           icon: const Icon(Icons.skip_next),
                         ),
                         IconButton(
                           onPressed: () {
-                            if (chapters.isNotEmpty)
+                            if (chapters.isNotEmpty) {
                               setState(() {
                                 _chapterIndex = (_chapterIndex - 1).clamp(
                                   0,
                                   chapters.length - 1,
                                 );
                               });
+                            }
+                            WidgetsBinding.instance.addPostFrameCallback((_) {
+                              if (_scrollController.hasClients) {
+                                _scrollController.jumpTo(0);
+                              }
+                            });
                           },
                           icon: const Icon(Icons.skip_previous),
                         ),
