@@ -51,6 +51,7 @@ class MyApp extends StatelessWidget {
     }
     return MaterialApp(
       title: '猫鸮加密',
+      debugShowCheckedModeBanner: false,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
           seedColor: themeProvider.seedColor ?? Colors.deepPurple,

@@ -6,7 +6,6 @@ import '../utils/settings_service.dart';
 import 'package:provider/provider.dart';
 import '../utils/theme_provider.dart';
 import '../utils/user_service.dart';
-import 'oobe_screen.dart';
 import 'package:file_picker/file_picker.dart';
 import 'dart:io';
 
@@ -24,8 +23,11 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
   bool _isNightMode = false;
   bool _isAppLocked = false;
   String _currentTheme = '默认';
+  String? _nickname;
+  String? _avatarPath;
   final AuthService _authService = AuthService();
   final SettingsService _settingsService = SettingsService();
+  final UserService _userService = UserService();
 
   @override
   void initState() {
@@ -41,6 +43,8 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
       _deviceId = await _authService.getDeviceId();
       // 检查是否为授权用户
       _isPremiumUser = await _authService.isPremiumUser();
+      _nickname = await _userService.getNickname();
+      _avatarPath = await _userService.getAvatarPath();
       // 加载设置
       _isNightMode = await _settingsService.getNightMode();
       _isAppLocked = await _settingsService.getAppLock();
@@ -147,7 +151,9 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
       final color = map[theme] ?? Colors.deepPurple;
       await tp.setSeedColor(color);
     } catch (_) {}
-    if (mounted) { _showToast('主题已切换为$theme'); }
+    if (mounted) {
+      _showToast('主题已切换为$theme');
+    }
   }
 
   // 打开回收站
@@ -178,12 +184,12 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text('官方QQ群：1211239054'),
+            const Text('官方QQ群：868140659'),
             const SizedBox(height: 16),
             ElevatedButton(
               onPressed: () async {
                 await Clipboard.setData(
-                  const ClipboardData(text: '1211239054'),
+                  const ClipboardData(text: '868140659'),
                 );
                 _showToast('群号已复制到剪贴板');
                 if (!context.mounted) return;
@@ -215,24 +221,17 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('我的'), elevation: 0, actions: [
-        IconButton(
-          icon: const Icon(Icons.lightbulb),
-          tooltip: '调试启动OOBE',
-          onPressed: () async {
-            try {
-              final us = UserService();
-              await us.setOobeDone(false);
-              if (!context.mounted) return;
-              Navigator.push(context, MaterialPageRoute(builder: (_) => const OobeScreen()));
-            } catch (_) {}
-          },
-        )
-      ]),
+      appBar: AppBar(title: const Text('我的'), elevation: 0, actions: const []),
       body: ListView(
         children: [
           // 用户信息卡片
-          GestureDetector(onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const EditProfileScreen())), child: _buildUserInfoCard()),
+          GestureDetector(
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const EditProfileScreen()),
+            ),
+            child: _buildUserInfoCard(),
+          ),
           const SizedBox(height: 16),
           // 功能列表
           _buildFeatureSection(),
@@ -258,7 +257,9 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: theme.colorScheme.outline.withValues(alpha: 0.12)),
+        side: BorderSide(
+          color: theme.colorScheme.outline.withValues(alpha: 0.12),
+        ),
       ),
       child: Padding(
         padding: const EdgeInsets.all(20),
@@ -268,18 +269,29 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
             // 用户头像和状态
             Row(
               children: [
-                Container(
-                  width: 72,
-                  height: 72,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(36),
-                    color: theme.colorScheme.primaryContainer,
-                  ),
-                  alignment: Alignment.center,
-                  child: Icon(
-                    Icons.person,
-                    size: 36,
-                    color: theme.colorScheme.onPrimaryContainer,
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(36),
+                  child: SizedBox(
+                    width: 72,
+                    height: 72,
+                    child: (() {
+                      final p = (_avatarPath ?? '').toString();
+                      if (p.isNotEmpty) {
+                        if (p.startsWith('assets/')) {
+                          return Image.asset(p, fit: BoxFit.cover);
+                        }
+                        try {
+                          final f = File(p);
+                          if (f.existsSync()) {
+                            return Image.file(f, fit: BoxFit.cover);
+                          }
+                        } catch (_) {}
+                      }
+                      return Image.asset(
+                        'assets/default_avatar.jpg',
+                        fit: BoxFit.cover,
+                      );
+                    })(),
                   ),
                 ),
                 const SizedBox(width: 16),
@@ -288,16 +300,20 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        _isPremiumUser ? '已授权用户' : '未授权用户',
+                        (_nickname == null || _nickname!.isEmpty)
+                            ? '未设置用户名'
+                            : _nickname!,
                         style: theme.textTheme.titleLarge?.copyWith(
                           fontWeight: FontWeight.w600,
                         ),
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        _isPremiumUser ? '拥有全部功能权限' : '需要作者授权',
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                        _isPremiumUser ? '已授权用户' : '未授权用户',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurface.withValues(
+                            alpha: 0.6,
+                          ),
                         ),
                       ),
                     ],
@@ -305,8 +321,15 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
                 ),
                 if (!_isPremiumUser)
                   FilledButton(
-                    onPressed: () {
-                      _showToast('请联系作者申请授权');
+                    onPressed: () async {
+                      final r = await Navigator.pushNamed(
+                        context,
+                        '/permission',
+                      );
+                      if (!context.mounted) return;
+                      if (r == true) {
+                        _loadUserInfo();
+                      }
                     },
                     style: FilledButton.styleFrom(
                       padding: const EdgeInsets.symmetric(
@@ -315,6 +338,26 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
                       ),
                     ),
                     child: const Text('申请授权'),
+                  ),
+                if (_isPremiumUser)
+                  FilledButton(
+                    onPressed: () async {
+                      final r = await Navigator.pushNamed(
+                        context,
+                        '/permission',
+                      );
+                      if (!context.mounted) return;
+                      if (r == true) {
+                        _loadUserInfo();
+                      }
+                    },
+                    style: FilledButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 8,
+                      ),
+                    ),
+                    child: const Text('增加时长'),
                   ),
               ],
             ),
@@ -336,7 +379,9 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
                         Text(
                           '设备ID',
                           style: theme.textTheme.bodySmall?.copyWith(
-                            color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                            color: theme.colorScheme.onSurface.withValues(
+                              alpha: 0.6,
+                            ),
                           ),
                         ),
                         const SizedBox(height: 4),
@@ -375,7 +420,9 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: theme.colorScheme.outline.withValues(alpha: 0.12)),
+        side: BorderSide(
+          color: theme.colorScheme.outline.withValues(alpha: 0.12),
+        ),
       ),
       child: Column(
         children: [
@@ -404,7 +451,13 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
             icon: Icons.verified,
             title: '卡密激活',
             subtitle: '输入卡密以激活高级功能',
-            onTap: () => Navigator.pushNamed(context, '/permission'),
+            onTap: () async {
+              final r = await Navigator.pushNamed(context, '/permission');
+              if (!context.mounted) return;
+              if (r == true) {
+                _loadUserInfo();
+              }
+            },
           ),
         ],
       ),
@@ -449,6 +502,7 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
     );
   }
+
   // 构建设置区域
   Widget _buildSettingsSection() {
     final theme = Theme.of(context);
@@ -457,7 +511,9 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: theme.colorScheme.outline.withValues(alpha: 0.12)),
+        side: BorderSide(
+          color: theme.colorScheme.outline.withValues(alpha: 0.12),
+        ),
       ),
       child: Column(
         children: [
@@ -481,10 +537,6 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
             value: _isAppLocked,
             onToggle: _toggleAppLock,
           ),
-          if (kDebugMode) ...[
-            const Divider(height: 1, indent: 72),
-            _buildDebugAuthItem(theme),
-          ],
         ],
       ),
     );
@@ -506,15 +558,27 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
           color: theme.colorScheme.secondaryContainer,
         ),
         alignment: Alignment.center,
-        child: Icon(icon, size: 20, color: theme.colorScheme.onSecondaryContainer),
+        child: Icon(
+          icon,
+          size: 20,
+          color: theme.colorScheme.onSecondaryContainer,
+        ),
       ),
       title: Text(title),
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(value, style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurface.withValues(alpha: 0.6))),
+          Text(
+            value,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+            ),
+          ),
           const SizedBox(width: 8),
-          Icon(Icons.chevron_right, color: theme.colorScheme.onSurface.withValues(alpha: 0.4)),
+          Icon(
+            Icons.chevron_right,
+            color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
+          ),
         ],
       ),
       onTap: onTap,
@@ -538,7 +602,11 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
           color: theme.colorScheme.tertiaryContainer,
         ),
         alignment: Alignment.center,
-        child: Icon(icon, size: 20, color: theme.colorScheme.onTertiaryContainer),
+        child: Icon(
+          icon,
+          size: 20,
+          color: theme.colorScheme.onTertiaryContainer,
+        ),
       ),
       title: Text(title),
       trailing: Switch(value: value, onChanged: (_) => onToggle()),
@@ -546,27 +614,6 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
     );
   }
-
-  Widget _buildDebugAuthItem(ThemeData theme) {
-    return ListTile(
-      leading: Container(
-        width: 40,
-        height: 40,
-        decoration: BoxDecoration(borderRadius: BorderRadius.circular(20), color: Colors.orange.withValues(alpha: 0.2)),
-        alignment: Alignment.center,
-        child: Icon(Icons.bug_report, size: 20, color: Colors.orange[700]),
-      ),
-      title: const Text('Debug 授权'),
-      subtitle: Text('测试时启用授权以使用加密功能', style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurface.withValues(alpha: 0.5), fontSize: 11)),
-      trailing: Switch(value: _isPremiumUser, onChanged: (_) => _toggleDebugAuth()),
-      onTap: _toggleDebugAuth,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-    );
-  }
-
-  
-
-  
 
   void _showThemeSelectionDialog() {
     showDialog(
@@ -583,7 +630,12 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
             _buildThemeOption('靛蓝', Colors.indigo),
           ],
         ),
-        actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('取消'))],
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('取消'),
+          ),
+        ],
       ),
     );
   }
@@ -596,7 +648,9 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(12),
           color: color,
-          border: _currentTheme == name ? Border.all(color: Colors.blue, width: 2) : Border.all(color: Colors.transparent),
+          border: _currentTheme == name
+              ? Border.all(color: Colors.blue, width: 2)
+              : Border.all(color: Colors.transparent),
         ),
       ),
       title: Text(name),
@@ -614,19 +668,36 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: theme.colorScheme.outline.withValues(alpha: 0.12)),
+        side: BorderSide(
+          color: theme.colorScheme.outline.withValues(alpha: 0.12),
+        ),
       ),
       child: ListTile(
         leading: Container(
           width: 40,
           height: 40,
-          decoration: BoxDecoration(borderRadius: BorderRadius.circular(20), color: theme.colorScheme.primaryContainer),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(20),
+            color: theme.colorScheme.primaryContainer,
+          ),
           alignment: Alignment.center,
-          child: Icon(Icons.group_outlined, size: 20, color: theme.colorScheme.onPrimaryContainer),
+          child: Icon(
+            Icons.group_outlined,
+            size: 20,
+            color: theme.colorScheme.onPrimaryContainer,
+          ),
         ),
         title: const Text('用户群'),
-        subtitle: Text('1211239054', style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurface.withValues(alpha: 0.6))),
-        trailing: Icon(Icons.chevron_right, color: theme.colorScheme.onSurface.withValues(alpha: 0.4)),
+        subtitle: Text(
+          '868140659',
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+          ),
+        ),
+        trailing: Icon(
+          Icons.chevron_right,
+          color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
+        ),
         onTap: _showQQGroupInfo,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
@@ -634,7 +705,13 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
   }
 
   Widget _buildVersionInfo() {
-    return Align(alignment: Alignment.center, child: Text('MxEnc v1.0.0', style: TextStyle(fontSize: 12, color: Colors.grey[500])));
+    return Align(
+      alignment: Alignment.center,
+      child: Text(
+        'MxEnc v0.1.0',
+        style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+      ),
+    );
   }
 }
 
@@ -672,7 +749,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   Future<void> _pickAvatar() async {
     final result = await FilePicker.platform.pickFiles(type: FileType.image);
     if (result != null) {
-      setState(() { _avatarPath = result.files.single.path; });
+      setState(() {
+        _avatarPath = result.files.single.path;
+      });
     }
   }
 
@@ -701,16 +780,29 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 child: _avatarPath != null && _avatarPath!.startsWith('assets/')
                     ? Image.asset(_avatarPath!, fit: BoxFit.cover)
                     : (_avatarPath != null && File(_avatarPath!).existsSync()
-                        ? Image.file(File(_avatarPath!), fit: BoxFit.cover)
-                        : Image.asset('assets/default_avatar.jpg', fit: BoxFit.cover)),
+                          ? Image.file(File(_avatarPath!), fit: BoxFit.cover)
+                          : Image.asset(
+                              'assets/default_avatar.jpg',
+                              fit: BoxFit.cover,
+                            )),
               ),
             ),
             const SizedBox(height: 12),
-            OutlinedButton.icon(onPressed: _pickAvatar, icon: const Icon(Icons.photo), label: const Text('更换头像')),
+            OutlinedButton.icon(
+              onPressed: _pickAvatar,
+              icon: const Icon(Icons.photo),
+              label: const Text('更换头像'),
+            ),
             const SizedBox(height: 16),
-            TextField(controller: _nicknameController, decoration: const InputDecoration(labelText: '昵称')),
+            TextField(
+              controller: _nicknameController,
+              decoration: const InputDecoration(labelText: '昵称'),
+            ),
             const SizedBox(height: 12),
-            TextField(controller: _signatureController, decoration: const InputDecoration(labelText: '个签')),
+            TextField(
+              controller: _signatureController,
+              decoration: const InputDecoration(labelText: '个签'),
+            ),
             const Spacer(),
             FilledButton(onPressed: _save, child: const Text('保存')),
           ],
