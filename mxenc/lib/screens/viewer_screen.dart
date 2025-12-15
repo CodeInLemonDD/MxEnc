@@ -6,7 +6,7 @@ import 'package:file_picker/file_picker.dart';
 import 'dart:io';
 import 'package:path/path.dart' as path;
 import '../rust_bridge.dart';
-import '../utils/progress.dart';
+// import '../utils/progress.dart';
 import '../utils/dynamic_watermark.dart';
 import '../models/novel.dart';
 import 'novel_detail_screen.dart';
@@ -112,14 +112,19 @@ class _ViewerScreenState extends State<ViewerScreen> {
     if (_selectedFile == null) return;
 
     try {
-      final fileBytes = await _selectedFile!.readAsBytes();
-      final (filename, fileType) = await widget.rustBridge
-          .parseMxencHeaderExtended(mxencData: fileBytes);
+      // 使用路径解析头部，避免读取大文件
+      final (filename, fileTypeInt) = await widget.rustBridge
+          .parseMxencHeaderByPath(inputPath: _selectedFile!.path);
 
       final decoded = _decodeFilenameUnicode(filename);
+      
+      // 转换 int 到 Enum
+      MxEncFileType type = MxEncFileType.values.firstWhere(
+          (e) => e.value == fileTypeInt, orElse: () => MxEncFileType.generic);
+
       setState(() {
         _originalFilename = _normalizePreviewFilename(decoded);
-        _fileType = fileType;
+        _fileType = type;
       });
 
       try {
@@ -131,10 +136,10 @@ class _ViewerScreenState extends State<ViewerScreen> {
       } catch (_) {}
 
       // 解析完整头部以尝试获取元数据（用于小说封面预览）
-      if (fileType == MxEncFileType.novel) {
+      if (type == MxEncFileType.novel) {
         try {
-          final result = await widget.rustBridge.parseMxencFullHeader(
-            mxencData: fileBytes,
+          final result = await widget.rustBridge.parseMxencFullHeaderByPath(
+            inputPath: _selectedFile!.path,
           );
           final metadata = result.$3;
           if (metadata.isNotEmpty) {
@@ -183,10 +188,10 @@ class _ViewerScreenState extends State<ViewerScreen> {
     loading.set(_progress);
 
     try {
-      final fileBytes = await _selectedFile!.readAsBytes();
+      // final fileBytes = await _selectedFile!.readAsBytes(); // 移除大文件读取
 
-      final stream = widget.rustBridge.decryptFileProgress(
-        mxencData: fileBytes,
+      final stream = widget.rustBridge.decryptFileByPathWithProgress(
+        inputPath: _selectedFile!.path,
         password: _passwordController.text,
       );
       await for (final ev in stream) {

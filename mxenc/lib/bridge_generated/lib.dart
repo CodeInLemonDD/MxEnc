@@ -24,10 +24,10 @@ int getFileTypeRichNovel() => RustLib.instance.api.crateGetFileTypeRichNovel();
 String getFileTypeDescription({required int fileType}) =>
     RustLib.instance.api.crateGetFileTypeDescription(fileType: fileType);
 
-/// 加密文件
+/// 加密文件 (异步)
 ///
 /// 将明文数据加密为 .mxenc 格式
-Uint8List encryptFile({
+Future<Uint8List> encryptFile({
   required List<int> plaintext,
   required String password,
   required String originalFilename,
@@ -37,7 +37,7 @@ Uint8List encryptFile({
   originalFilename: originalFilename,
 );
 
-Uint8List encryptFileWithMetadata({
+Future<Uint8List> encryptFileWithMetadata({
   required List<int> plaintext,
   required String password,
   required String originalFilename,
@@ -51,14 +51,40 @@ Uint8List encryptFileWithMetadata({
   metadata: metadata,
 );
 
-/// 解密文件
+/// 通过路径加密文件 (异步，避免Dart端内存压力)
+Future<void> encryptFileByPath({
+  required String inputPath,
+  required String outputPath,
+  required String password,
+  String? originalFilename,
+  required int fileType,
+  Uint8List? metadata,
+}) => RustLib.instance.api.crateEncryptFileByPath(
+  inputPath: inputPath,
+  outputPath: outputPath,
+  password: password,
+  originalFilename: originalFilename,
+  fileType: fileType,
+  metadata: metadata,
+);
+
+/// 解密文件 (异步)
 ///
 /// 解密 .mxenc 格式的数据，返回原始文件名和明文数据
-(String, Uint8List) decryptFile({
+Future<(String, Uint8List)> decryptFile({
   required List<int> mxencData,
   required String password,
 }) => RustLib.instance.api.crateDecryptFile(
   mxencData: mxencData,
+  password: password,
+);
+
+/// 通过路径读取并解密文件，返回内容 (异步，避免Dart端读取文件)
+Future<(String, Uint8List)> decryptFileInMemoryByPath({
+  required String inputPath,
+  required String password,
+}) => RustLib.instance.api.crateDecryptFileInMemoryByPath(
+  inputPath: inputPath,
   password: password,
 );
 
@@ -68,11 +94,21 @@ Uint8List encryptFileWithMetadata({
 String parseMxencHeader({required List<int> mxencData}) =>
     RustLib.instance.api.crateParseMxencHeader(mxencData: mxencData);
 
+/// 通过路径解析文件头 (异步，避免Dart端读取)
+Future<(String, int)> parseMxencHeaderByPath({required String inputPath}) =>
+    RustLib.instance.api.crateParseMxencHeaderByPath(inputPath: inputPath);
+
 (String, int) parseMxencHeaderExtended({required List<int> mxencData}) =>
     RustLib.instance.api.crateParseMxencHeaderExtended(mxencData: mxencData);
 
 (String, int, Uint8List) parseMxencFullHeader({required List<int> mxencData}) =>
     RustLib.instance.api.crateParseMxencFullHeader(mxencData: mxencData);
+
+/// 通过路径解析完整头部 (异步)
+Future<(String, int, Uint8List)> parseMxencFullHeaderByPath({
+  required String inputPath,
+}) =>
+    RustLib.instance.api.crateParseMxencFullHeaderByPath(inputPath: inputPath);
 
 /// 生成设备指纹
 ///
@@ -88,22 +124,37 @@ Stream<ProgressEvent> decryptFileWithProgress({
   password: password,
 );
 
-Future<int> frbGetRustContentHash() =>
-    RustLib.instance.api.crateFrbGetRustContentHash();
+/// 通过路径解密并返回进度 (异步)
+Stream<ProgressEvent> decryptFileByPathWithProgress({
+  required String inputPath,
+  required String password,
+}) => RustLib.instance.api.crateDecryptFileByPathWithProgress(
+  inputPath: inputPath,
+  password: password,
+);
 
 class ProgressEvent {
   final ProgressPhase phase;
   final double percent;
   final String label;
+  final String? filename;
+  final Uint8List? data;
 
   const ProgressEvent({
     required this.phase,
     required this.percent,
     required this.label,
+    this.filename,
+    this.data,
   });
 
   @override
-  int get hashCode => phase.hashCode ^ percent.hashCode ^ label.hashCode;
+  int get hashCode =>
+      phase.hashCode ^
+      percent.hashCode ^
+      label.hashCode ^
+      filename.hashCode ^
+      data.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -112,7 +163,9 @@ class ProgressEvent {
           runtimeType == other.runtimeType &&
           phase == other.phase &&
           percent == other.percent &&
-          label == other.label;
+          label == other.label &&
+          filename == other.filename &&
+          data == other.data;
 }
 
 enum ProgressPhase { readHeader, deriveKey, decrypt, decode, done }

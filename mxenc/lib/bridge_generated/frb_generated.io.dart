@@ -19,23 +19,8 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
     required super.portManager,
   });
 
-  CrossPlatformFinalizerArg get rust_arc_decrement_strong_count_U8Ptr => wire
-      ._rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInneru8Ptr;
-
   @protected
   AnyhowException dco_decode_AnyhowException(dynamic raw);
-
-  @protected
-  U8
-  dco_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInneru8(
-    dynamic raw,
-  );
-
-  @protected
-  U8
-  dco_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInneru8(
-    dynamic raw,
-  );
 
   @protected
   RustStreamSink<ProgressEvent> dco_decode_StreamSink_progress_event_Dco(
@@ -44,12 +29,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   String dco_decode_String(dynamic raw);
-
-  @protected
-  U8
-  dco_decode_box_autoadd_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInneru8(
-    dynamic raw,
-  );
 
   @protected
   double dco_decode_f_32(dynamic raw);
@@ -67,13 +46,7 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   Uint8List dco_decode_list_prim_u_8_strict(dynamic raw);
 
   @protected
-  MxEncFile dco_decode_mx_enc_file(dynamic raw);
-
-  @protected
-  U8?
-  dco_decode_opt_box_autoadd_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInneru8(
-    dynamic raw,
-  );
+  String? dco_decode_opt_String(dynamic raw);
 
   @protected
   Uint8List? dco_decode_opt_list_prim_u_8_strict(dynamic raw);
@@ -83,13 +56,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   ProgressPhase dco_decode_progress_phase(dynamic raw);
-
-  @protected
-  (String, FileType) dco_decode_record_string_file_type(dynamic raw);
-
-  @protected
-  (String, FileType, Uint8List)
-  dco_decode_record_string_file_type_list_prim_u_8_strict(dynamic raw);
 
   @protected
   (String, Uint8List) dco_decode_record_string_list_prim_u_8_strict(
@@ -111,22 +77,7 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void dco_decode_unit(dynamic raw);
 
   @protected
-  BigInt dco_decode_usize(dynamic raw);
-
-  @protected
   AnyhowException sse_decode_AnyhowException(SseDeserializer deserializer);
-
-  @protected
-  U8
-  sse_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInneru8(
-    SseDeserializer deserializer,
-  );
-
-  @protected
-  U8
-  sse_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInneru8(
-    SseDeserializer deserializer,
-  );
 
   @protected
   RustStreamSink<ProgressEvent> sse_decode_StreamSink_progress_event_Dco(
@@ -135,12 +86,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   String sse_decode_String(SseDeserializer deserializer);
-
-  @protected
-  U8
-  sse_decode_box_autoadd_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInneru8(
-    SseDeserializer deserializer,
-  );
 
   @protected
   double sse_decode_f_32(SseDeserializer deserializer);
@@ -158,13 +103,7 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   Uint8List sse_decode_list_prim_u_8_strict(SseDeserializer deserializer);
 
   @protected
-  MxEncFile sse_decode_mx_enc_file(SseDeserializer deserializer);
-
-  @protected
-  U8?
-  sse_decode_opt_box_autoadd_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInneru8(
-    SseDeserializer deserializer,
-  );
+  String? sse_decode_opt_String(SseDeserializer deserializer);
 
   @protected
   Uint8List? sse_decode_opt_list_prim_u_8_strict(SseDeserializer deserializer);
@@ -174,17 +113,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   ProgressPhase sse_decode_progress_phase(SseDeserializer deserializer);
-
-  @protected
-  (String, FileType) sse_decode_record_string_file_type(
-    SseDeserializer deserializer,
-  );
-
-  @protected
-  (String, FileType, Uint8List)
-  sse_decode_record_string_file_type_list_prim_u_8_strict(
-    SseDeserializer deserializer,
-  );
 
   @protected
   (String, Uint8List) sse_decode_record_string_list_prim_u_8_strict(
@@ -204,9 +132,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_decode_unit(SseDeserializer deserializer);
-
-  @protected
-  BigInt sse_decode_usize(SseDeserializer deserializer);
 
   @protected
   bool sse_decode_bool(SseDeserializer deserializer);
@@ -240,20 +165,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   }
 
   @protected
-  ffi.Pointer<ffi.UintPtr>
-  cst_encode_box_autoadd_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInneru8(
-    U8 raw,
-  ) {
-    // Codec=Cst (C-struct based), see doc to use other codecs
-    return wire
-        .cst_new_box_autoadd_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInneru8(
-          cst_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInneru8(
-            raw,
-          ),
-        );
-  }
-
-  @protected
   ffi.Pointer<wire_cst_list_prim_u_8_loose> cst_encode_list_prim_u_8_loose(
     List<int> raw,
   ) {
@@ -274,16 +185,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   }
 
   @protected
-  ffi.Pointer<ffi.UintPtr>
-  cst_encode_opt_box_autoadd_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInneru8(
-    U8? raw,
+  ffi.Pointer<wire_cst_list_prim_u_8_strict> cst_encode_opt_String(
+    String? raw,
   ) {
     // Codec=Cst (C-struct based), see doc to use other codecs
-    return raw == null
-        ? ffi.nullptr
-        : cst_encode_box_autoadd_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInneru8(
-            raw,
-          );
+    return raw == null ? ffi.nullptr : cst_encode_String(raw);
   }
 
   @protected
@@ -294,25 +200,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   }
 
   @protected
-  int cst_encode_usize(BigInt raw) {
-    // Codec=Cst (C-struct based), see doc to use other codecs
-    return raw.toSigned(64).toInt();
-  }
-
-  @protected
-  void cst_api_fill_to_wire_mx_enc_file(
-    MxEncFile apiObj,
-    wire_cst_mx_enc_file wireObj,
-  ) {
-    wireObj.original_filename = cst_encode_String(apiObj.originalFilename);
-    wireObj.file_type = cst_encode_file_type(apiObj.fileType);
-    wireObj.metadata = cst_encode_list_prim_u_8_strict(apiObj.metadata);
-    wireObj.salt = cst_encode_list_prim_u_8_strict(apiObj.salt);
-    wireObj.nonce = cst_encode_list_prim_u_8_strict(apiObj.nonce);
-    wireObj.ciphertext = cst_encode_list_prim_u_8_strict(apiObj.ciphertext);
-  }
-
-  @protected
   void cst_api_fill_to_wire_progress_event(
     ProgressEvent apiObj,
     wire_cst_progress_event wireObj,
@@ -320,25 +207,8 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
     wireObj.phase = cst_encode_progress_phase(apiObj.phase);
     wireObj.percent = cst_encode_f_32(apiObj.percent);
     wireObj.label = cst_encode_String(apiObj.label);
-  }
-
-  @protected
-  void cst_api_fill_to_wire_record_string_file_type(
-    (String, FileType) apiObj,
-    wire_cst_record_string_file_type wireObj,
-  ) {
-    wireObj.field0 = cst_encode_String(apiObj.$1);
-    wireObj.field1 = cst_encode_file_type(apiObj.$2);
-  }
-
-  @protected
-  void cst_api_fill_to_wire_record_string_file_type_list_prim_u_8_strict(
-    (String, FileType, Uint8List) apiObj,
-    wire_cst_record_string_file_type_list_prim_u_8_strict wireObj,
-  ) {
-    wireObj.field0 = cst_encode_String(apiObj.$1);
-    wireObj.field1 = cst_encode_file_type(apiObj.$2);
-    wireObj.field2 = cst_encode_list_prim_u_8_strict(apiObj.$3);
+    wireObj.filename = cst_encode_opt_String(apiObj.filename);
+    wireObj.data = cst_encode_opt_list_prim_u_8_strict(apiObj.data);
   }
 
   @protected
@@ -370,18 +240,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   }
 
   @protected
-  int
-  cst_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInneru8(
-    U8 raw,
-  );
-
-  @protected
-  int
-  cst_encode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInneru8(
-    U8 raw,
-  );
-
-  @protected
   double cst_encode_f_32(double raw);
 
   @protected
@@ -406,20 +264,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
-  void
-  sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInneru8(
-    U8 self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void
-  sse_encode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInneru8(
-    U8 self,
-    SseSerializer serializer,
-  );
-
-  @protected
   void sse_encode_StreamSink_progress_event_Dco(
     RustStreamSink<ProgressEvent> self,
     SseSerializer serializer,
@@ -427,13 +271,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_String(String self, SseSerializer serializer);
-
-  @protected
-  void
-  sse_encode_box_autoadd_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInneru8(
-    U8 self,
-    SseSerializer serializer,
-  );
 
   @protected
   void sse_encode_f_32(double self, SseSerializer serializer);
@@ -454,14 +291,7 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
-  void sse_encode_mx_enc_file(MxEncFile self, SseSerializer serializer);
-
-  @protected
-  void
-  sse_encode_opt_box_autoadd_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInneru8(
-    U8? self,
-    SseSerializer serializer,
-  );
+  void sse_encode_opt_String(String? self, SseSerializer serializer);
 
   @protected
   void sse_encode_opt_list_prim_u_8_strict(
@@ -474,18 +304,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_progress_phase(ProgressPhase self, SseSerializer serializer);
-
-  @protected
-  void sse_encode_record_string_file_type(
-    (String, FileType) self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_record_string_file_type_list_prim_u_8_strict(
-    (String, FileType, Uint8List) self,
-    SseSerializer serializer,
-  );
 
   @protected
   void sse_encode_record_string_list_prim_u_8_strict(
@@ -510,9 +328,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_unit(void self, SseSerializer serializer);
-
-  @protected
-  void sse_encode_usize(BigInt self, SseSerializer serializer);
 
   @protected
   void sse_encode_bool(bool self, SseSerializer serializer);
@@ -555,28 +370,19 @@ class RustLibWire implements BaseWire {
   late final _store_dart_post_cobject = _store_dart_post_cobjectPtr
       .asFunction<void Function(DartPostCObjectFnType)>();
 
-  int frb_get_rust_content_hash() {
-    return _frb_get_rust_content_hash();
-  }
-
-  late final _frb_get_rust_content_hashPtr =
-      _lookup<ffi.NativeFunction<ffi.Int32 Function()>>(
-        'frb_get_rust_content_hash',
-      );
-  late final _frb_get_rust_content_hash = _frb_get_rust_content_hashPtr
-      .asFunction<int Function()>();
-
-  WireSyncRust2DartDco wire__crate__decrypt_file(
+  void wire__crate__decrypt_file(
+    int port_,
     ffi.Pointer<wire_cst_list_prim_u_8_loose> mxenc_data,
     ffi.Pointer<wire_cst_list_prim_u_8_strict> password,
   ) {
-    return _wire__crate__decrypt_file(mxenc_data, password);
+    return _wire__crate__decrypt_file(port_, mxenc_data, password);
   }
 
   late final _wire__crate__decrypt_filePtr =
       _lookup<
         ffi.NativeFunction<
-          WireSyncRust2DartDco Function(
+          ffi.Void Function(
+            ffi.Int64,
             ffi.Pointer<wire_cst_list_prim_u_8_loose>,
             ffi.Pointer<wire_cst_list_prim_u_8_strict>,
           )
@@ -584,11 +390,80 @@ class RustLibWire implements BaseWire {
       >('frbgen_mxenc_wire__crate__decrypt_file');
   late final _wire__crate__decrypt_file = _wire__crate__decrypt_filePtr
       .asFunction<
-        WireSyncRust2DartDco Function(
+        void Function(
+          int,
           ffi.Pointer<wire_cst_list_prim_u_8_loose>,
           ffi.Pointer<wire_cst_list_prim_u_8_strict>,
         )
       >();
+
+  void wire__crate__decrypt_file_by_path_with_progress(
+    int port_,
+    ffi.Pointer<wire_cst_list_prim_u_8_strict> input_path,
+    ffi.Pointer<wire_cst_list_prim_u_8_strict> password,
+    ffi.Pointer<wire_cst_list_prim_u_8_strict> sink,
+  ) {
+    return _wire__crate__decrypt_file_by_path_with_progress(
+      port_,
+      input_path,
+      password,
+      sink,
+    );
+  }
+
+  late final _wire__crate__decrypt_file_by_path_with_progressPtr =
+      _lookup<
+        ffi.NativeFunction<
+          ffi.Void Function(
+            ffi.Int64,
+            ffi.Pointer<wire_cst_list_prim_u_8_strict>,
+            ffi.Pointer<wire_cst_list_prim_u_8_strict>,
+            ffi.Pointer<wire_cst_list_prim_u_8_strict>,
+          )
+        >
+      >('frbgen_mxenc_wire__crate__decrypt_file_by_path_with_progress');
+  late final _wire__crate__decrypt_file_by_path_with_progress =
+      _wire__crate__decrypt_file_by_path_with_progressPtr
+          .asFunction<
+            void Function(
+              int,
+              ffi.Pointer<wire_cst_list_prim_u_8_strict>,
+              ffi.Pointer<wire_cst_list_prim_u_8_strict>,
+              ffi.Pointer<wire_cst_list_prim_u_8_strict>,
+            )
+          >();
+
+  void wire__crate__decrypt_file_in_memory_by_path(
+    int port_,
+    ffi.Pointer<wire_cst_list_prim_u_8_strict> input_path,
+    ffi.Pointer<wire_cst_list_prim_u_8_strict> password,
+  ) {
+    return _wire__crate__decrypt_file_in_memory_by_path(
+      port_,
+      input_path,
+      password,
+    );
+  }
+
+  late final _wire__crate__decrypt_file_in_memory_by_pathPtr =
+      _lookup<
+        ffi.NativeFunction<
+          ffi.Void Function(
+            ffi.Int64,
+            ffi.Pointer<wire_cst_list_prim_u_8_strict>,
+            ffi.Pointer<wire_cst_list_prim_u_8_strict>,
+          )
+        >
+      >('frbgen_mxenc_wire__crate__decrypt_file_in_memory_by_path');
+  late final _wire__crate__decrypt_file_in_memory_by_path =
+      _wire__crate__decrypt_file_in_memory_by_pathPtr
+          .asFunction<
+            void Function(
+              int,
+              ffi.Pointer<wire_cst_list_prim_u_8_strict>,
+              ffi.Pointer<wire_cst_list_prim_u_8_strict>,
+            )
+          >();
 
   void wire__crate__decrypt_file_with_progress(
     int port_,
@@ -626,18 +501,25 @@ class RustLibWire implements BaseWire {
             )
           >();
 
-  WireSyncRust2DartDco wire__crate__encrypt_file(
+  void wire__crate__encrypt_file(
+    int port_,
     ffi.Pointer<wire_cst_list_prim_u_8_loose> plaintext,
     ffi.Pointer<wire_cst_list_prim_u_8_strict> password,
     ffi.Pointer<wire_cst_list_prim_u_8_strict> original_filename,
   ) {
-    return _wire__crate__encrypt_file(plaintext, password, original_filename);
+    return _wire__crate__encrypt_file(
+      port_,
+      plaintext,
+      password,
+      original_filename,
+    );
   }
 
   late final _wire__crate__encrypt_filePtr =
       _lookup<
         ffi.NativeFunction<
-          WireSyncRust2DartDco Function(
+          ffi.Void Function(
+            ffi.Int64,
             ffi.Pointer<wire_cst_list_prim_u_8_loose>,
             ffi.Pointer<wire_cst_list_prim_u_8_strict>,
             ffi.Pointer<wire_cst_list_prim_u_8_strict>,
@@ -646,14 +528,64 @@ class RustLibWire implements BaseWire {
       >('frbgen_mxenc_wire__crate__encrypt_file');
   late final _wire__crate__encrypt_file = _wire__crate__encrypt_filePtr
       .asFunction<
-        WireSyncRust2DartDco Function(
+        void Function(
+          int,
           ffi.Pointer<wire_cst_list_prim_u_8_loose>,
           ffi.Pointer<wire_cst_list_prim_u_8_strict>,
           ffi.Pointer<wire_cst_list_prim_u_8_strict>,
         )
       >();
 
-  WireSyncRust2DartDco wire__crate__encrypt_file_with_metadata(
+  void wire__crate__encrypt_file_by_path(
+    int port_,
+    ffi.Pointer<wire_cst_list_prim_u_8_strict> input_path,
+    ffi.Pointer<wire_cst_list_prim_u_8_strict> output_path,
+    ffi.Pointer<wire_cst_list_prim_u_8_strict> password,
+    ffi.Pointer<wire_cst_list_prim_u_8_strict> original_filename,
+    int file_type,
+    ffi.Pointer<wire_cst_list_prim_u_8_strict> metadata,
+  ) {
+    return _wire__crate__encrypt_file_by_path(
+      port_,
+      input_path,
+      output_path,
+      password,
+      original_filename,
+      file_type,
+      metadata,
+    );
+  }
+
+  late final _wire__crate__encrypt_file_by_pathPtr =
+      _lookup<
+        ffi.NativeFunction<
+          ffi.Void Function(
+            ffi.Int64,
+            ffi.Pointer<wire_cst_list_prim_u_8_strict>,
+            ffi.Pointer<wire_cst_list_prim_u_8_strict>,
+            ffi.Pointer<wire_cst_list_prim_u_8_strict>,
+            ffi.Pointer<wire_cst_list_prim_u_8_strict>,
+            ffi.Uint8,
+            ffi.Pointer<wire_cst_list_prim_u_8_strict>,
+          )
+        >
+      >('frbgen_mxenc_wire__crate__encrypt_file_by_path');
+  late final _wire__crate__encrypt_file_by_path =
+      _wire__crate__encrypt_file_by_pathPtr
+          .asFunction<
+            void Function(
+              int,
+              ffi.Pointer<wire_cst_list_prim_u_8_strict>,
+              ffi.Pointer<wire_cst_list_prim_u_8_strict>,
+              ffi.Pointer<wire_cst_list_prim_u_8_strict>,
+              ffi.Pointer<wire_cst_list_prim_u_8_strict>,
+              int,
+              ffi.Pointer<wire_cst_list_prim_u_8_strict>,
+            )
+          >();
+
+  void wire__crate__encrypt_file_with_metadata(
+    int port_,
     ffi.Pointer<wire_cst_list_prim_u_8_loose> plaintext,
     ffi.Pointer<wire_cst_list_prim_u_8_strict> password,
     ffi.Pointer<wire_cst_list_prim_u_8_strict> original_filename,
@@ -661,6 +593,7 @@ class RustLibWire implements BaseWire {
     ffi.Pointer<wire_cst_list_prim_u_8_strict> metadata,
   ) {
     return _wire__crate__encrypt_file_with_metadata(
+      port_,
       plaintext,
       password,
       original_filename,
@@ -672,7 +605,8 @@ class RustLibWire implements BaseWire {
   late final _wire__crate__encrypt_file_with_metadataPtr =
       _lookup<
         ffi.NativeFunction<
-          WireSyncRust2DartDco Function(
+          ffi.Void Function(
+            ffi.Int64,
             ffi.Pointer<wire_cst_list_prim_u_8_loose>,
             ffi.Pointer<wire_cst_list_prim_u_8_strict>,
             ffi.Pointer<wire_cst_list_prim_u_8_strict>,
@@ -684,7 +618,8 @@ class RustLibWire implements BaseWire {
   late final _wire__crate__encrypt_file_with_metadata =
       _wire__crate__encrypt_file_with_metadataPtr
           .asFunction<
-            WireSyncRust2DartDco Function(
+            void Function(
+              int,
               ffi.Pointer<wire_cst_list_prim_u_8_loose>,
               ffi.Pointer<wire_cst_list_prim_u_8_strict>,
               ffi.Pointer<wire_cst_list_prim_u_8_strict>,
@@ -692,18 +627,6 @@ class RustLibWire implements BaseWire {
               ffi.Pointer<wire_cst_list_prim_u_8_strict>,
             )
           >();
-
-  void wire__crate__frb_get_rust_content_hash(int port_) {
-    return _wire__crate__frb_get_rust_content_hash(port_);
-  }
-
-  late final _wire__crate__frb_get_rust_content_hashPtr =
-      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Int64)>>(
-        'frbgen_mxenc_wire__crate__frb_get_rust_content_hash',
-      );
-  late final _wire__crate__frb_get_rust_content_hash =
-      _wire__crate__frb_get_rust_content_hashPtr
-          .asFunction<void Function(int)>();
 
   WireSyncRust2DartDco wire__crate__generate_device_fingerprint() {
     return _wire__crate__generate_device_fingerprint();
@@ -828,193 +751,6 @@ class RustLibWire implements BaseWire {
       _wire__crate__get_file_type_rich_novelPtr
           .asFunction<WireSyncRust2DartDco Function()>();
 
-  void wire__crate__crypto__mx_enc_file_decrypt(
-    int port_,
-    ffi.Pointer<wire_cst_list_prim_u_8_loose> encrypted_data,
-    ffi.Pointer<wire_cst_list_prim_u_8_strict> password,
-  ) {
-    return _wire__crate__crypto__mx_enc_file_decrypt(
-      port_,
-      encrypted_data,
-      password,
-    );
-  }
-
-  late final _wire__crate__crypto__mx_enc_file_decryptPtr =
-      _lookup<
-        ffi.NativeFunction<
-          ffi.Void Function(
-            ffi.Int64,
-            ffi.Pointer<wire_cst_list_prim_u_8_loose>,
-            ffi.Pointer<wire_cst_list_prim_u_8_strict>,
-          )
-        >
-      >('frbgen_mxenc_wire__crate__crypto__mx_enc_file_decrypt');
-  late final _wire__crate__crypto__mx_enc_file_decrypt =
-      _wire__crate__crypto__mx_enc_file_decryptPtr
-          .asFunction<
-            void Function(
-              int,
-              ffi.Pointer<wire_cst_list_prim_u_8_loose>,
-              ffi.Pointer<wire_cst_list_prim_u_8_strict>,
-            )
-          >();
-
-  void wire__crate__crypto__mx_enc_file_encrypt(
-    int port_,
-    ffi.Pointer<wire_cst_list_prim_u_8_loose> plaintext,
-    ffi.Pointer<wire_cst_list_prim_u_8_strict> password,
-    ffi.Pointer<wire_cst_list_prim_u_8_strict> original_filename,
-  ) {
-    return _wire__crate__crypto__mx_enc_file_encrypt(
-      port_,
-      plaintext,
-      password,
-      original_filename,
-    );
-  }
-
-  late final _wire__crate__crypto__mx_enc_file_encryptPtr =
-      _lookup<
-        ffi.NativeFunction<
-          ffi.Void Function(
-            ffi.Int64,
-            ffi.Pointer<wire_cst_list_prim_u_8_loose>,
-            ffi.Pointer<wire_cst_list_prim_u_8_strict>,
-            ffi.Pointer<wire_cst_list_prim_u_8_strict>,
-          )
-        >
-      >('frbgen_mxenc_wire__crate__crypto__mx_enc_file_encrypt');
-  late final _wire__crate__crypto__mx_enc_file_encrypt =
-      _wire__crate__crypto__mx_enc_file_encryptPtr
-          .asFunction<
-            void Function(
-              int,
-              ffi.Pointer<wire_cst_list_prim_u_8_loose>,
-              ffi.Pointer<wire_cst_list_prim_u_8_strict>,
-              ffi.Pointer<wire_cst_list_prim_u_8_strict>,
-            )
-          >();
-
-  void wire__crate__crypto__mx_enc_file_encrypt_with_metadata(
-    int port_,
-    ffi.Pointer<wire_cst_list_prim_u_8_loose> plaintext,
-    ffi.Pointer<wire_cst_list_prim_u_8_strict> password,
-    ffi.Pointer<wire_cst_list_prim_u_8_strict> original_filename,
-    int file_type,
-    ffi.Pointer<ffi.UintPtr> metadata,
-  ) {
-    return _wire__crate__crypto__mx_enc_file_encrypt_with_metadata(
-      port_,
-      plaintext,
-      password,
-      original_filename,
-      file_type,
-      metadata,
-    );
-  }
-
-  late final _wire__crate__crypto__mx_enc_file_encrypt_with_metadataPtr =
-      _lookup<
-        ffi.NativeFunction<
-          ffi.Void Function(
-            ffi.Int64,
-            ffi.Pointer<wire_cst_list_prim_u_8_loose>,
-            ffi.Pointer<wire_cst_list_prim_u_8_strict>,
-            ffi.Pointer<wire_cst_list_prim_u_8_strict>,
-            ffi.Int32,
-            ffi.Pointer<ffi.UintPtr>,
-          )
-        >
-      >('frbgen_mxenc_wire__crate__crypto__mx_enc_file_encrypt_with_metadata');
-  late final _wire__crate__crypto__mx_enc_file_encrypt_with_metadata =
-      _wire__crate__crypto__mx_enc_file_encrypt_with_metadataPtr
-          .asFunction<
-            void Function(
-              int,
-              ffi.Pointer<wire_cst_list_prim_u_8_loose>,
-              ffi.Pointer<wire_cst_list_prim_u_8_strict>,
-              ffi.Pointer<wire_cst_list_prim_u_8_strict>,
-              int,
-              ffi.Pointer<ffi.UintPtr>,
-            )
-          >();
-
-  void wire__crate__crypto__mx_enc_file_parse_full_header(
-    int port_,
-    ffi.Pointer<wire_cst_list_prim_u_8_loose> encrypted_data,
-  ) {
-    return _wire__crate__crypto__mx_enc_file_parse_full_header(
-      port_,
-      encrypted_data,
-    );
-  }
-
-  late final _wire__crate__crypto__mx_enc_file_parse_full_headerPtr =
-      _lookup<
-        ffi.NativeFunction<
-          ffi.Void Function(
-            ffi.Int64,
-            ffi.Pointer<wire_cst_list_prim_u_8_loose>,
-          )
-        >
-      >('frbgen_mxenc_wire__crate__crypto__mx_enc_file_parse_full_header');
-  late final _wire__crate__crypto__mx_enc_file_parse_full_header =
-      _wire__crate__crypto__mx_enc_file_parse_full_headerPtr
-          .asFunction<
-            void Function(int, ffi.Pointer<wire_cst_list_prim_u_8_loose>)
-          >();
-
-  void wire__crate__crypto__mx_enc_file_parse_header(
-    int port_,
-    ffi.Pointer<wire_cst_list_prim_u_8_loose> encrypted_data,
-  ) {
-    return _wire__crate__crypto__mx_enc_file_parse_header(
-      port_,
-      encrypted_data,
-    );
-  }
-
-  late final _wire__crate__crypto__mx_enc_file_parse_headerPtr =
-      _lookup<
-        ffi.NativeFunction<
-          ffi.Void Function(
-            ffi.Int64,
-            ffi.Pointer<wire_cst_list_prim_u_8_loose>,
-          )
-        >
-      >('frbgen_mxenc_wire__crate__crypto__mx_enc_file_parse_header');
-  late final _wire__crate__crypto__mx_enc_file_parse_header =
-      _wire__crate__crypto__mx_enc_file_parse_headerPtr
-          .asFunction<
-            void Function(int, ffi.Pointer<wire_cst_list_prim_u_8_loose>)
-          >();
-
-  void wire__crate__crypto__mx_enc_file_parse_header_extended(
-    int port_,
-    ffi.Pointer<wire_cst_list_prim_u_8_loose> encrypted_data,
-  ) {
-    return _wire__crate__crypto__mx_enc_file_parse_header_extended(
-      port_,
-      encrypted_data,
-    );
-  }
-
-  late final _wire__crate__crypto__mx_enc_file_parse_header_extendedPtr =
-      _lookup<
-        ffi.NativeFunction<
-          ffi.Void Function(
-            ffi.Int64,
-            ffi.Pointer<wire_cst_list_prim_u_8_loose>,
-          )
-        >
-      >('frbgen_mxenc_wire__crate__crypto__mx_enc_file_parse_header_extended');
-  late final _wire__crate__crypto__mx_enc_file_parse_header_extended =
-      _wire__crate__crypto__mx_enc_file_parse_header_extendedPtr
-          .asFunction<
-            void Function(int, ffi.Pointer<wire_cst_list_prim_u_8_loose>)
-          >();
-
   WireSyncRust2DartDco wire__crate__parse_mxenc_full_header(
     ffi.Pointer<wire_cst_list_prim_u_8_loose> mxenc_data,
   ) {
@@ -1035,6 +771,28 @@ class RustLibWire implements BaseWire {
             WireSyncRust2DartDco Function(
               ffi.Pointer<wire_cst_list_prim_u_8_loose>,
             )
+          >();
+
+  void wire__crate__parse_mxenc_full_header_by_path(
+    int port_,
+    ffi.Pointer<wire_cst_list_prim_u_8_strict> input_path,
+  ) {
+    return _wire__crate__parse_mxenc_full_header_by_path(port_, input_path);
+  }
+
+  late final _wire__crate__parse_mxenc_full_header_by_pathPtr =
+      _lookup<
+        ffi.NativeFunction<
+          ffi.Void Function(
+            ffi.Int64,
+            ffi.Pointer<wire_cst_list_prim_u_8_strict>,
+          )
+        >
+      >('frbgen_mxenc_wire__crate__parse_mxenc_full_header_by_path');
+  late final _wire__crate__parse_mxenc_full_header_by_path =
+      _wire__crate__parse_mxenc_full_header_by_pathPtr
+          .asFunction<
+            void Function(int, ffi.Pointer<wire_cst_list_prim_u_8_strict>)
           >();
 
   WireSyncRust2DartDco wire__crate__parse_mxenc_header(
@@ -1059,6 +817,28 @@ class RustLibWire implements BaseWire {
             )
           >();
 
+  void wire__crate__parse_mxenc_header_by_path(
+    int port_,
+    ffi.Pointer<wire_cst_list_prim_u_8_strict> input_path,
+  ) {
+    return _wire__crate__parse_mxenc_header_by_path(port_, input_path);
+  }
+
+  late final _wire__crate__parse_mxenc_header_by_pathPtr =
+      _lookup<
+        ffi.NativeFunction<
+          ffi.Void Function(
+            ffi.Int64,
+            ffi.Pointer<wire_cst_list_prim_u_8_strict>,
+          )
+        >
+      >('frbgen_mxenc_wire__crate__parse_mxenc_header_by_path');
+  late final _wire__crate__parse_mxenc_header_by_path =
+      _wire__crate__parse_mxenc_header_by_pathPtr
+          .asFunction<
+            void Function(int, ffi.Pointer<wire_cst_list_prim_u_8_strict>)
+          >();
+
   WireSyncRust2DartDco wire__crate__parse_mxenc_header_extended(
     ffi.Pointer<wire_cst_list_prim_u_8_loose> mxenc_data,
   ) {
@@ -1080,59 +860,6 @@ class RustLibWire implements BaseWire {
               ffi.Pointer<wire_cst_list_prim_u_8_loose>,
             )
           >();
-
-  void
-  rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInneru8(
-    ffi.Pointer<ffi.Void> ptr,
-  ) {
-    return _rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInneru8(
-      ptr,
-    );
-  }
-
-  late final _rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInneru8Ptr =
-      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Pointer<ffi.Void>)>>(
-        'frbgen_mxenc_rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInneru8',
-      );
-  late final _rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInneru8 =
-      _rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInneru8Ptr
-          .asFunction<void Function(ffi.Pointer<ffi.Void>)>();
-
-  void
-  rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInneru8(
-    ffi.Pointer<ffi.Void> ptr,
-  ) {
-    return _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInneru8(
-      ptr,
-    );
-  }
-
-  late final _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInneru8Ptr =
-      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Pointer<ffi.Void>)>>(
-        'frbgen_mxenc_rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInneru8',
-      );
-  late final _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInneru8 =
-      _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInneru8Ptr
-          .asFunction<void Function(ffi.Pointer<ffi.Void>)>();
-
-  ffi.Pointer<ffi.UintPtr>
-  cst_new_box_autoadd_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInneru8(
-    int value,
-  ) {
-    return _cst_new_box_autoadd_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInneru8(
-      value,
-    );
-  }
-
-  late final _cst_new_box_autoadd_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInneru8Ptr =
-      _lookup<
-        ffi.NativeFunction<ffi.Pointer<ffi.UintPtr> Function(ffi.UintPtr)>
-      >(
-        'frbgen_mxenc_cst_new_box_autoadd_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInneru8',
-      );
-  late final _cst_new_box_autoadd_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInneru8 =
-      _cst_new_box_autoadd_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInneru8Ptr
-          .asFunction<ffi.Pointer<ffi.UintPtr> Function(int)>();
 
   ffi.Pointer<wire_cst_list_prim_u_8_loose> cst_new_list_prim_u_8_loose(
     int len,
@@ -1198,21 +925,6 @@ final class wire_cst_list_prim_u_8_strict extends ffi.Struct {
   external int len;
 }
 
-final class wire_cst_mx_enc_file extends ffi.Struct {
-  external ffi.Pointer<wire_cst_list_prim_u_8_strict> original_filename;
-
-  @ffi.Int32()
-  external int file_type;
-
-  external ffi.Pointer<wire_cst_list_prim_u_8_strict> metadata;
-
-  external ffi.Pointer<wire_cst_list_prim_u_8_strict> salt;
-
-  external ffi.Pointer<wire_cst_list_prim_u_8_strict> nonce;
-
-  external ffi.Pointer<wire_cst_list_prim_u_8_strict> ciphertext;
-}
-
 final class wire_cst_progress_event extends ffi.Struct {
   @ffi.Int32()
   external int phase;
@@ -1221,23 +933,10 @@ final class wire_cst_progress_event extends ffi.Struct {
   external double percent;
 
   external ffi.Pointer<wire_cst_list_prim_u_8_strict> label;
-}
 
-final class wire_cst_record_string_file_type extends ffi.Struct {
-  external ffi.Pointer<wire_cst_list_prim_u_8_strict> field0;
+  external ffi.Pointer<wire_cst_list_prim_u_8_strict> filename;
 
-  @ffi.Int32()
-  external int field1;
-}
-
-final class wire_cst_record_string_file_type_list_prim_u_8_strict
-    extends ffi.Struct {
-  external ffi.Pointer<wire_cst_list_prim_u_8_strict> field0;
-
-  @ffi.Int32()
-  external int field1;
-
-  external ffi.Pointer<wire_cst_list_prim_u_8_strict> field2;
+  external ffi.Pointer<wire_cst_list_prim_u_8_strict> data;
 }
 
 final class wire_cst_record_string_list_prim_u_8_strict extends ffi.Struct {

@@ -25,7 +25,6 @@
 
 // Section: imports
 
-use crate::crypto::*;
 use flutter_rust_bridge::for_generated::byteorder::{NativeEndian, ReadBytesExt, WriteBytesExt};
 use flutter_rust_bridge::for_generated::{transform_result_dco, Lifetimeable, Lockable};
 use flutter_rust_bridge::{Handler, IntoIntoDart};
@@ -38,7 +37,7 @@ flutter_rust_bridge::frb_generated_boilerplate!(
     default_rust_auto_opaque = RustAutoOpaqueNom,
 );
 pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_VERSION: &str = "2.11.1";
-pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -1788119364;
+pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -881924666;
 
 // Section: executor
 
@@ -47,22 +46,78 @@ flutter_rust_bridge::frb_generated_default_handler!();
 // Section: wire_funcs
 
 fn wire__crate__decrypt_file_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
     mxenc_data: impl CstDecode<Vec<u8>>,
     password: impl CstDecode<String>,
-) -> flutter_rust_bridge::for_generated::WireSyncRust2DartDco {
-    FLUTTER_RUST_BRIDGE_HANDLER.wrap_sync::<flutter_rust_bridge::for_generated::DcoCodec, _>(
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::DcoCodec, _, _>(
         flutter_rust_bridge::for_generated::TaskInfo {
             debug_name: "decrypt_file",
-            port: None,
-            mode: flutter_rust_bridge::for_generated::FfiCallMode::Sync,
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
         },
         move || {
             let api_mxenc_data = mxenc_data.cst_decode();
             let api_password = password.cst_decode();
-            transform_result_dco::<_, _, String>((move || {
-                let output_ok = crate::decrypt_file(api_mxenc_data, api_password)?;
-                Ok(output_ok)
-            })())
+            move |context| {
+                transform_result_dco::<_, _, String>((move || {
+                    let output_ok = crate::decrypt_file(api_mxenc_data, api_password)?;
+                    Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
+fn wire__crate__decrypt_file_by_path_with_progress_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    input_path: impl CstDecode<String>,
+    password: impl CstDecode<String>,
+    sink: impl CstDecode<StreamSink<crate::ProgressEvent, flutter_rust_bridge::for_generated::DcoCodec>>,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::DcoCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "decrypt_file_by_path_with_progress",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let api_input_path = input_path.cst_decode();
+            let api_password = password.cst_decode();
+            let api_sink = sink.cst_decode();
+            move |context| {
+                transform_result_dco::<_, _, String>((move || {
+                    let output_ok = crate::decrypt_file_by_path_with_progress(
+                        api_input_path,
+                        api_password,
+                        api_sink,
+                    )?;
+                    Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
+fn wire__crate__decrypt_file_in_memory_by_path_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    input_path: impl CstDecode<String>,
+    password: impl CstDecode<String>,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::DcoCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "decrypt_file_in_memory_by_path",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let api_input_path = input_path.cst_decode();
+            let api_password = password.cst_decode();
+            move |context| {
+                transform_result_dco::<_, _, String>((move || {
+                    let output_ok =
+                        crate::decrypt_file_in_memory_by_path(api_input_path, api_password)?;
+                    Ok(output_ok)
+                })())
+            }
         },
     )
 }
@@ -93,40 +148,82 @@ fn wire__crate__decrypt_file_with_progress_impl(
     )
 }
 fn wire__crate__encrypt_file_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
     plaintext: impl CstDecode<Vec<u8>>,
     password: impl CstDecode<String>,
     original_filename: impl CstDecode<String>,
-) -> flutter_rust_bridge::for_generated::WireSyncRust2DartDco {
-    FLUTTER_RUST_BRIDGE_HANDLER.wrap_sync::<flutter_rust_bridge::for_generated::DcoCodec, _>(
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::DcoCodec, _, _>(
         flutter_rust_bridge::for_generated::TaskInfo {
             debug_name: "encrypt_file",
-            port: None,
-            mode: flutter_rust_bridge::for_generated::FfiCallMode::Sync,
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
         },
         move || {
             let api_plaintext = plaintext.cst_decode();
             let api_password = password.cst_decode();
             let api_original_filename = original_filename.cst_decode();
-            transform_result_dco::<_, _, String>((move || {
-                let output_ok =
-                    crate::encrypt_file(api_plaintext, api_password, api_original_filename)?;
-                Ok(output_ok)
-            })())
+            move |context| {
+                transform_result_dco::<_, _, String>((move || {
+                    let output_ok =
+                        crate::encrypt_file(api_plaintext, api_password, api_original_filename)?;
+                    Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
+fn wire__crate__encrypt_file_by_path_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    input_path: impl CstDecode<String>,
+    output_path: impl CstDecode<String>,
+    password: impl CstDecode<String>,
+    original_filename: impl CstDecode<Option<String>>,
+    file_type: impl CstDecode<u8>,
+    metadata: impl CstDecode<Option<Vec<u8>>>,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::DcoCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "encrypt_file_by_path",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let api_input_path = input_path.cst_decode();
+            let api_output_path = output_path.cst_decode();
+            let api_password = password.cst_decode();
+            let api_original_filename = original_filename.cst_decode();
+            let api_file_type = file_type.cst_decode();
+            let api_metadata = metadata.cst_decode();
+            move |context| {
+                transform_result_dco::<_, _, String>((move || {
+                    let output_ok = crate::encrypt_file_by_path(
+                        api_input_path,
+                        api_output_path,
+                        api_password,
+                        api_original_filename,
+                        api_file_type,
+                        api_metadata,
+                    )?;
+                    Ok(output_ok)
+                })())
+            }
         },
     )
 }
 fn wire__crate__encrypt_file_with_metadata_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
     plaintext: impl CstDecode<Vec<u8>>,
     password: impl CstDecode<String>,
     original_filename: impl CstDecode<String>,
     file_type: impl CstDecode<u8>,
     metadata: impl CstDecode<Option<Vec<u8>>>,
-) -> flutter_rust_bridge::for_generated::WireSyncRust2DartDco {
-    FLUTTER_RUST_BRIDGE_HANDLER.wrap_sync::<flutter_rust_bridge::for_generated::DcoCodec, _>(
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::DcoCodec, _, _>(
         flutter_rust_bridge::for_generated::TaskInfo {
             debug_name: "encrypt_file_with_metadata",
-            port: None,
-            mode: flutter_rust_bridge::for_generated::FfiCallMode::Sync,
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
         },
         move || {
             let api_plaintext = plaintext.cst_decode();
@@ -134,32 +231,15 @@ fn wire__crate__encrypt_file_with_metadata_impl(
             let api_original_filename = original_filename.cst_decode();
             let api_file_type = file_type.cst_decode();
             let api_metadata = metadata.cst_decode();
-            transform_result_dco::<_, _, String>((move || {
-                let output_ok = crate::encrypt_file_with_metadata(
-                    api_plaintext,
-                    api_password,
-                    api_original_filename,
-                    api_file_type,
-                    api_metadata,
-                )?;
-                Ok(output_ok)
-            })())
-        },
-    )
-}
-fn wire__crate__frb_get_rust_content_hash_impl(
-    port_: flutter_rust_bridge::for_generated::MessagePort,
-) {
-    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::DcoCodec, _, _>(
-        flutter_rust_bridge::for_generated::TaskInfo {
-            debug_name: "frb_get_rust_content_hash",
-            port: Some(port_),
-            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
-        },
-        move || {
             move |context| {
-                transform_result_dco::<_, _, ()>((move || {
-                    let output_ok = Result::<_, ()>::Ok(crate::frb_generated::io::frb_get_rust_content_hash())?;
+                transform_result_dco::<_, _, String>((move || {
+                    let output_ok = crate::encrypt_file_with_metadata(
+                        api_plaintext,
+                        api_password,
+                        api_original_filename,
+                        api_file_type,
+                        api_metadata,
+                    )?;
                     Ok(output_ok)
                 })())
             }
@@ -340,172 +420,6 @@ fn wire__crate__get_file_type_rich_novel_impl(
         },
     )
 }
-fn wire__crate__crypto__mx_enc_file_decrypt_impl(
-    port_: flutter_rust_bridge::for_generated::MessagePort,
-    encrypted_data: impl CstDecode<Vec<u8>>,
-    password: impl CstDecode<String>,
-) {
-    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::DcoCodec, _, _>(
-        flutter_rust_bridge::for_generated::TaskInfo {
-            debug_name: "mx_enc_file_decrypt",
-            port: Some(port_),
-            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
-        },
-        move || {
-            let api_encrypted_data = encrypted_data.cst_decode();
-            let api_password = password.cst_decode();
-            move |context| {
-                transform_result_dco::<_, _, flutter_rust_bridge::for_generated::anyhow::Error>(
-                    (move || {
-                        let output_ok =
-                            crate::crypto::MxEncFile::decrypt(&api_encrypted_data, &api_password)?;
-                        Ok(output_ok)
-                    })(),
-                )
-            }
-        },
-    )
-}
-fn wire__crate__crypto__mx_enc_file_encrypt_impl(
-    port_: flutter_rust_bridge::for_generated::MessagePort,
-    plaintext: impl CstDecode<Vec<u8>>,
-    password: impl CstDecode<String>,
-    original_filename: impl CstDecode<String>,
-) {
-    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::DcoCodec, _, _>(
-        flutter_rust_bridge::for_generated::TaskInfo {
-            debug_name: "mx_enc_file_encrypt",
-            port: Some(port_),
-            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
-        },
-        move || {
-            let api_plaintext = plaintext.cst_decode();
-            let api_password = password.cst_decode();
-            let api_original_filename = original_filename.cst_decode();
-            move |context| {
-                transform_result_dco::<_, _, flutter_rust_bridge::for_generated::anyhow::Error>(
-                    (move || {
-                        let output_ok = crate::crypto::MxEncFile::encrypt(
-                            &api_plaintext,
-                            &api_password,
-                            &api_original_filename,
-                        )?;
-                        Ok(output_ok)
-                    })(),
-                )
-            }
-        },
-    )
-}
-fn wire__crate__crypto__mx_enc_file_encrypt_with_metadata_impl(
-    port_: flutter_rust_bridge::for_generated::MessagePort,
-    plaintext: impl CstDecode<Vec<u8>>,
-    password: impl CstDecode<String>,
-    original_filename: impl CstDecode<String>,
-    file_type: impl CstDecode<crate::crypto::FileType>,
-    metadata: impl CstDecode<Option<Vec<u8>>>,
-) {
-    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::DcoCodec, _, _>(
-        flutter_rust_bridge::for_generated::TaskInfo {
-            debug_name: "mx_enc_file_encrypt_with_metadata",
-            port: Some(port_),
-            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
-        },
-        move || {
-            let api_plaintext = plaintext.cst_decode();
-            let api_password = password.cst_decode();
-            let api_original_filename = original_filename.cst_decode();
-            let api_file_type = file_type.cst_decode();
-            let api_metadata = metadata.cst_decode();
-            move |context| {
-                transform_result_dco::<_, _, flutter_rust_bridge::for_generated::anyhow::Error>(
-                    (move || {
-                        let output_ok = crate::crypto::MxEncFile::encrypt_with_metadata(
-                            &api_plaintext,
-                            &api_password,
-                            &api_original_filename,
-                            api_file_type,
-                            api_metadata.as_deref(),
-                        )?;
-                        Ok(output_ok)
-                    })(),
-                )
-            }
-        },
-    )
-}
-fn wire__crate__crypto__mx_enc_file_parse_full_header_impl(
-    port_: flutter_rust_bridge::for_generated::MessagePort,
-    encrypted_data: impl CstDecode<Vec<u8>>,
-) {
-    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::DcoCodec, _, _>(
-        flutter_rust_bridge::for_generated::TaskInfo {
-            debug_name: "mx_enc_file_parse_full_header",
-            port: Some(port_),
-            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
-        },
-        move || {
-            let api_encrypted_data = encrypted_data.cst_decode();
-            move |context| {
-                transform_result_dco::<_, _, flutter_rust_bridge::for_generated::anyhow::Error>(
-                    (move || {
-                        let output_ok =
-                            crate::crypto::MxEncFile::parse_full_header(&api_encrypted_data)?;
-                        Ok(output_ok)
-                    })(),
-                )
-            }
-        },
-    )
-}
-fn wire__crate__crypto__mx_enc_file_parse_header_impl(
-    port_: flutter_rust_bridge::for_generated::MessagePort,
-    encrypted_data: impl CstDecode<Vec<u8>>,
-) {
-    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::DcoCodec, _, _>(
-        flutter_rust_bridge::for_generated::TaskInfo {
-            debug_name: "mx_enc_file_parse_header",
-            port: Some(port_),
-            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
-        },
-        move || {
-            let api_encrypted_data = encrypted_data.cst_decode();
-            move |context| {
-                transform_result_dco::<_, _, flutter_rust_bridge::for_generated::anyhow::Error>(
-                    (move || {
-                        let output_ok =
-                            crate::crypto::MxEncFile::parse_header(&api_encrypted_data)?;
-                        Ok(output_ok)
-                    })(),
-                )
-            }
-        },
-    )
-}
-fn wire__crate__crypto__mx_enc_file_parse_header_extended_impl(
-    port_: flutter_rust_bridge::for_generated::MessagePort,
-    encrypted_data: impl CstDecode<Vec<u8>>,
-) {
-    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::DcoCodec, _, _>(
-        flutter_rust_bridge::for_generated::TaskInfo {
-            debug_name: "mx_enc_file_parse_header_extended",
-            port: Some(port_),
-            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
-        },
-        move || {
-            let api_encrypted_data = encrypted_data.cst_decode();
-            move |context| {
-                transform_result_dco::<_, _, flutter_rust_bridge::for_generated::anyhow::Error>(
-                    (move || {
-                        let output_ok =
-                            crate::crypto::MxEncFile::parse_header_extended(&api_encrypted_data)?;
-                        Ok(output_ok)
-                    })(),
-                )
-            }
-        },
-    )
-}
 fn wire__crate__parse_mxenc_full_header_impl(
     mxenc_data: impl CstDecode<Vec<u8>>,
 ) -> flutter_rust_bridge::for_generated::WireSyncRust2DartDco {
@@ -524,6 +438,27 @@ fn wire__crate__parse_mxenc_full_header_impl(
         },
     )
 }
+fn wire__crate__parse_mxenc_full_header_by_path_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    input_path: impl CstDecode<String>,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::DcoCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "parse_mxenc_full_header_by_path",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let api_input_path = input_path.cst_decode();
+            move |context| {
+                transform_result_dco::<_, _, String>((move || {
+                    let output_ok = crate::parse_mxenc_full_header_by_path(api_input_path)?;
+                    Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
 fn wire__crate__parse_mxenc_header_impl(
     mxenc_data: impl CstDecode<Vec<u8>>,
 ) -> flutter_rust_bridge::for_generated::WireSyncRust2DartDco {
@@ -539,6 +474,27 @@ fn wire__crate__parse_mxenc_header_impl(
                 let output_ok = crate::parse_mxenc_header(api_mxenc_data)?;
                 Ok(output_ok)
             })())
+        },
+    )
+}
+fn wire__crate__parse_mxenc_header_by_path_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    input_path: impl CstDecode<String>,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::DcoCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "parse_mxenc_header_by_path",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let api_input_path = input_path.cst_decode();
+            move |context| {
+                transform_result_dco::<_, _, String>((move || {
+                    let output_ok = crate::parse_mxenc_header_by_path(api_input_path)?;
+                    Ok(output_ok)
+                })())
+            }
         },
     )
 }
@@ -608,12 +564,6 @@ impl CstDecode<u8> for u8 {
         self
     }
 }
-impl CstDecode<usize> for usize {
-    // Codec=Cst (C-struct based), see doc to use other codecs
-    fn cst_decode(self) -> usize {
-        self
-    }
-}
 impl SseDecode for flutter_rust_bridge::for_generated::anyhow::Error {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -621,7 +571,6 @@ impl SseDecode for flutter_rust_bridge::for_generated::anyhow::Error {
         return flutter_rust_bridge::for_generated::anyhow::anyhow!("{}", inner);
     }
 }
-
 
 impl SseDecode for StreamSink<crate::ProgressEvent, flutter_rust_bridge::for_generated::DcoCodec> {
     // Codec=Sse (Serialization based), see doc to use other codecs
@@ -681,26 +630,16 @@ impl SseDecode for Vec<u8> {
     }
 }
 
-impl SseDecode for crate::crypto::MxEncFile {
+impl SseDecode for Option<String> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
-        let mut var_originalFilename = <String>::sse_decode(deserializer);
-        let mut var_fileType = <crate::crypto::FileType>::sse_decode(deserializer);
-        let mut var_metadata = <Vec<u8>>::sse_decode(deserializer);
-        let mut var_salt = <Vec<u8>>::sse_decode(deserializer);
-        let mut var_nonce = <Vec<u8>>::sse_decode(deserializer);
-        let mut var_ciphertext = <Vec<u8>>::sse_decode(deserializer);
-        return crate::crypto::MxEncFile {
-            original_filename: var_originalFilename,
-            file_type: var_fileType,
-            metadata: var_metadata,
-            salt: var_salt,
-            nonce: var_nonce,
-            ciphertext: var_ciphertext,
-        };
+        if (<bool>::sse_decode(deserializer)) {
+            return Some(<String>::sse_decode(deserializer));
+        } else {
+            return None;
+        }
     }
 }
-
 
 impl SseDecode for Option<Vec<u8>> {
     // Codec=Sse (Serialization based), see doc to use other codecs
@@ -719,10 +658,14 @@ impl SseDecode for crate::ProgressEvent {
         let mut var_phase = <crate::ProgressPhase>::sse_decode(deserializer);
         let mut var_percent = <f32>::sse_decode(deserializer);
         let mut var_label = <String>::sse_decode(deserializer);
+        let mut var_filename = <Option<String>>::sse_decode(deserializer);
+        let mut var_data = <Option<Vec<u8>>>::sse_decode(deserializer);
         return crate::ProgressEvent {
             phase: var_phase,
             percent: var_percent,
             label: var_label,
+            filename: var_filename,
+            data: var_data,
         };
     }
 }
@@ -739,25 +682,6 @@ impl SseDecode for crate::ProgressPhase {
             4 => crate::ProgressPhase::Done,
             _ => unreachable!("Invalid variant for ProgressPhase: {}", inner),
         };
-    }
-}
-
-impl SseDecode for (String, crate::crypto::FileType) {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
-        let mut var_field0 = <String>::sse_decode(deserializer);
-        let mut var_field1 = <crate::crypto::FileType>::sse_decode(deserializer);
-        return (var_field0, var_field1);
-    }
-}
-
-impl SseDecode for (String, crate::crypto::FileType, Vec<u8>) {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
-        let mut var_field0 = <String>::sse_decode(deserializer);
-        let mut var_field1 = <crate::crypto::FileType>::sse_decode(deserializer);
-        let mut var_field2 = <Vec<u8>>::sse_decode(deserializer);
-        return (var_field0, var_field1, var_field2);
     }
 }
 
@@ -799,13 +723,6 @@ impl SseDecode for u8 {
 impl SseDecode for () {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {}
-}
-
-impl SseDecode for usize {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
-        deserializer.cursor.read_u64::<NativeEndian>().unwrap() as _
-    }
 }
 
 impl SseDecode for bool {
@@ -863,32 +780,14 @@ impl flutter_rust_bridge::IntoIntoDart<crate::crypto::FileType> for crate::crypt
     }
 }
 // Codec=Dco (DartCObject based), see doc to use other codecs
-impl flutter_rust_bridge::IntoDart for crate::crypto::MxEncFile {
-    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
-        [
-            self.original_filename.into_into_dart().into_dart(),
-            self.file_type.into_into_dart().into_dart(),
-            self.metadata.into_into_dart().into_dart(),
-            self.salt.into_into_dart().into_dart(),
-            self.nonce.into_into_dart().into_dart(),
-            self.ciphertext.into_into_dart().into_dart(),
-        ]
-        .into_dart()
-    }
-}
-impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive for crate::crypto::MxEncFile {}
-impl flutter_rust_bridge::IntoIntoDart<crate::crypto::MxEncFile> for crate::crypto::MxEncFile {
-    fn into_into_dart(self) -> crate::crypto::MxEncFile {
-        self
-    }
-}
-// Codec=Dco (DartCObject based), see doc to use other codecs
 impl flutter_rust_bridge::IntoDart for crate::ProgressEvent {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
         [
             self.phase.into_into_dart().into_dart(),
             self.percent.into_into_dart().into_dart(),
             self.label.into_into_dart().into_dart(),
+            self.filename.into_into_dart().into_dart(),
+            self.data.into_into_dart().into_dart(),
         ]
         .into_dart()
     }
@@ -925,7 +824,6 @@ impl SseEncode for flutter_rust_bridge::for_generated::anyhow::Error {
         <String>::sse_encode(format!("{:?}", self), serializer);
     }
 }
-
 
 impl SseEncode for StreamSink<crate::ProgressEvent, flutter_rust_bridge::for_generated::DcoCodec> {
     // Codec=Sse (Serialization based), see doc to use other codecs
@@ -985,18 +883,15 @@ impl SseEncode for Vec<u8> {
     }
 }
 
-impl SseEncode for crate::crypto::MxEncFile {
+impl SseEncode for Option<String> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
-        <String>::sse_encode(self.original_filename, serializer);
-        <crate::crypto::FileType>::sse_encode(self.file_type, serializer);
-        <Vec<u8>>::sse_encode(self.metadata, serializer);
-        <Vec<u8>>::sse_encode(self.salt, serializer);
-        <Vec<u8>>::sse_encode(self.nonce, serializer);
-        <Vec<u8>>::sse_encode(self.ciphertext, serializer);
+        <bool>::sse_encode(self.is_some(), serializer);
+        if let Some(value) = self {
+            <String>::sse_encode(value, serializer);
+        }
     }
 }
-
 
 impl SseEncode for Option<Vec<u8>> {
     // Codec=Sse (Serialization based), see doc to use other codecs
@@ -1014,6 +909,8 @@ impl SseEncode for crate::ProgressEvent {
         <crate::ProgressPhase>::sse_encode(self.phase, serializer);
         <f32>::sse_encode(self.percent, serializer);
         <String>::sse_encode(self.label, serializer);
+        <Option<String>>::sse_encode(self.filename, serializer);
+        <Option<Vec<u8>>>::sse_encode(self.data, serializer);
     }
 }
 
@@ -1033,23 +930,6 @@ impl SseEncode for crate::ProgressPhase {
             },
             serializer,
         );
-    }
-}
-
-impl SseEncode for (String, crate::crypto::FileType) {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
-        <String>::sse_encode(self.0, serializer);
-        <crate::crypto::FileType>::sse_encode(self.1, serializer);
-    }
-}
-
-impl SseEncode for (String, crate::crypto::FileType, Vec<u8>) {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
-        <String>::sse_encode(self.0, serializer);
-        <crate::crypto::FileType>::sse_encode(self.1, serializer);
-        <Vec<u8>>::sse_encode(self.2, serializer);
     }
 }
 
@@ -1090,16 +970,6 @@ impl SseEncode for () {
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {}
 }
 
-impl SseEncode for usize {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
-        serializer
-            .cursor
-            .write_u64::<NativeEndian>(self as _)
-            .unwrap();
-    }
-}
-
 impl SseEncode for bool {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -1115,7 +985,6 @@ mod io {
     // Section: imports
 
     use super::*;
-    use crate::crypto::*;
     use flutter_rust_bridge::for_generated::byteorder::{
         NativeEndian, ReadBytesExt, WriteBytesExt,
     };
@@ -1173,19 +1042,6 @@ mod io {
             }
         }
     }
-    impl CstDecode<crate::crypto::MxEncFile> for wire_cst_mx_enc_file {
-        // Codec=Cst (C-struct based), see doc to use other codecs
-        fn cst_decode(self) -> crate::crypto::MxEncFile {
-            crate::crypto::MxEncFile {
-                original_filename: self.original_filename.cst_decode(),
-                file_type: self.file_type.cst_decode(),
-                metadata: self.metadata.cst_decode(),
-                salt: self.salt.cst_decode(),
-                nonce: self.nonce.cst_decode(),
-                ciphertext: self.ciphertext.cst_decode(),
-            }
-        }
-    }
     impl CstDecode<crate::ProgressEvent> for wire_cst_progress_event {
         // Codec=Cst (C-struct based), see doc to use other codecs
         fn cst_decode(self) -> crate::ProgressEvent {
@@ -1193,25 +1049,9 @@ mod io {
                 phase: self.phase.cst_decode(),
                 percent: self.percent.cst_decode(),
                 label: self.label.cst_decode(),
+                filename: self.filename.cst_decode(),
+                data: self.data.cst_decode(),
             }
-        }
-    }
-    impl CstDecode<(String, crate::crypto::FileType)> for wire_cst_record_string_file_type {
-        // Codec=Cst (C-struct based), see doc to use other codecs
-        fn cst_decode(self) -> (String, crate::crypto::FileType) {
-            (self.field0.cst_decode(), self.field1.cst_decode())
-        }
-    }
-    impl CstDecode<(String, crate::crypto::FileType, Vec<u8>)>
-        for wire_cst_record_string_file_type_list_prim_u_8_strict
-    {
-        // Codec=Cst (C-struct based), see doc to use other codecs
-        fn cst_decode(self) -> (String, crate::crypto::FileType, Vec<u8>) {
-            (
-                self.field0.cst_decode(),
-                self.field1.cst_decode(),
-                self.field2.cst_decode(),
-            )
         }
     }
     impl CstDecode<(String, Vec<u8>)> for wire_cst_record_string_list_prim_u_8_strict {
@@ -1236,60 +1076,18 @@ mod io {
             )
         }
     }
-    impl NewWithNullPtr for wire_cst_mx_enc_file {
-        fn new_with_null_ptr() -> Self {
-            Self {
-                original_filename: core::ptr::null_mut(),
-                file_type: Default::default(),
-                metadata: core::ptr::null_mut(),
-                salt: core::ptr::null_mut(),
-                nonce: core::ptr::null_mut(),
-                ciphertext: core::ptr::null_mut(),
-            }
-        }
-    }
-    impl Default for wire_cst_mx_enc_file {
-        fn default() -> Self {
-            Self::new_with_null_ptr()
-        }
-    }
     impl NewWithNullPtr for wire_cst_progress_event {
         fn new_with_null_ptr() -> Self {
             Self {
                 phase: Default::default(),
                 percent: Default::default(),
                 label: core::ptr::null_mut(),
+                filename: core::ptr::null_mut(),
+                data: core::ptr::null_mut(),
             }
         }
     }
     impl Default for wire_cst_progress_event {
-        fn default() -> Self {
-            Self::new_with_null_ptr()
-        }
-    }
-    impl NewWithNullPtr for wire_cst_record_string_file_type {
-        fn new_with_null_ptr() -> Self {
-            Self {
-                field0: core::ptr::null_mut(),
-                field1: Default::default(),
-            }
-        }
-    }
-    impl Default for wire_cst_record_string_file_type {
-        fn default() -> Self {
-            Self::new_with_null_ptr()
-        }
-    }
-    impl NewWithNullPtr for wire_cst_record_string_file_type_list_prim_u_8_strict {
-        fn new_with_null_ptr() -> Self {
-            Self {
-                field0: core::ptr::null_mut(),
-                field1: Default::default(),
-                field2: core::ptr::null_mut(),
-            }
-        }
-    }
-    impl Default for wire_cst_record_string_file_type_list_prim_u_8_strict {
         fn default() -> Self {
             Self::new_with_null_ptr()
         }
@@ -1337,10 +1135,30 @@ mod io {
 
     #[unsafe(no_mangle)]
     pub extern "C" fn frbgen_mxenc_wire__crate__decrypt_file(
+        port_: i64,
         mxenc_data: *mut wire_cst_list_prim_u_8_loose,
         password: *mut wire_cst_list_prim_u_8_strict,
-    ) -> flutter_rust_bridge::for_generated::WireSyncRust2DartDco {
-        wire__crate__decrypt_file_impl(mxenc_data, password)
+    ) {
+        wire__crate__decrypt_file_impl(port_, mxenc_data, password)
+    }
+
+    #[unsafe(no_mangle)]
+    pub extern "C" fn frbgen_mxenc_wire__crate__decrypt_file_by_path_with_progress(
+        port_: i64,
+        input_path: *mut wire_cst_list_prim_u_8_strict,
+        password: *mut wire_cst_list_prim_u_8_strict,
+        sink: *mut wire_cst_list_prim_u_8_strict,
+    ) {
+        wire__crate__decrypt_file_by_path_with_progress_impl(port_, input_path, password, sink)
+    }
+
+    #[unsafe(no_mangle)]
+    pub extern "C" fn frbgen_mxenc_wire__crate__decrypt_file_in_memory_by_path(
+        port_: i64,
+        input_path: *mut wire_cst_list_prim_u_8_strict,
+        password: *mut wire_cst_list_prim_u_8_strict,
+    ) {
+        wire__crate__decrypt_file_in_memory_by_path_impl(port_, input_path, password)
     }
 
     #[unsafe(no_mangle)]
@@ -1355,23 +1173,28 @@ mod io {
 
     #[unsafe(no_mangle)]
     pub extern "C" fn frbgen_mxenc_wire__crate__encrypt_file(
+        port_: i64,
         plaintext: *mut wire_cst_list_prim_u_8_loose,
         password: *mut wire_cst_list_prim_u_8_strict,
         original_filename: *mut wire_cst_list_prim_u_8_strict,
-    ) -> flutter_rust_bridge::for_generated::WireSyncRust2DartDco {
-        wire__crate__encrypt_file_impl(plaintext, password, original_filename)
+    ) {
+        wire__crate__encrypt_file_impl(port_, plaintext, password, original_filename)
     }
 
     #[unsafe(no_mangle)]
-    pub extern "C" fn frbgen_mxenc_wire__crate__encrypt_file_with_metadata(
-        plaintext: *mut wire_cst_list_prim_u_8_loose,
+    pub extern "C" fn frbgen_mxenc_wire__crate__encrypt_file_by_path(
+        port_: i64,
+        input_path: *mut wire_cst_list_prim_u_8_strict,
+        output_path: *mut wire_cst_list_prim_u_8_strict,
         password: *mut wire_cst_list_prim_u_8_strict,
         original_filename: *mut wire_cst_list_prim_u_8_strict,
         file_type: u8,
         metadata: *mut wire_cst_list_prim_u_8_strict,
-    ) -> flutter_rust_bridge::for_generated::WireSyncRust2DartDco {
-        wire__crate__encrypt_file_with_metadata_impl(
-            plaintext,
+    ) {
+        wire__crate__encrypt_file_by_path_impl(
+            port_,
+            input_path,
+            output_path,
             password,
             original_filename,
             file_type,
@@ -1380,8 +1203,22 @@ mod io {
     }
 
     #[unsafe(no_mangle)]
-    pub extern "C" fn frbgen_mxenc_wire__crate__frb_get_rust_content_hash(port_: i64) {
-        wire__crate__frb_get_rust_content_hash_impl(port_)
+    pub extern "C" fn frbgen_mxenc_wire__crate__encrypt_file_with_metadata(
+        port_: i64,
+        plaintext: *mut wire_cst_list_prim_u_8_loose,
+        password: *mut wire_cst_list_prim_u_8_strict,
+        original_filename: *mut wire_cst_list_prim_u_8_strict,
+        file_type: u8,
+        metadata: *mut wire_cst_list_prim_u_8_strict,
+    ) {
+        wire__crate__encrypt_file_with_metadata_impl(
+            port_,
+            plaintext,
+            password,
+            original_filename,
+            file_type,
+            metadata,
+        )
     }
 
     #[unsafe(no_mangle)]
@@ -1447,72 +1284,18 @@ mod io {
     }
 
     #[unsafe(no_mangle)]
-    pub extern "C" fn frbgen_mxenc_wire__crate__crypto__mx_enc_file_decrypt(
-        port_: i64,
-        encrypted_data: *mut wire_cst_list_prim_u_8_loose,
-        password: *mut wire_cst_list_prim_u_8_strict,
-    ) {
-        wire__crate__crypto__mx_enc_file_decrypt_impl(port_, encrypted_data, password)
-    }
-
-    #[unsafe(no_mangle)]
-    pub extern "C" fn frbgen_mxenc_wire__crate__crypto__mx_enc_file_encrypt(
-        port_: i64,
-        plaintext: *mut wire_cst_list_prim_u_8_loose,
-        password: *mut wire_cst_list_prim_u_8_strict,
-        original_filename: *mut wire_cst_list_prim_u_8_strict,
-    ) {
-        wire__crate__crypto__mx_enc_file_encrypt_impl(port_, plaintext, password, original_filename)
-    }
-
-    #[unsafe(no_mangle)]
-    pub extern "C" fn frbgen_mxenc_wire__crate__crypto__mx_enc_file_encrypt_with_metadata(
-        port_: i64,
-        plaintext: *mut wire_cst_list_prim_u_8_loose,
-        password: *mut wire_cst_list_prim_u_8_strict,
-        original_filename: *mut wire_cst_list_prim_u_8_strict,
-        file_type: i32,
-        metadata: *mut wire_cst_list_prim_u_8_strict,
-    ) {
-        wire__crate__crypto__mx_enc_file_encrypt_with_metadata_impl(
-            port_,
-            plaintext,
-            password,
-            original_filename,
-            file_type,
-            metadata,
-        )
-    }
-
-    #[unsafe(no_mangle)]
-    pub extern "C" fn frbgen_mxenc_wire__crate__crypto__mx_enc_file_parse_full_header(
-        port_: i64,
-        encrypted_data: *mut wire_cst_list_prim_u_8_loose,
-    ) {
-        wire__crate__crypto__mx_enc_file_parse_full_header_impl(port_, encrypted_data)
-    }
-
-    #[unsafe(no_mangle)]
-    pub extern "C" fn frbgen_mxenc_wire__crate__crypto__mx_enc_file_parse_header(
-        port_: i64,
-        encrypted_data: *mut wire_cst_list_prim_u_8_loose,
-    ) {
-        wire__crate__crypto__mx_enc_file_parse_header_impl(port_, encrypted_data)
-    }
-
-    #[unsafe(no_mangle)]
-    pub extern "C" fn frbgen_mxenc_wire__crate__crypto__mx_enc_file_parse_header_extended(
-        port_: i64,
-        encrypted_data: *mut wire_cst_list_prim_u_8_loose,
-    ) {
-        wire__crate__crypto__mx_enc_file_parse_header_extended_impl(port_, encrypted_data)
-    }
-
-    #[unsafe(no_mangle)]
     pub extern "C" fn frbgen_mxenc_wire__crate__parse_mxenc_full_header(
         mxenc_data: *mut wire_cst_list_prim_u_8_loose,
     ) -> flutter_rust_bridge::for_generated::WireSyncRust2DartDco {
         wire__crate__parse_mxenc_full_header_impl(mxenc_data)
+    }
+
+    #[unsafe(no_mangle)]
+    pub extern "C" fn frbgen_mxenc_wire__crate__parse_mxenc_full_header_by_path(
+        port_: i64,
+        input_path: *mut wire_cst_list_prim_u_8_strict,
+    ) {
+        wire__crate__parse_mxenc_full_header_by_path_impl(port_, input_path)
     }
 
     #[unsafe(no_mangle)]
@@ -1523,14 +1306,19 @@ mod io {
     }
 
     #[unsafe(no_mangle)]
+    pub extern "C" fn frbgen_mxenc_wire__crate__parse_mxenc_header_by_path(
+        port_: i64,
+        input_path: *mut wire_cst_list_prim_u_8_strict,
+    ) {
+        wire__crate__parse_mxenc_header_by_path_impl(port_, input_path)
+    }
+
+    #[unsafe(no_mangle)]
     pub extern "C" fn frbgen_mxenc_wire__crate__parse_mxenc_header_extended(
         mxenc_data: *mut wire_cst_list_prim_u_8_loose,
     ) -> flutter_rust_bridge::for_generated::WireSyncRust2DartDco {
         wire__crate__parse_mxenc_header_extended_impl(mxenc_data)
     }
-
-    #[unsafe(no_mangle)]
-    
 
     #[unsafe(no_mangle)]
     pub extern "C" fn frbgen_mxenc_cst_new_list_prim_u_8_loose(
@@ -1568,33 +1356,12 @@ mod io {
     }
     #[repr(C)]
     #[derive(Clone, Copy)]
-    pub struct wire_cst_mx_enc_file {
-        original_filename: *mut wire_cst_list_prim_u_8_strict,
-        file_type: i32,
-        metadata: *mut wire_cst_list_prim_u_8_strict,
-        salt: *mut wire_cst_list_prim_u_8_strict,
-        nonce: *mut wire_cst_list_prim_u_8_strict,
-        ciphertext: *mut wire_cst_list_prim_u_8_strict,
-    }
-    #[repr(C)]
-    #[derive(Clone, Copy)]
     pub struct wire_cst_progress_event {
         phase: i32,
         percent: f32,
         label: *mut wire_cst_list_prim_u_8_strict,
-    }
-    #[repr(C)]
-    #[derive(Clone, Copy)]
-    pub struct wire_cst_record_string_file_type {
-        field0: *mut wire_cst_list_prim_u_8_strict,
-        field1: i32,
-    }
-    #[repr(C)]
-    #[derive(Clone, Copy)]
-    pub struct wire_cst_record_string_file_type_list_prim_u_8_strict {
-        field0: *mut wire_cst_list_prim_u_8_strict,
-        field1: i32,
-        field2: *mut wire_cst_list_prim_u_8_strict,
+        filename: *mut wire_cst_list_prim_u_8_strict,
+        data: *mut wire_cst_list_prim_u_8_strict,
     }
     #[repr(C)]
     #[derive(Clone, Copy)]
@@ -1628,7 +1395,6 @@ mod web {
     // Section: imports
 
     use super::*;
-    use crate::crypto::*;
     use flutter_rust_bridge::for_generated::byteorder::{
         NativeEndian, ReadBytesExt, WriteBytesExt,
     };
@@ -1672,28 +1438,10 @@ mod web {
             self.into_vec()
         }
     }
-    impl CstDecode<crate::crypto::MxEncFile>
-        for flutter_rust_bridge::for_generated::wasm_bindgen::JsValue
-    {
+    impl CstDecode<Option<String>> for Option<String> {
         // Codec=Cst (C-struct based), see doc to use other codecs
-        fn cst_decode(self) -> crate::crypto::MxEncFile {
-            let self_ = self
-                .dyn_into::<flutter_rust_bridge::for_generated::js_sys::Array>()
-                .unwrap();
-            assert_eq!(
-                self_.length(),
-                6,
-                "Expected 6 elements, got {}",
-                self_.length()
-            );
-            crate::crypto::MxEncFile {
-                original_filename: self_.get(0).cst_decode(),
-                file_type: self_.get(1).cst_decode(),
-                metadata: self_.get(2).cst_decode(),
-                salt: self_.get(3).cst_decode(),
-                nonce: self_.get(4).cst_decode(),
-                ciphertext: self_.get(5).cst_decode(),
-            }
+        fn cst_decode(self) -> Option<String> {
+            self.map(CstDecode::cst_decode)
         }
     }
     impl CstDecode<Option<Vec<u8>>> for Option<Box<[u8]>> {
@@ -1710,53 +1458,17 @@ mod web {
                 .unwrap();
             assert_eq!(
                 self_.length(),
-                3,
-                "Expected 3 elements, got {}",
+                5,
+                "Expected 5 elements, got {}",
                 self_.length()
             );
             crate::ProgressEvent {
                 phase: self_.get(0).cst_decode(),
                 percent: self_.get(1).cst_decode(),
                 label: self_.get(2).cst_decode(),
+                filename: self_.get(3).cst_decode(),
+                data: self_.get(4).cst_decode(),
             }
-        }
-    }
-    impl CstDecode<(String, crate::crypto::FileType)>
-        for flutter_rust_bridge::for_generated::wasm_bindgen::JsValue
-    {
-        // Codec=Cst (C-struct based), see doc to use other codecs
-        fn cst_decode(self) -> (String, crate::crypto::FileType) {
-            let self_ = self
-                .dyn_into::<flutter_rust_bridge::for_generated::js_sys::Array>()
-                .unwrap();
-            assert_eq!(
-                self_.length(),
-                2,
-                "Expected 2 elements, got {}",
-                self_.length()
-            );
-            (self_.get(0).cst_decode(), self_.get(1).cst_decode())
-        }
-    }
-    impl CstDecode<(String, crate::crypto::FileType, Vec<u8>)>
-        for flutter_rust_bridge::for_generated::wasm_bindgen::JsValue
-    {
-        // Codec=Cst (C-struct based), see doc to use other codecs
-        fn cst_decode(self) -> (String, crate::crypto::FileType, Vec<u8>) {
-            let self_ = self
-                .dyn_into::<flutter_rust_bridge::for_generated::js_sys::Array>()
-                .unwrap();
-            assert_eq!(
-                self_.length(),
-                3,
-                "Expected 3 elements, got {}",
-                self_.length()
-            );
-            (
-                self_.get(0).cst_decode(),
-                self_.get(1).cst_decode(),
-                self_.get(2).cst_decode(),
-            )
         }
     }
     impl CstDecode<(String, Vec<u8>)> for flutter_rust_bridge::for_generated::wasm_bindgen::JsValue {
@@ -1818,20 +1530,6 @@ mod web {
             unimplemented!()
         }
     }
-    impl CstDecode<RustOpaqueNom<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<[u8]>>>
-        for flutter_rust_bridge::for_generated::wasm_bindgen::JsValue
-    {
-        // Codec=Cst (C-struct based), see doc to use other codecs
-        fn cst_decode(
-            self,
-        ) -> RustOpaqueNom<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<[u8]>> {
-            #[cfg(target_pointer_width = "64")]
-            {
-                compile_error!("64-bit pointers are not supported.");
-            }
-            unsafe { decode_rust_opaque_nom((self.as_f64().unwrap() as usize) as _) }
-        }
-    }
     impl CstDecode<StreamSink<crate::ProgressEvent, flutter_rust_bridge::for_generated::DcoCodec>>
         for flutter_rust_bridge::for_generated::wasm_bindgen::JsValue
     {
@@ -1889,19 +1587,33 @@ mod web {
             self.unchecked_into_f64() as _
         }
     }
-    impl CstDecode<usize> for flutter_rust_bridge::for_generated::wasm_bindgen::JsValue {
-        // Codec=Cst (C-struct based), see doc to use other codecs
-        fn cst_decode(self) -> usize {
-            ::std::convert::TryInto::<u64>::try_into(self).unwrap() as _
-        }
-    }
 
     #[wasm_bindgen]
     pub fn wire__crate__decrypt_file(
+        port_: flutter_rust_bridge::for_generated::MessagePort,
         mxenc_data: Box<[u8]>,
         password: String,
-    ) -> flutter_rust_bridge::for_generated::WireSyncRust2DartDco {
-        wire__crate__decrypt_file_impl(mxenc_data, password)
+    ) {
+        wire__crate__decrypt_file_impl(port_, mxenc_data, password)
+    }
+
+    #[wasm_bindgen]
+    pub fn wire__crate__decrypt_file_by_path_with_progress(
+        port_: flutter_rust_bridge::for_generated::MessagePort,
+        input_path: String,
+        password: String,
+        sink: String,
+    ) {
+        wire__crate__decrypt_file_by_path_with_progress_impl(port_, input_path, password, sink)
+    }
+
+    #[wasm_bindgen]
+    pub fn wire__crate__decrypt_file_in_memory_by_path(
+        port_: flutter_rust_bridge::for_generated::MessagePort,
+        input_path: String,
+        password: String,
+    ) {
+        wire__crate__decrypt_file_in_memory_by_path_impl(port_, input_path, password)
     }
 
     #[wasm_bindgen]
@@ -1916,23 +1628,28 @@ mod web {
 
     #[wasm_bindgen]
     pub fn wire__crate__encrypt_file(
+        port_: flutter_rust_bridge::for_generated::MessagePort,
         plaintext: Box<[u8]>,
         password: String,
         original_filename: String,
-    ) -> flutter_rust_bridge::for_generated::WireSyncRust2DartDco {
-        wire__crate__encrypt_file_impl(plaintext, password, original_filename)
+    ) {
+        wire__crate__encrypt_file_impl(port_, plaintext, password, original_filename)
     }
 
     #[wasm_bindgen]
-    pub fn wire__crate__encrypt_file_with_metadata(
-        plaintext: Box<[u8]>,
+    pub fn wire__crate__encrypt_file_by_path(
+        port_: flutter_rust_bridge::for_generated::MessagePort,
+        input_path: String,
+        output_path: String,
         password: String,
-        original_filename: String,
+        original_filename: Option<String>,
         file_type: u8,
         metadata: Option<Box<[u8]>>,
-    ) -> flutter_rust_bridge::for_generated::WireSyncRust2DartDco {
-        wire__crate__encrypt_file_with_metadata_impl(
-            plaintext,
+    ) {
+        wire__crate__encrypt_file_by_path_impl(
+            port_,
+            input_path,
+            output_path,
             password,
             original_filename,
             file_type,
@@ -1941,10 +1658,22 @@ mod web {
     }
 
     #[wasm_bindgen]
-    pub fn wire__crate__frb_get_rust_content_hash(
+    pub fn wire__crate__encrypt_file_with_metadata(
         port_: flutter_rust_bridge::for_generated::MessagePort,
+        plaintext: Box<[u8]>,
+        password: String,
+        original_filename: String,
+        file_type: u8,
+        metadata: Option<Box<[u8]>>,
     ) {
-        wire__crate__frb_get_rust_content_hash_impl(port_)
+        wire__crate__encrypt_file_with_metadata_impl(
+            port_,
+            plaintext,
+            password,
+            original_filename,
+            file_type,
+            metadata,
+        )
     }
 
     #[wasm_bindgen]
@@ -2012,72 +1741,18 @@ mod web {
     }
 
     #[wasm_bindgen]
-    pub fn wire__crate__crypto__mx_enc_file_decrypt(
-        port_: flutter_rust_bridge::for_generated::MessagePort,
-        encrypted_data: Box<[u8]>,
-        password: String,
-    ) {
-        wire__crate__crypto__mx_enc_file_decrypt_impl(port_, encrypted_data, password)
-    }
-
-    #[wasm_bindgen]
-    pub fn wire__crate__crypto__mx_enc_file_encrypt(
-        port_: flutter_rust_bridge::for_generated::MessagePort,
-        plaintext: Box<[u8]>,
-        password: String,
-        original_filename: String,
-    ) {
-        wire__crate__crypto__mx_enc_file_encrypt_impl(port_, plaintext, password, original_filename)
-    }
-
-    #[wasm_bindgen]
-    pub fn wire__crate__crypto__mx_enc_file_encrypt_with_metadata(
-        port_: flutter_rust_bridge::for_generated::MessagePort,
-        plaintext: Box<[u8]>,
-        password: String,
-        original_filename: String,
-        file_type: i32,
-        metadata: flutter_rust_bridge::for_generated::wasm_bindgen::JsValue,
-    ) {
-        wire__crate__crypto__mx_enc_file_encrypt_with_metadata_impl(
-            port_,
-            plaintext,
-            password,
-            original_filename,
-            file_type,
-            metadata,
-        )
-    }
-
-    #[wasm_bindgen]
-    pub fn wire__crate__crypto__mx_enc_file_parse_full_header(
-        port_: flutter_rust_bridge::for_generated::MessagePort,
-        encrypted_data: Box<[u8]>,
-    ) {
-        wire__crate__crypto__mx_enc_file_parse_full_header_impl(port_, encrypted_data)
-    }
-
-    #[wasm_bindgen]
-    pub fn wire__crate__crypto__mx_enc_file_parse_header(
-        port_: flutter_rust_bridge::for_generated::MessagePort,
-        encrypted_data: Box<[u8]>,
-    ) {
-        wire__crate__crypto__mx_enc_file_parse_header_impl(port_, encrypted_data)
-    }
-
-    #[wasm_bindgen]
-    pub fn wire__crate__crypto__mx_enc_file_parse_header_extended(
-        port_: flutter_rust_bridge::for_generated::MessagePort,
-        encrypted_data: Box<[u8]>,
-    ) {
-        wire__crate__crypto__mx_enc_file_parse_header_extended_impl(port_, encrypted_data)
-    }
-
-    #[wasm_bindgen]
     pub fn wire__crate__parse_mxenc_full_header(
         mxenc_data: Box<[u8]>,
     ) -> flutter_rust_bridge::for_generated::WireSyncRust2DartDco {
         wire__crate__parse_mxenc_full_header_impl(mxenc_data)
+    }
+
+    #[wasm_bindgen]
+    pub fn wire__crate__parse_mxenc_full_header_by_path(
+        port_: flutter_rust_bridge::for_generated::MessagePort,
+        input_path: String,
+    ) {
+        wire__crate__parse_mxenc_full_header_by_path_impl(port_, input_path)
     }
 
     #[wasm_bindgen]
@@ -2088,28 +1763,18 @@ mod web {
     }
 
     #[wasm_bindgen]
+    pub fn wire__crate__parse_mxenc_header_by_path(
+        port_: flutter_rust_bridge::for_generated::MessagePort,
+        input_path: String,
+    ) {
+        wire__crate__parse_mxenc_header_by_path_impl(port_, input_path)
+    }
+
+    #[wasm_bindgen]
     pub fn wire__crate__parse_mxenc_header_extended(
         mxenc_data: Box<[u8]>,
     ) -> flutter_rust_bridge::for_generated::WireSyncRust2DartDco {
         wire__crate__parse_mxenc_header_extended_impl(mxenc_data)
-    }
-
-    #[wasm_bindgen]
-    pub fn rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInneru8(
-        ptr: *const std::ffi::c_void,
-    ) {
-        unsafe {
-            StdArc::<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<[u8]>>::increment_strong_count(ptr as _);
-        }
-    }
-
-    #[wasm_bindgen]
-    pub fn rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInneru8(
-        ptr: *const std::ffi::c_void,
-    ) {
-        unsafe {
-            StdArc::<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<[u8]>>::decrement_strong_count(ptr as _);
-        }
     }
 }
 #[cfg(target_family = "wasm")]

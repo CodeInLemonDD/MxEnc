@@ -1,6 +1,9 @@
 #![allow(unexpected_cfgs)]
 mod frb_generated; /* AUTO INJECTED BY flutter_rust_bridge. This line may not be accurate, and you can change it according to your needs. */
-pub mod crypto;
+mod crypto;
+
+use std::fs;
+use std::path::Path;
 
 // 导出文件类型枚举以供Dart使用
 #[frb(sync)]
@@ -48,10 +51,9 @@ fn init_once() {
     });
 }
 
-/// 加密文件
+/// 加密文件 (异步)
 /// 
 /// 将明文数据加密为 .mxenc 格式
-#[frb(sync)]
 pub fn encrypt_file(
     plaintext: Vec<u8>,
     password: String,
@@ -65,7 +67,6 @@ pub fn encrypt_file(
     }
 }
 
-#[frb(sync)]
 pub fn encrypt_file_with_metadata(
     plaintext: Vec<u8>,
     password: String,
@@ -93,15 +94,73 @@ pub fn encrypt_file_with_metadata(
     }
 }
 
-/// 解密文件
+/// 通过路径加密文件 (异步，避免Dart端内存压力)
+pub fn encrypt_file_by_path(
+    input_path: String,
+    output_path: String,
+    password: String,
+    original_filename: Option<String>,
+    file_type: u8,
+    metadata: Option<Vec<u8>>,
+) -> Result<(), String> {
+    init_once();
+    
+    // 在Rust后台线程读取文件
+    let plaintext = fs::read(&input_path).map_err(|e| format!("读取文件失败: {}", e))?;
+    
+    // 确定原始文件名
+    let filename = if let Some(name) = original_filename {
+        name
+    } else {
+        Path::new(&input_path)
+            .file_name()
+            .and_then(|n| n.to_str())
+            .unwrap_or("unknown")
+            .to_string()
+    };
+
+    let ft = match file_type {
+        0 => FileType::Generic,
+        1 => FileType::Image,
+        2 => FileType::Novel,
+        _ => FileType::Other,
+    };
+
+    let encrypted = crypto::MxEncFile::encrypt_with_metadata(
+        &plaintext,
+        &password,
+        &filename,
+        ft,
+        metadata.as_deref(),
+    ).map_err(|e| e.to_string())?;
+
+    fs::write(&output_path, encrypted).map_err(|e| format!("写入文件失败: {}", e))?;
+    Ok(())
+}
+
+/// 解密文件 (异步)
 /// 
 /// 解密 .mxenc 格式的数据，返回原始文件名和明文数据
-#[frb(sync)]
 pub fn decrypt_file(
     mxenc_data: Vec<u8>,
     password: String,
 ) -> Result<(String, Vec<u8>), String> {
     init_once();
+    
+    match crypto::MxEncFile::decrypt(&mxenc_data, &password) {
+        Ok((filename, data)) => Ok((filename, data)),
+        Err(e) => Err(e.to_string()),
+    }
+}
+
+/// 通过路径读取并解密文件，返回内容 (异步，避免Dart端读取文件)
+pub fn decrypt_file_in_memory_by_path(
+    input_path: String,
+    password: String,
+) -> Result<(String, Vec<u8>), String> {
+    init_once();
+    
+    let mxenc_data = fs::read(&input_path).map_err(|e| format!("读取文件失败: {}", e))?;
     
     match crypto::MxEncFile::decrypt(&mxenc_data, &password) {
         Ok((filename, data)) => Ok((filename, data)),
@@ -118,6 +177,27 @@ pub fn parse_mxenc_header(mxenc_data: Vec<u8>) -> Result<String, String> {
     
     match crypto::MxEncFile::parse_header(&mxenc_data) {
         Ok(filename) => Ok(filename),
+        Err(e) => Err(e.to_string()),
+    }
+}
+
+/// 通过路径解析文件头 (异步，避免Dart端读取)
+pub fn parse_mxenc_header_by_path(input_path: String) -> Result<(String, u8), String> {
+    init_once();
+    
+    // 只读取头部，不需要读取整个文件
+    // 这里简单起见先读一部分，或者为了复用 parse_header_extended，我们需要一个 reader 接口
+    // 但 MxEncFile::parse_header_extended 接受 slice
+    // 我们可以只读前 4KB，通常足够了
+    
+    use std::io::Read;
+    let mut file = fs::File::open(&input_path).map_err(|e| format!("打开文件失败: {}", e))?;
+    let mut buffer = vec![0u8; 4096]; // 4KB should be enough for header
+    let n = file.read(&mut buffer).map_err(|e| format!("读取文件头失败: {}", e))?;
+    buffer.truncate(n);
+    
+    match crypto::MxEncFile::parse_header_extended(&buffer) {
+        Ok((filename, file_type)) => Ok((filename, file_type as u8)),
         Err(e) => Err(e.to_string()),
     }
 }
@@ -142,6 +222,27 @@ pub fn parse_mxenc_full_header(mxenc_data: Vec<u8>) -> Result<(String, u8, Vec<u
     }
 }
 
+/// 通过路径解析完整头部 (异步)
+pub fn parse_mxenc_full_header_by_path(input_path: String) -> Result<(String, u8, Vec<u8>), String> {
+    init_once();
+    
+    // 需要读取足够多的数据以包含 metadata
+    // 这里我们保守一点，读取前 1MB，如果 metadata 很大可能不够，但目前设计 metadata < 64KB
+    // 所以 1MB 足够了
+    
+    use std::io::Read;
+    let mut file = fs::File::open(&input_path).map_err(|e| format!("打开文件失败: {}", e))?;
+    let mut buffer = vec![0u8; 1024 * 1024]; // 1MB
+    let n = file.read(&mut buffer).map_err(|e| format!("读取文件头失败: {}", e))?;
+    buffer.truncate(n);
+    
+    match crypto::MxEncFile::parse_full_header(&buffer) {
+        Ok((filename, file_type, metadata)) => Ok((filename, file_type as u8, metadata)),
+        Err(e) => Err(e.to_string()),
+    }
+}
+
+
 /// 生成设备指纹
 /// 
 /// 用于水印标识
@@ -156,24 +257,131 @@ pub fn generate_device_fingerprint() -> String {
 pub enum ProgressPhase { ReadHeader, DeriveKey, Decrypt, Decode, Done }
 
 #[derive(Clone, Debug)]
-pub struct ProgressEvent { pub phase: ProgressPhase, pub percent: f32, pub label: String }
+pub struct ProgressEvent { 
+    pub phase: ProgressPhase, 
+    pub percent: f32, 
+    pub label: String,
+    pub filename: Option<String>,
+    pub data: Option<Vec<u8>>,
+}
 
 #[frb]
 pub fn decrypt_file_with_progress(
     mxenc_data: Vec<u8>,
     password: String,
-    sink: frb_generated::StreamSink<ProgressEvent>,
+    sink: crate::frb_generated::StreamSink<ProgressEvent>,
 ) -> Result<(), String> {
     init_once();
-    let _ = sink.add(ProgressEvent { phase: ProgressPhase::ReadHeader, percent: 0.05, label: "读取文件".to_string() });
-    let _ = sink.add(ProgressEvent { phase: ProgressPhase::ReadHeader, percent: 0.10, label: "解析头部".to_string() });
-    let _ = sink.add(ProgressEvent { phase: ProgressPhase::DeriveKey, percent: 0.20, label: "派生密钥".to_string() });
-    let _ = sink.add(ProgressEvent { phase: ProgressPhase::Decrypt, percent: 0.90, label: "解密中".to_string() });
-    let _ = match crypto::MxEncFile::decrypt(&mxenc_data, &password) {
-        Ok(_) => (),
+    let _ = sink.add(ProgressEvent { 
+        phase: ProgressPhase::ReadHeader, 
+        percent: 0.05, 
+        label: "读取文件".to_string(),
+        filename: None,
+        data: None 
+    });
+    let _ = sink.add(ProgressEvent { 
+        phase: ProgressPhase::ReadHeader, 
+        percent: 0.10, 
+        label: "解析头部".to_string(),
+        filename: None,
+        data: None
+    });
+    let _ = sink.add(ProgressEvent { 
+        phase: ProgressPhase::DeriveKey, 
+        percent: 0.20, 
+        label: "派生密钥".to_string(),
+        filename: None,
+        data: None
+    });
+    let _ = sink.add(ProgressEvent { 
+        phase: ProgressPhase::Decrypt, 
+        percent: 0.90, 
+        label: "解密中".to_string(),
+        filename: None,
+        data: None
+    });
+    
+    let (filename, data) = match crypto::MxEncFile::decrypt(&mxenc_data, &password) {
+        Ok(res) => res,
         Err(e) => return Err(e.to_string()),
     };
-    let _ = sink.add(ProgressEvent { phase: ProgressPhase::Decode, percent: 0.98, label: "解码中".to_string() });
-    let _ = sink.add(ProgressEvent { phase: ProgressPhase::Done, percent: 1.00, label: "完成".to_string() });
+    
+    let _ = sink.add(ProgressEvent { 
+        phase: ProgressPhase::Decode, 
+        percent: 0.98, 
+        label: "解码中".to_string(),
+        filename: None,
+        data: None
+    });
+    let _ = sink.add(ProgressEvent { 
+        phase: ProgressPhase::Done, 
+        percent: 1.00, 
+        label: "完成".to_string(),
+        filename: Some(filename),
+        data: Some(data),
+    });
     Ok(())
+}
+
+/// 通过路径解密并返回进度 (异步)
+#[frb]
+pub fn decrypt_file_by_path_with_progress(
+    input_path: String,
+    password: String,
+    sink: crate::frb_generated::StreamSink<ProgressEvent>,
+) -> Result<(), String> {
+    init_once();
+    let _ = sink.add(ProgressEvent { 
+        phase: ProgressPhase::ReadHeader, 
+        percent: 0.05, 
+        label: "读取文件".to_string(),
+        filename: None,
+        data: None
+    });
+    
+    let mxenc_data = fs::read(&input_path).map_err(|e| format!("读取文件失败: {}", e))?;
+    
+    let _ = sink.add(ProgressEvent { 
+        phase: ProgressPhase::ReadHeader, 
+        percent: 0.10, 
+        label: "解析头部".to_string(),
+        filename: None,
+        data: None
+    });
+    let _ = sink.add(ProgressEvent { 
+        phase: ProgressPhase::DeriveKey, 
+        percent: 0.20, 
+        label: "派生密钥".to_string(),
+        filename: None,
+        data: None
+    });
+    let _ = sink.add(ProgressEvent { 
+        phase: ProgressPhase::Decrypt, 
+        percent: 0.90, 
+        label: "解密中".to_string(),
+        filename: None,
+        data: None
+    });
+    
+    match crypto::MxEncFile::decrypt(&mxenc_data, &password) {
+        Ok((filename, data)) => {
+             let _ = sink.add(ProgressEvent { 
+                 phase: ProgressPhase::Decode, 
+                 percent: 0.98, 
+                 label: "解码中".to_string(),
+                 filename: None,
+                 data: None
+             });
+             
+             let _ = sink.add(ProgressEvent { 
+                 phase: ProgressPhase::Done, 
+                 percent: 1.00, 
+                 label: "完成".to_string(),
+                 filename: Some(filename),
+                 data: Some(data),
+             });
+             Ok(())
+        },
+        Err(e) => Err(e.to_string()),
+    }
 }

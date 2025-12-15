@@ -3,11 +3,11 @@ use aes_gcm::{
     Aes256Gcm, Key, Nonce,
 };
 use anyhow::{anyhow, Result};
-use argon2::{Algorithm, Argon2, Params, Version};
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 use rand::{Rng, RngCore};
 use std::io::{Cursor, Read, Write};
 use zeroize::Zeroize;
+use flutter_rust_bridge::frb;
 
 // 常量定义
 const MAGIC: &[u8] = b"MXENC20"; // 升级到版本2.0
@@ -27,6 +27,7 @@ pub enum FileType {
 }
 
 /// MxEnc 文件格式处理器
+#[frb(ignore)]
 pub struct MxEncFile {
     pub original_filename: String,
     pub file_type: FileType,
@@ -354,18 +355,21 @@ impl MxEncFile {
 
 /// 从密码和盐值派生加密密钥
 fn derive_key(password: &str, salt: &[u8]) -> Result<Key<Aes256Gcm>> {
-    // 使用 Argon2id 算法派生密钥
-    let argon2 = Argon2::new(
-        Algorithm::Argon2id,
-        Version::V0x13,
-        Params::new(32768, 4, 1, Some(KEY_SIZE))
-            .map_err(|e| anyhow!("Argon2 参数错误: {}", e))?,
-    );
+    // 兼容 Dart 实现：使用 PBKDF2 (SHA256, 100000 iterations)
+    // Dart: _pbkdf2(password, salt, 32)
     
+    use pbkdf2::pbkdf2;
+    use hmac::Hmac;
+    use sha2::Sha256;
+
     let mut key_bytes = [0u8; KEY_SIZE];
-    argon2
-        .hash_password_into(password.as_bytes(), salt, &mut key_bytes)
-        .map_err(|e| anyhow!("密钥派生失败: {}", e))?;
+    
+    pbkdf2::<Hmac<Sha256>>(
+        password.as_bytes(),
+        salt,
+        100000,
+        &mut key_bytes
+    ).map_err(|e| anyhow!("密钥派生失败: {}", e))?;
     
     let key = Key::<Aes256Gcm>::from_slice(&key_bytes).clone();
     

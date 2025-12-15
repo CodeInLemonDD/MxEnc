@@ -10,7 +10,7 @@ import 'package:flutter/foundation.dart';
 import 'comic_detail_screen.dart';
 import 'rich_detail_screen.dart';
 import '../widgets/loading_dialog.dart';
-import '../utils/progress.dart';
+// import '../utils/progress.dart';
 // import 'dart:typed_data';
 
 // 定义书籍/图片项目模型
@@ -224,13 +224,13 @@ class _BookshelfScreenState extends State<BookshelfScreen> {
         if (input == null || input.isEmpty) return;
         password = input;
       }
-      final fileBytes = await File(item.filePath).readAsBytes();
+      // final fileBytes = await File(item.filePath).readAsBytes();
       final controller = LoadingController(0);
       if (!mounted) return;
       showLoadingDialog(context, controller: controller, label: '解密中');
       controller.set(0.05);
-      final stream = widget.rustBridge.decryptFileProgress(
-        mxencData: fileBytes,
+      final stream = widget.rustBridge.decryptFileByPathWithProgress(
+        inputPath: item.filePath,
         password: password,
       );
       Uint8List? decrypted;
@@ -307,13 +307,13 @@ class _BookshelfScreenState extends State<BookshelfScreen> {
         password = input;
       }
 
-      final fileBytes = await File(item.filePath).readAsBytes();
+      // final fileBytes = await File(item.filePath).readAsBytes();
       final controller = LoadingController(0);
       if (!mounted) return;
       showLoadingDialog(context, controller: controller, label: '解密中');
       controller.set(0.05);
-      final stream = widget.rustBridge.decryptFileProgress(
-        mxencData: fileBytes,
+      final stream = widget.rustBridge.decryptFileByPathWithProgress(
+        inputPath: item.filePath,
         password: password,
       );
       Uint8List? decrypted;

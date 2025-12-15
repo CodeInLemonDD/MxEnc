@@ -21,23 +21,8 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
     required super.portManager,
   });
 
-  CrossPlatformFinalizerArg get rust_arc_decrement_strong_count_U8Ptr => wire
-      .rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInneru8;
-
   @protected
   AnyhowException dco_decode_AnyhowException(dynamic raw);
-
-  @protected
-  U8
-  dco_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInneru8(
-    dynamic raw,
-  );
-
-  @protected
-  U8
-  dco_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInneru8(
-    dynamic raw,
-  );
 
   @protected
   RustStreamSink<ProgressEvent> dco_decode_StreamSink_progress_event_Dco(
@@ -46,12 +31,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   String dco_decode_String(dynamic raw);
-
-  @protected
-  U8
-  dco_decode_box_autoadd_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInneru8(
-    dynamic raw,
-  );
 
   @protected
   double dco_decode_f_32(dynamic raw);
@@ -69,13 +48,7 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   Uint8List dco_decode_list_prim_u_8_strict(dynamic raw);
 
   @protected
-  MxEncFile dco_decode_mx_enc_file(dynamic raw);
-
-  @protected
-  U8?
-  dco_decode_opt_box_autoadd_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInneru8(
-    dynamic raw,
-  );
+  String? dco_decode_opt_String(dynamic raw);
 
   @protected
   Uint8List? dco_decode_opt_list_prim_u_8_strict(dynamic raw);
@@ -85,13 +58,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   ProgressPhase dco_decode_progress_phase(dynamic raw);
-
-  @protected
-  (String, FileType) dco_decode_record_string_file_type(dynamic raw);
-
-  @protected
-  (String, FileType, Uint8List)
-  dco_decode_record_string_file_type_list_prim_u_8_strict(dynamic raw);
 
   @protected
   (String, Uint8List) dco_decode_record_string_list_prim_u_8_strict(
@@ -113,22 +79,7 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void dco_decode_unit(dynamic raw);
 
   @protected
-  BigInt dco_decode_usize(dynamic raw);
-
-  @protected
   AnyhowException sse_decode_AnyhowException(SseDeserializer deserializer);
-
-  @protected
-  U8
-  sse_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInneru8(
-    SseDeserializer deserializer,
-  );
-
-  @protected
-  U8
-  sse_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInneru8(
-    SseDeserializer deserializer,
-  );
 
   @protected
   RustStreamSink<ProgressEvent> sse_decode_StreamSink_progress_event_Dco(
@@ -137,12 +88,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   String sse_decode_String(SseDeserializer deserializer);
-
-  @protected
-  U8
-  sse_decode_box_autoadd_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInneru8(
-    SseDeserializer deserializer,
-  );
 
   @protected
   double sse_decode_f_32(SseDeserializer deserializer);
@@ -160,13 +105,7 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   Uint8List sse_decode_list_prim_u_8_strict(SseDeserializer deserializer);
 
   @protected
-  MxEncFile sse_decode_mx_enc_file(SseDeserializer deserializer);
-
-  @protected
-  U8?
-  sse_decode_opt_box_autoadd_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInneru8(
-    SseDeserializer deserializer,
-  );
+  String? sse_decode_opt_String(SseDeserializer deserializer);
 
   @protected
   Uint8List? sse_decode_opt_list_prim_u_8_strict(SseDeserializer deserializer);
@@ -176,17 +115,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   ProgressPhase sse_decode_progress_phase(SseDeserializer deserializer);
-
-  @protected
-  (String, FileType) sse_decode_record_string_file_type(
-    SseDeserializer deserializer,
-  );
-
-  @protected
-  (String, FileType, Uint8List)
-  sse_decode_record_string_file_type_list_prim_u_8_strict(
-    SseDeserializer deserializer,
-  );
 
   @protected
   (String, Uint8List) sse_decode_record_string_list_prim_u_8_strict(
@@ -206,9 +134,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_decode_unit(SseDeserializer deserializer);
-
-  @protected
-  BigInt sse_decode_usize(SseDeserializer deserializer);
 
   @protected
   bool sse_decode_bool(SseDeserializer deserializer);
@@ -241,17 +166,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   }
 
   @protected
-  int
-  cst_encode_box_autoadd_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInneru8(
-    U8 raw,
-  ) {
-    // Codec=Cst (C-struct based), see doc to use other codecs
-    return cst_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInneru8(
-      raw,
-    );
-  }
-
-  @protected
   JSAny cst_encode_list_prim_u_8_loose(List<int> raw) {
     // Codec=Cst (C-struct based), see doc to use other codecs
     return raw.jsify()!;
@@ -264,29 +178,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   }
 
   @protected
-  JSAny cst_encode_mx_enc_file(MxEncFile raw) {
+  String? cst_encode_opt_String(String? raw) {
     // Codec=Cst (C-struct based), see doc to use other codecs
-    return [
-      cst_encode_String(raw.originalFilename),
-      cst_encode_file_type(raw.fileType),
-      cst_encode_list_prim_u_8_strict(raw.metadata),
-      cst_encode_list_prim_u_8_strict(raw.salt),
-      cst_encode_list_prim_u_8_strict(raw.nonce),
-      cst_encode_list_prim_u_8_strict(raw.ciphertext),
-    ].jsify()!;
-  }
-
-  @protected
-  int?
-  cst_encode_opt_box_autoadd_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInneru8(
-    U8? raw,
-  ) {
-    // Codec=Cst (C-struct based), see doc to use other codecs
-    return raw == null
-        ? null
-        : cst_encode_box_autoadd_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInneru8(
-            raw,
-          );
+    return raw == null ? null : cst_encode_String(raw);
   }
 
   @protected
@@ -302,24 +196,8 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
       cst_encode_progress_phase(raw.phase),
       cst_encode_f_32(raw.percent),
       cst_encode_String(raw.label),
-    ].jsify()!;
-  }
-
-  @protected
-  JSAny cst_encode_record_string_file_type((String, FileType) raw) {
-    // Codec=Cst (C-struct based), see doc to use other codecs
-    return [cst_encode_String(raw.$1), cst_encode_file_type(raw.$2)].jsify()!;
-  }
-
-  @protected
-  JSAny cst_encode_record_string_file_type_list_prim_u_8_strict(
-    (String, FileType, Uint8List) raw,
-  ) {
-    // Codec=Cst (C-struct based), see doc to use other codecs
-    return [
-      cst_encode_String(raw.$1),
-      cst_encode_file_type(raw.$2),
-      cst_encode_list_prim_u_8_strict(raw.$3),
+      cst_encode_opt_String(raw.filename),
+      cst_encode_opt_list_prim_u_8_strict(raw.data),
     ].jsify()!;
   }
 
@@ -351,24 +229,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   }
 
   @protected
-  JSAny cst_encode_usize(BigInt raw) {
-    // Codec=Cst (C-struct based), see doc to use other codecs
-    return castNativeBigInt(raw);
-  }
-
-  @protected
-  int
-  cst_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInneru8(
-    U8 raw,
-  );
-
-  @protected
-  int
-  cst_encode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInneru8(
-    U8 raw,
-  );
-
-  @protected
   double cst_encode_f_32(double raw);
 
   @protected
@@ -393,20 +253,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
-  void
-  sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInneru8(
-    U8 self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void
-  sse_encode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInneru8(
-    U8 self,
-    SseSerializer serializer,
-  );
-
-  @protected
   void sse_encode_StreamSink_progress_event_Dco(
     RustStreamSink<ProgressEvent> self,
     SseSerializer serializer,
@@ -414,13 +260,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_String(String self, SseSerializer serializer);
-
-  @protected
-  void
-  sse_encode_box_autoadd_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInneru8(
-    U8 self,
-    SseSerializer serializer,
-  );
 
   @protected
   void sse_encode_f_32(double self, SseSerializer serializer);
@@ -441,14 +280,7 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
-  void sse_encode_mx_enc_file(MxEncFile self, SseSerializer serializer);
-
-  @protected
-  void
-  sse_encode_opt_box_autoadd_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInneru8(
-    U8? self,
-    SseSerializer serializer,
-  );
+  void sse_encode_opt_String(String? self, SseSerializer serializer);
 
   @protected
   void sse_encode_opt_list_prim_u_8_strict(
@@ -461,18 +293,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_progress_phase(ProgressPhase self, SseSerializer serializer);
-
-  @protected
-  void sse_encode_record_string_file_type(
-    (String, FileType) self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_record_string_file_type_list_prim_u_8_strict(
-    (String, FileType, Uint8List) self,
-    SseSerializer serializer,
-  );
 
   @protected
   void sse_encode_record_string_list_prim_u_8_strict(
@@ -499,9 +319,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_unit(void self, SseSerializer serializer);
 
   @protected
-  void sse_encode_usize(BigInt self, SseSerializer serializer);
-
-  @protected
   void sse_encode_bool(bool self, SseSerializer serializer);
 }
 
@@ -510,9 +327,33 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 class RustLibWire implements BaseWire {
   RustLibWire.fromExternalLibrary(ExternalLibrary lib);
 
-  JSAny? /* flutter_rust_bridge::for_generated::WireSyncRust2DartDco */
-  wire__crate__decrypt_file(JSAny mxenc_data, String password) =>
-      wasmModule.wire__crate__decrypt_file(mxenc_data, password);
+  void wire__crate__decrypt_file(
+    NativePortType port_,
+    JSAny mxenc_data,
+    String password,
+  ) => wasmModule.wire__crate__decrypt_file(port_, mxenc_data, password);
+
+  void wire__crate__decrypt_file_by_path_with_progress(
+    NativePortType port_,
+    String input_path,
+    String password,
+    String sink,
+  ) => wasmModule.wire__crate__decrypt_file_by_path_with_progress(
+    port_,
+    input_path,
+    password,
+    sink,
+  );
+
+  void wire__crate__decrypt_file_in_memory_by_path(
+    NativePortType port_,
+    String input_path,
+    String password,
+  ) => wasmModule.wire__crate__decrypt_file_in_memory_by_path(
+    port_,
+    input_path,
+    password,
+  );
 
   void wire__crate__decrypt_file_with_progress(
     NativePortType port_,
@@ -526,34 +367,51 @@ class RustLibWire implements BaseWire {
     sink,
   );
 
-  JSAny? /* flutter_rust_bridge::for_generated::WireSyncRust2DartDco */
-  wire__crate__encrypt_file(
+  void wire__crate__encrypt_file(
+    NativePortType port_,
     JSAny plaintext,
     String password,
     String original_filename,
   ) => wasmModule.wire__crate__encrypt_file(
+    port_,
     plaintext,
     password,
     original_filename,
   );
 
-  JSAny? /* flutter_rust_bridge::for_generated::WireSyncRust2DartDco */
-  wire__crate__encrypt_file_with_metadata(
-    JSAny plaintext,
+  void wire__crate__encrypt_file_by_path(
+    NativePortType port_,
+    String input_path,
+    String output_path,
     String password,
-    String original_filename,
+    String? original_filename,
     int file_type,
     JSAny? metadata,
-  ) => wasmModule.wire__crate__encrypt_file_with_metadata(
-    plaintext,
+  ) => wasmModule.wire__crate__encrypt_file_by_path(
+    port_,
+    input_path,
+    output_path,
     password,
     original_filename,
     file_type,
     metadata,
   );
 
-  void wire__crate__frb_get_rust_content_hash(NativePortType port_) =>
-      wasmModule.wire__crate__frb_get_rust_content_hash(port_);
+  void wire__crate__encrypt_file_with_metadata(
+    NativePortType port_,
+    JSAny plaintext,
+    String password,
+    String original_filename,
+    int file_type,
+    JSAny? metadata,
+  ) => wasmModule.wire__crate__encrypt_file_with_metadata(
+    port_,
+    plaintext,
+    password,
+    original_filename,
+    file_type,
+    metadata,
+  );
 
   JSAny? /* flutter_rust_bridge::for_generated::WireSyncRust2DartDco */
   wire__crate__generate_device_fingerprint() =>
@@ -598,95 +456,30 @@ class RustLibWire implements BaseWire {
   wire__crate__get_file_type_rich_novel() =>
       wasmModule.wire__crate__get_file_type_rich_novel();
 
-  void wire__crate__crypto__mx_enc_file_decrypt(
-    NativePortType port_,
-    JSAny encrypted_data,
-    String password,
-  ) => wasmModule.wire__crate__crypto__mx_enc_file_decrypt(
-    port_,
-    encrypted_data,
-    password,
-  );
-
-  void wire__crate__crypto__mx_enc_file_encrypt(
-    NativePortType port_,
-    JSAny plaintext,
-    String password,
-    String original_filename,
-  ) => wasmModule.wire__crate__crypto__mx_enc_file_encrypt(
-    port_,
-    plaintext,
-    password,
-    original_filename,
-  );
-
-  void wire__crate__crypto__mx_enc_file_encrypt_with_metadata(
-    NativePortType port_,
-    JSAny plaintext,
-    String password,
-    String original_filename,
-    int file_type,
-    int? metadata,
-  ) => wasmModule.wire__crate__crypto__mx_enc_file_encrypt_with_metadata(
-    port_,
-    plaintext,
-    password,
-    original_filename,
-    file_type,
-    metadata,
-  );
-
-  void wire__crate__crypto__mx_enc_file_parse_full_header(
-    NativePortType port_,
-    JSAny encrypted_data,
-  ) => wasmModule.wire__crate__crypto__mx_enc_file_parse_full_header(
-    port_,
-    encrypted_data,
-  );
-
-  void wire__crate__crypto__mx_enc_file_parse_header(
-    NativePortType port_,
-    JSAny encrypted_data,
-  ) => wasmModule.wire__crate__crypto__mx_enc_file_parse_header(
-    port_,
-    encrypted_data,
-  );
-
-  void wire__crate__crypto__mx_enc_file_parse_header_extended(
-    NativePortType port_,
-    JSAny encrypted_data,
-  ) => wasmModule.wire__crate__crypto__mx_enc_file_parse_header_extended(
-    port_,
-    encrypted_data,
-  );
-
   JSAny? /* flutter_rust_bridge::for_generated::WireSyncRust2DartDco */
   wire__crate__parse_mxenc_full_header(JSAny mxenc_data) =>
       wasmModule.wire__crate__parse_mxenc_full_header(mxenc_data);
+
+  void wire__crate__parse_mxenc_full_header_by_path(
+    NativePortType port_,
+    String input_path,
+  ) => wasmModule.wire__crate__parse_mxenc_full_header_by_path(
+    port_,
+    input_path,
+  );
 
   JSAny? /* flutter_rust_bridge::for_generated::WireSyncRust2DartDco */
   wire__crate__parse_mxenc_header(JSAny mxenc_data) =>
       wasmModule.wire__crate__parse_mxenc_header(mxenc_data);
 
+  void wire__crate__parse_mxenc_header_by_path(
+    NativePortType port_,
+    String input_path,
+  ) => wasmModule.wire__crate__parse_mxenc_header_by_path(port_, input_path);
+
   JSAny? /* flutter_rust_bridge::for_generated::WireSyncRust2DartDco */
   wire__crate__parse_mxenc_header_extended(JSAny mxenc_data) =>
       wasmModule.wire__crate__parse_mxenc_header_extended(mxenc_data);
-
-  void
-  rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInneru8(
-    int ptr,
-  ) => wasmModule
-      .rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInneru8(
-        ptr,
-      );
-
-  void
-  rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInneru8(
-    int ptr,
-  ) => wasmModule
-      .rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInneru8(
-        ptr,
-      );
 }
 
 @JS('wasm_bindgen')
@@ -695,8 +488,24 @@ external RustLibWasmModule get wasmModule;
 @JS()
 @anonymous
 extension type RustLibWasmModule._(JSObject _) implements JSObject {
-  external JSAny? /* flutter_rust_bridge::for_generated::WireSyncRust2DartDco */
-  wire__crate__decrypt_file(JSAny mxenc_data, String password);
+  external void wire__crate__decrypt_file(
+    NativePortType port_,
+    JSAny mxenc_data,
+    String password,
+  );
+
+  external void wire__crate__decrypt_file_by_path_with_progress(
+    NativePortType port_,
+    String input_path,
+    String password,
+    String sink,
+  );
+
+  external void wire__crate__decrypt_file_in_memory_by_path(
+    NativePortType port_,
+    String input_path,
+    String password,
+  );
 
   external void wire__crate__decrypt_file_with_progress(
     NativePortType port_,
@@ -705,23 +514,31 @@ extension type RustLibWasmModule._(JSObject _) implements JSObject {
     String sink,
   );
 
-  external JSAny? /* flutter_rust_bridge::for_generated::WireSyncRust2DartDco */
-  wire__crate__encrypt_file(
+  external void wire__crate__encrypt_file(
+    NativePortType port_,
     JSAny plaintext,
     String password,
     String original_filename,
   );
 
-  external JSAny? /* flutter_rust_bridge::for_generated::WireSyncRust2DartDco */
-  wire__crate__encrypt_file_with_metadata(
+  external void wire__crate__encrypt_file_by_path(
+    NativePortType port_,
+    String input_path,
+    String output_path,
+    String password,
+    String? original_filename,
+    int file_type,
+    JSAny? metadata,
+  );
+
+  external void wire__crate__encrypt_file_with_metadata(
+    NativePortType port_,
     JSAny plaintext,
     String password,
     String original_filename,
     int file_type,
     JSAny? metadata,
   );
-
-  external void wire__crate__frb_get_rust_content_hash(NativePortType port_);
 
   external JSAny? /* flutter_rust_bridge::for_generated::WireSyncRust2DartDco */
   wire__crate__generate_device_fingerprint();
@@ -756,59 +573,22 @@ extension type RustLibWasmModule._(JSObject _) implements JSObject {
   external JSAny? /* flutter_rust_bridge::for_generated::WireSyncRust2DartDco */
   wire__crate__get_file_type_rich_novel();
 
-  external void wire__crate__crypto__mx_enc_file_decrypt(
-    NativePortType port_,
-    JSAny encrypted_data,
-    String password,
-  );
-
-  external void wire__crate__crypto__mx_enc_file_encrypt(
-    NativePortType port_,
-    JSAny plaintext,
-    String password,
-    String original_filename,
-  );
-
-  external void wire__crate__crypto__mx_enc_file_encrypt_with_metadata(
-    NativePortType port_,
-    JSAny plaintext,
-    String password,
-    String original_filename,
-    int file_type,
-    int? metadata,
-  );
-
-  external void wire__crate__crypto__mx_enc_file_parse_full_header(
-    NativePortType port_,
-    JSAny encrypted_data,
-  );
-
-  external void wire__crate__crypto__mx_enc_file_parse_header(
-    NativePortType port_,
-    JSAny encrypted_data,
-  );
-
-  external void wire__crate__crypto__mx_enc_file_parse_header_extended(
-    NativePortType port_,
-    JSAny encrypted_data,
-  );
-
   external JSAny? /* flutter_rust_bridge::for_generated::WireSyncRust2DartDco */
   wire__crate__parse_mxenc_full_header(JSAny mxenc_data);
+
+  external void wire__crate__parse_mxenc_full_header_by_path(
+    NativePortType port_,
+    String input_path,
+  );
 
   external JSAny? /* flutter_rust_bridge::for_generated::WireSyncRust2DartDco */
   wire__crate__parse_mxenc_header(JSAny mxenc_data);
 
+  external void wire__crate__parse_mxenc_header_by_path(
+    NativePortType port_,
+    String input_path,
+  );
+
   external JSAny? /* flutter_rust_bridge::for_generated::WireSyncRust2DartDco */
   wire__crate__parse_mxenc_header_extended(JSAny mxenc_data);
-
-  external void
-  rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInneru8(
-    int ptr,
-  );
-
-  external void
-  rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInneru8(
-    int ptr,
-  );
 }

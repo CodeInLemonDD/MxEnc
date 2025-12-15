@@ -110,44 +110,11 @@ class _EncryptScreenState extends State<EncryptScreen> {
     });
     loading.set(_progress);
 
-    Uint8List encryptedBytes;
-    try {
-      final fileBytes = await _selectedFile!.readAsBytes();
-      final originalFilename = path.basename(_selectedFile!.path);
-      final fileType = _determineFileType(originalFilename);
-      setState(() {
-        _progress = 0.4;
-        _progressLabel = '加密中';
-      });
-      loading.set(_progress);
-      encryptedBytes = await widget.rustBridge.encryptFileWithMetadata(
-        plaintext: fileBytes,
-        password: _passwordController.text,
-        originalFilename: originalFilename,
-        fileType: fileType,
-        metadata: null,
-      );
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _errorMessage = '加密失败: $e';
-          _isEncrypting = false;
-          _progress = 0.0;
-          _progressLabel = '';
-        });
-      }
-      return;
-    }
-
     try {
       final originalFilename = path.basename(_selectedFile!.path);
       String encryptedFilePath;
       final outName = '$originalFilename.mxenc';
-      setState(() {
-        _progress = 0.8;
-        _progressLabel = '保存文件';
-      });
-      loading.set(_progress);
+      
       if (Platform.isAndroid) {
         final dir = await FilePicker.platform.getDirectoryPath(
           dialogTitle: '选择保存位置',
@@ -179,7 +146,37 @@ class _EncryptScreenState extends State<EncryptScreen> {
       } else {
         encryptedFilePath = '${_selectedFile!.path}.mxenc';
       }
-      await File(encryptedFilePath).writeAsBytes(encryptedBytes);
+
+      setState(() {
+        _progress = 0.4;
+        _progressLabel = '加密中';
+      });
+      loading.set(_progress);
+
+      final fileType = _determineFileType(originalFilename);
+      // 将 Dart 枚举转换为 Rust 对应的 u8 值
+      // Generic=0, Image=1, Novel=2, Comic=3, RichNovel=4, Other=255
+      int fileTypeVal = 0;
+      switch (fileType) {
+        case MxEncFileType.image:
+          fileTypeVal = 1;
+          break;
+        case MxEncFileType.novel:
+          fileTypeVal = 2;
+          break;
+        default:
+          fileTypeVal = 0;
+      }
+
+      await widget.rustBridge.encryptFileByPath(
+        inputPath: _selectedFile!.path,
+        outputPath: encryptedFilePath,
+        password: _passwordController.text,
+        originalFilename: originalFilename,
+        fileType: fileTypeVal,
+        metadata: null,
+      );
+
       if (mounted) {
         setState(() {
           _progress = 1.0;
@@ -200,9 +197,13 @@ class _EncryptScreenState extends State<EncryptScreen> {
     } catch (e) {
       if (mounted) {
         setState(() {
-          _errorMessage = '导出失败: $e';
+          _errorMessage = '加密失败: $e';
+          _isEncrypting = false;
+          _progress = 0.0;
+          _progressLabel = '';
         });
       }
+      return;
     } finally {
       if (mounted) {
         setState(() {
