@@ -28,6 +28,19 @@ class NovelData {
     this.authorDeviceId,
   });
 
+  static List<String> _splitTags(dynamic v) {
+    final List<String> out = [];
+    if (v is String) {
+      out.addAll(v.split(RegExp(r'[，,]')).map((e) => e.trim()).where((e) => e.isNotEmpty));
+    } else if (v is List) {
+      for (final el in v) {
+        final s = (el ?? '').toString();
+        out.addAll(s.split(RegExp(r'[，,]')).map((e) => e.trim()).where((e) => e.isNotEmpty));
+      }
+    }
+    return out;
+  }
+
   factory NovelData.fromJson(Map<String, dynamic> json) {
     final chaptersJson = (json['chapters'] as List<dynamic>? ?? []);
     final chapters = chaptersJson.map((e) {
@@ -37,7 +50,7 @@ class NovelData {
         content: (m['content'] ?? '').toString(),
       );
     }).toList();
-    final tags = (json['tags'] as List<dynamic>? ?? []).map((e) => e.toString()).toList();
+    final tags = _splitTags(json['tags']);
     return NovelData(
       title: (json['title'] ?? '').toString(),
       author: (json['author'] ?? '').toString(),

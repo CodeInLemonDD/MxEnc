@@ -4,8 +4,7 @@ import 'package:flutter/services.dart';
 import '../utils/storage_service.dart';
 import '../utils/theme_provider.dart';
 import '../utils/dynamic_watermark.dart';
-import '../utils/auth_service.dart';
-import '../widgets/favorite_button.dart';
+import '../utils/platform_secure.dart';
 
 class ComicReaderScreen extends StatefulWidget {
   final Map<String, dynamic> manifest;
@@ -13,6 +12,7 @@ class ComicReaderScreen extends StatefulWidget {
   final int start;
   final String sourcePath;
   final String? password;
+  final int initialChapterIndex;
   const ComicReaderScreen({
     super.key,
     required this.manifest,
@@ -20,6 +20,7 @@ class ComicReaderScreen extends StatefulWidget {
     required this.start,
     required this.sourcePath,
     this.password,
+    this.initialChapterIndex = 0,
   });
 
   @override
@@ -30,7 +31,6 @@ class _ComicReaderScreenState extends State<ComicReaderScreen> {
   bool _overlayVisible = false;
   int _chapterIndex = 0;
   final ScrollController _scrollController = ScrollController();
-  String _maskedId = '';
 
   List<Map<String, dynamic>> get _chapters =>
       (widget.manifest['chapters'] as List<dynamic>? ?? [])
@@ -42,6 +42,8 @@ class _ComicReaderScreenState extends State<ComicReaderScreen> {
   @override
   void initState() {
     super.initState();
+    PlatformSecure.enableSecureScreen();
+    _chapterIndex = widget.initialChapterIndex.clamp(0, _chapters.isEmpty ? 0 : _chapters.length - 1);
     _scrollController.addListener(() {
       if (_overlayVisible) {
         setState(() {
@@ -49,21 +51,12 @@ class _ComicReaderScreenState extends State<ComicReaderScreen> {
         });
       }
     });
-    () async {
-      try {
-        final id = await AuthService().getDeviceId();
-        setState(() {
-          _maskedId = id.length > 8
-              ? '${id.substring(0, 4)}****${id.substring(id.length - 4)}'
-              : id;
-        });
-      } catch (_) {}
-    }();
   }
 
   @override
   void dispose() {
     _scrollController.dispose();
+    PlatformSecure.disableSecureScreen();
     super.dispose();
   }
 
@@ -138,7 +131,9 @@ class _ComicReaderScreenState extends State<ComicReaderScreen> {
         child: Stack(
           children: [
             ListView.builder(
-              key: PageStorageKey('comic_reader_${widget.sourcePath}_chapter_$_chapterIndex'),
+              key: PageStorageKey(
+                'comic_reader_${widget.sourcePath}_chapter_$_chapterIndex',
+              ),
               controller: _scrollController,
               physics: const ClampingScrollPhysics(),
               itemCount: images.length,
@@ -165,12 +160,7 @@ class _ComicReaderScreenState extends State<ComicReaderScreen> {
               },
             ),
             Positioned.fill(
-              child: IgnorePointer(
-                child: DynamicWatermark(
-                  receiverId: _maskedId.isEmpty ? 'MxEnc 受保护内容' : _maskedId,
-                  opacity: 0.15,
-                ),
-              ),
+              child: IgnorePointer(child: const StaticWatermark(opacity: 0.1)),
             ),
             if (_overlayVisible)
               Positioned(
@@ -201,7 +191,7 @@ class _ComicReaderScreenState extends State<ComicReaderScreen> {
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
-                        FavoriteButton(onPressed: _addToShelf),
+                        const SizedBox.shrink(),
                       ],
                     ),
                   ),
@@ -248,7 +238,9 @@ class _ComicReaderScreenState extends State<ComicReaderScreen> {
                                 setState(() {
                                   _chapterIndex = v;
                                 });
-                                WidgetsBinding.instance.addPostFrameCallback((_) {
+                                WidgetsBinding.instance.addPostFrameCallback((
+                                  _,
+                                ) {
                                   if (_scrollController.hasClients) {
                                     _scrollController.jumpTo(0);
                                   }
@@ -292,6 +284,10 @@ class _ComicReaderScreenState extends State<ComicReaderScreen> {
                             });
                           },
                           icon: const Icon(Icons.skip_previous),
+                        ),
+                        IconButton(
+                          onPressed: _addToShelf,
+                          icon: const Icon(Icons.bookmark_add),
                         ),
                       ],
                     ),

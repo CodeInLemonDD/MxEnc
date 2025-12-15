@@ -18,8 +18,8 @@ import '../utils/auth_service.dart';
 import '../utils/mxenc_dart.dart';
 import '../utils/keyboard_utils.dart';
 import '../widgets/loading_dialog.dart';
-import 'comic_reader_screen.dart';
-import 'rich_reader_screen.dart';
+import 'comic_detail_screen.dart';
+import 'rich_detail_screen.dart';
 
 class ViewerScreen extends StatefulWidget {
   final RustBridge rustBridge;
@@ -194,127 +194,132 @@ class _ViewerScreenState extends State<ViewerScreen> {
         _progressLabel = ev.label;
         setState(() {});
         loading.set(_progress);
-        if (ev.phase == ProgressPhase.done && ev.data != null && ev.filename != null) {
-          final originalFilename = _normalizePreviewFilename(_decodeFilenameUnicode(ev.filename!));
+        if (ev.phase == ProgressPhase.done &&
+            ev.data != null &&
+            ev.filename != null) {
+          final originalFilename = _normalizePreviewFilename(
+            _decodeFilenameUnicode(ev.filename!),
+          );
           final decryptedBytes = ev.data!;
 
-      // 根据文件类型处理内容
-      if (_fileType == MxEncFileType.novel) {
-        final parsed = await compute(decodeNovelMeta, decryptedBytes);
-        final novelTitle = parsed.$1.isEmpty ? originalFilename : parsed.$1;
-        final author = parsed.$2.isEmpty ? '未知作者' : parsed.$2;
+          // 根据文件类型处理内容
+          if (_fileType == MxEncFileType.novel) {
+            final parsed = await compute(decodeNovelMeta, decryptedBytes);
+            final novelTitle = parsed.$1.isEmpty ? originalFilename : parsed.$1;
+            final author = parsed.$2.isEmpty ? '未知作者' : parsed.$2;
 
-        if (mounted) {
-          setState(() {
-            _isDecrypting = false;
-          });
-          String coverPath = 'assets/placeholder.png';
-          if (_previewImage != null) {
-            final id = StorageService.newId();
-            String masked = '';
+            if (mounted) {
+              setState(() {
+                _isDecrypting = false;
+              });
+              String coverPath = 'assets/placeholder.png';
+              if (_previewImage != null) {
+                final id = StorageService.newId();
+                String masked = '';
+                try {
+                  final s = utf8.decode(decryptedBytes, allowMalformed: true);
+                  final map = jsonDecode(s) as Map<String, dynamic>;
+                  final dev = (map['authorDeviceId'] ?? '').toString();
+                  if (dev.isNotEmpty) {
+                    masked = dev.length > 8
+                        ? '${dev.substring(0, 4)}****${dev.substring(dev.length - 4)}'
+                        : dev;
+                  }
+                } catch (_) {}
+                coverPath = await StorageService.storeCoverBytes(
+                  id,
+                  _previewImage!,
+                  watermarkText: masked,
+                );
+              }
+              final item = BookshelfItem(
+                id: StorageService.newId(),
+                title: novelTitle,
+                author: author,
+                coverPath: coverPath,
+                filePath: _selectedFile?.path ?? '',
+                isNovel: true,
+                importTime: DateTime.now(),
+                creationTime: null,
+              );
+              NovelData? novel;
+              try {
+                final obj = await compute(decodeNovelFull, decryptedBytes);
+                novel = NovelData.fromJson(obj);
+              } catch (_) {}
+              if (!mounted) return;
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(
+                  builder: (context) =>
+                      NovelDetailScreen(item: item, novel: novel),
+                ),
+              );
+              return;
+            }
+          } else if (_fileType == MxEncFileType.comic) {
             try {
-              final s = utf8.decode(decryptedBytes, allowMalformed: true);
-              final map = jsonDecode(s) as Map<String, dynamic>;
-              final dev = (map['authorDeviceId'] ?? '').toString();
-              if (dev.isNotEmpty) {
-                masked = dev.length > 8
-                    ? '${dev.substring(0, 4)}****${dev.substring(dev.length - 4)}'
-                    : dev;
+              final packed = await compute(unpackComicEntry, decryptedBytes);
+              final manifest = packed['manifest'] as Map<String, dynamic>;
+              final start = packed['start'] as int;
+              if (mounted) {
+                setState(() {
+                  _isDecrypting = false;
+                });
+                if (!mounted) return;
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => ComicDetailScreen(
+                      manifest: manifest,
+                      payload: decryptedBytes,
+                      start: start,
+                      sourcePath: _selectedFile?.path ?? '',
+                      password: _passwordController.text,
+                    ),
+                  ),
+                );
+                return;
               }
             } catch (_) {}
-            coverPath = await StorageService.storeCoverBytes(
-              id,
-              _previewImage!,
-              watermarkText: masked,
-            );
+          } else if (_fileType == MxEncFileType.richNovel) {
+            try {
+              final packed = await compute(unpackRichEntry, decryptedBytes);
+              final manifest = packed['manifest'] as Map<String, dynamic>;
+              final start = packed['start'] as int;
+              if (mounted) {
+                setState(() {
+                  _isDecrypting = false;
+                });
+                if (!mounted) return;
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => RichDetailScreen(
+                      manifest: manifest,
+                      payload: decryptedBytes,
+                      start: start,
+                      sourcePath: _selectedFile?.path ?? '',
+                      password: _passwordController.text,
+                    ),
+                  ),
+                );
+                return;
+              }
+            } catch (_) {}
+          } else if (_fileType == MxEncFileType.image ||
+              _isImageFile(originalFilename)) {
+            _previewImage = decryptedBytes;
+          } else if (_isTextFile(originalFilename)) {
+            try {
+              final s = await compute(decodeUtf8Safe, decryptedBytes);
+              if (mounted) {
+                setState(() {
+                  _textContent = s;
+                });
+              }
+            } catch (_) {}
           }
-          final item = BookshelfItem(
-            id: StorageService.newId(),
-            title: novelTitle,
-            author: author,
-            coverPath: coverPath,
-            filePath: _selectedFile?.path ?? '',
-            isNovel: true,
-            importTime: DateTime.now(),
-            creationTime: null,
-          );
-          NovelData? novel;
-          try {
-            final obj = await compute(decodeNovelFull, decryptedBytes);
-            novel = NovelData.fromJson(obj);
-          } catch (_) {}
-          if (!mounted) return;
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(
-              builder: (context) => NovelDetailScreen(item: item, novel: novel),
-            ),
-          );
-          return;
-        }
-      } else if (_fileType == MxEncFileType.comic) {
-        try {
-          final packed = await compute(unpackComicEntry, decryptedBytes);
-          final manifest = packed['manifest'] as Map<String, dynamic>;
-          final start = packed['start'] as int;
-          if (mounted) {
-            setState(() {
-              _isDecrypting = false;
-            });
-            if (!mounted) return;
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(
-                builder: (context) => ComicReaderScreen(
-                  manifest: manifest,
-                  payload: decryptedBytes,
-                  start: start,
-                  sourcePath: _selectedFile?.path ?? '',
-                  password: _passwordController.text,
-                ),
-              ),
-            );
-            return;
-          }
-        } catch (_) {}
-      } else if (_fileType == MxEncFileType.richNovel) {
-        try {
-          final packed = await compute(unpackRichEntry, decryptedBytes);
-          final manifest = packed['manifest'] as Map<String, dynamic>;
-          final start = packed['start'] as int;
-          if (mounted) {
-            setState(() {
-              _isDecrypting = false;
-            });
-            if (!mounted) return;
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(
-                builder: (context) => RichReaderScreen(
-                  manifest: manifest,
-                  payload: decryptedBytes,
-                  start: start,
-                  sourcePath: _selectedFile?.path ?? '',
-                  password: _passwordController.text,
-                ),
-              ),
-            );
-            return;
-          }
-        } catch (_) {}
-      } else if (_fileType == MxEncFileType.image ||
-          _isImageFile(originalFilename)) {
-        _previewImage = decryptedBytes;
-      } else if (_isTextFile(originalFilename)) {
-        try {
-          final s = await compute(decodeUtf8Safe, decryptedBytes);
-          if (mounted) {
-            setState(() {
-              _textContent = s;
-            });
-          }
-        } catch (_) {}
-      }
 
           if (mounted) {
             setState(() {
@@ -387,6 +392,8 @@ class _ViewerScreenState extends State<ViewerScreen> {
               final map = jsonDecode(obj) as Map<String, dynamic>;
               title = (map['title'] ?? title).toString();
               author = (map['author'] ?? author).toString();
+              authorSignature = (map['authorSignature'] ?? '').toString();
+              authorAvatarPath = (map['authorAvatarPath'] ?? '').toString();
             }
           } catch (_) {}
         }
@@ -557,8 +564,8 @@ class _ViewerScreenState extends State<ViewerScreen> {
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 color: Theme.of(context).brightness == Brightness.dark
-                      ? Colors.grey.shade800
-                      : Colors.grey.shade100,
+                    ? Colors.grey.shade800
+                    : Colors.grey.shade100,
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Column(
@@ -763,10 +770,14 @@ class _ViewerScreenState extends State<ViewerScreen> {
 }
 
 // isolate helpers must be top-level
-Map<String, dynamic> unpackComicEntry(Uint8List payload) => MxencDart.unpackComicContainer(payload);
-Map<String, dynamic> unpackRichEntry(Uint8List payload) => MxencDart.unpackRichNovelContainer(payload);
-Map<String, dynamic> _decodeJson(Uint8List data) => jsonDecode(utf8.decode(data, allowMalformed: true)) as Map<String, dynamic>;
-String decodeUtf8Safe(Uint8List data) => utf8.decode(data, allowMalformed: true);
+Map<String, dynamic> unpackComicEntry(Uint8List payload) =>
+    MxencDart.unpackComicContainer(payload);
+Map<String, dynamic> unpackRichEntry(Uint8List payload) =>
+    MxencDart.unpackRichNovelContainer(payload);
+Map<String, dynamic> _decodeJson(Uint8List data) =>
+    jsonDecode(utf8.decode(data, allowMalformed: true)) as Map<String, dynamic>;
+String decodeUtf8Safe(Uint8List data) =>
+    utf8.decode(data, allowMalformed: true);
 Map<String, dynamic> decodeNovelFull(Uint8List data) => _decodeJson(data);
 (String, String) decodeNovelMeta(Uint8List data) {
   try {

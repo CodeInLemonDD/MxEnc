@@ -112,6 +112,67 @@ class _DynamicWatermarkState extends State<DynamicWatermark> with SingleTickerPr
   }
 }
 
+class StaticWatermark extends StatelessWidget {
+  final double opacity;
+  final String groupText;
+  const StaticWatermark({
+    super.key,
+    this.opacity = 0.1,
+    this.groupText = 'QQ群：868140659',
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final brightness = Theme.of(context).brightness;
+    final baseColor = brightness == Brightness.dark
+        ? Colors.white.withValues(alpha: opacity)
+        : Colors.black.withValues(alpha: opacity);
+    return CustomPaint(
+      painter: StaticWatermarkPainter(
+        text: '未经允许禁止盗用\n$groupText',
+        color: baseColor,
+      ),
+      size: Size.infinite,
+    );
+  }
+}
+
+class StaticWatermarkPainter extends CustomPainter {
+  final String text;
+  final Color color;
+  StaticWatermarkPainter({required this.text, required this.color});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final tp = TextPainter(
+      text: TextSpan(
+        text: text,
+        style: TextStyle(color: color, fontSize: 16, height: 1.4),
+      ),
+      textAlign: TextAlign.center,
+      textDirection: TextDirection.ltr,
+    );
+    tp.layout();
+    final stepX = tp.width + 160;
+    final stepY = tp.height + 140;
+    canvas.save();
+    canvas.translate(size.width / 2, size.height / 2);
+    canvas.rotate(-0.25);
+    canvas.translate(-size.width / 2, -size.height / 2);
+    for (double x = -stepX; x < size.width + stepX; x += stepX) {
+      for (double y = -stepY; y < size.height + stepY; y += stepY) {
+        tp.paint(canvas, Offset(x, y));
+      }
+    }
+    canvas.restore();
+  }
+
+  @override
+  bool shouldRepaint(covariant StaticWatermarkPainter oldDelegate) {
+    return oldDelegate.text != text || oldDelegate.color != color;
+  }
+}
+
 class WatermarkPainter extends CustomPainter {
   final String text;
   final double angle;

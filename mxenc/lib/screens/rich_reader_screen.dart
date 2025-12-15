@@ -4,7 +4,7 @@ import 'package:flutter/services.dart';
 import '../utils/storage_service.dart';
 import '../utils/theme_provider.dart';
 import '../utils/dynamic_watermark.dart';
-import '../utils/auth_service.dart';
+import '../utils/platform_secure.dart';
 
 class RichReaderScreen extends StatefulWidget {
   final Map<String, dynamic> manifest;
@@ -12,6 +12,7 @@ class RichReaderScreen extends StatefulWidget {
   final int start;
   final String sourcePath;
   final String? password;
+  final int initialChapterIndex;
   const RichReaderScreen({
     super.key,
     required this.manifest,
@@ -19,6 +20,7 @@ class RichReaderScreen extends StatefulWidget {
     required this.start,
     required this.sourcePath,
     this.password,
+    this.initialChapterIndex = 0,
   });
 
   @override
@@ -30,7 +32,6 @@ class _RichReaderScreenState extends State<RichReaderScreen> {
   double _fontScale = 1.0;
   int _chapterIndex = 0;
   final ScrollController _scrollController = ScrollController();
-  String _maskedId = '';
 
   List<Map<String, dynamic>> get _blocks =>
       (widget.manifest['blocks'] as List<dynamic>? ?? [])
@@ -45,6 +46,11 @@ class _RichReaderScreenState extends State<RichReaderScreen> {
   @override
   void initState() {
     super.initState();
+    PlatformSecure.enableSecureScreen();
+    _chapterIndex = widget.initialChapterIndex.clamp(
+      0,
+      _chapters.isEmpty ? 0 : _chapters.length - 1,
+    );
     _scrollController.addListener(() {
       if (_overlayVisible) {
         setState(() {
@@ -52,21 +58,12 @@ class _RichReaderScreenState extends State<RichReaderScreen> {
         });
       }
     });
-    () async {
-      try {
-        final id = await AuthService().getDeviceId();
-        setState(() {
-          _maskedId = id.length > 8
-              ? '${id.substring(0, 4)}****${id.substring(id.length - 4)}'
-              : id;
-        });
-      } catch (_) {}
-    }();
   }
 
   @override
   void dispose() {
     _scrollController.dispose();
+    PlatformSecure.disableSecureScreen();
     super.dispose();
   }
 
@@ -182,12 +179,7 @@ class _RichReaderScreenState extends State<RichReaderScreen> {
               },
             ),
             Positioned.fill(
-              child: IgnorePointer(
-                child: DynamicWatermark(
-                  receiverId: _maskedId.isEmpty ? 'MxEnc 受保护内容' : _maskedId,
-                  opacity: 0.15,
-                ),
-              ),
+              child: IgnorePointer(child: const StaticWatermark(opacity: 0.1)),
             ),
             if (_overlayVisible)
               Positioned(
@@ -218,10 +210,7 @@ class _RichReaderScreenState extends State<RichReaderScreen> {
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
-                        IconButton(
-                          onPressed: _addToShelf,
-                          icon: const Icon(Icons.bookmark_add),
-                        ),
+                        const SizedBox.shrink(),
                       ],
                     ),
                   ),

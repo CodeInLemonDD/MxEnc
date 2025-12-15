@@ -3,7 +3,7 @@ import '../models/chapter.dart';
 import '../utils/storage_service.dart';
 import 'dart:typed_data';
 import '../utils/dynamic_watermark.dart';
-import '../utils/auth_service.dart';
+import '../utils/platform_secure.dart';
 
 class NovelReaderScreen extends StatefulWidget {
   final Chapter chapter; // 章节信息
@@ -37,14 +37,12 @@ class _NovelReaderScreenState extends State<NovelReaderScreen> {
   bool _showSettings = false;
   bool _showNavigation = false;
   double _progress = 0.0; // 阅读进度
-  String? _deviceId;
 
   @override
   void initState() {
     super.initState();
     // 启用防截图功能
     _enableSecureMode();
-    _loadDeviceId();
   }
 
   // 滚动控制器
@@ -61,15 +59,7 @@ class _NovelReaderScreenState extends State<NovelReaderScreen> {
 
   // 启用防截图模式
   void _enableSecureMode() {
-    // 在不同平台启用防截图功能
-    // 实际应用中需要通过平台通道实现
-  }
-
-  Future<void> _loadDeviceId() async {
-    try {
-      final id = await AuthService().getDeviceId();
-      if (mounted) setState(() { _deviceId = id; });
-    } catch (_) {}
+    PlatformSecure.enableSecureScreen();
   }
 
   // 切换夜间模式
@@ -112,7 +102,6 @@ class _NovelReaderScreenState extends State<NovelReaderScreen> {
       _showSettings = !_showSettings;
     });
   }
-
 
   // 处理点击屏幕中间区域
   void _handleTapCenter() {
@@ -166,11 +155,17 @@ class _NovelReaderScreenState extends State<NovelReaderScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        leading: IconButton(icon: const Icon(Icons.arrow_back), onPressed: () => Navigator.pop(context)),
-        title: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(widget.novelTitle, style: const TextStyle(fontSize: 16)),
-          Text(widget.author, style: const TextStyle(fontSize: 12)),
-        ]),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(widget.novelTitle, style: const TextStyle(fontSize: 16)),
+            Text(widget.author, style: const TextStyle(fontSize: 12)),
+          ],
+        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.bookmark_add),
@@ -187,35 +182,7 @@ class _NovelReaderScreenState extends State<NovelReaderScreen> {
           if (_showNavigation) _buildTopNavigation(),
           if (_showNavigation) _buildBottomNavigation(),
           if (_showSettings) _buildSettingsPanel(),
-          if (_deviceId != null)
-            DynamicWatermark(
-              receiverId: (() {
-                final v = _deviceId!;
-                return v.length > 8 ? '${v.substring(0,4)}****${v.substring(v.length-4)}' : v;
-              })(),
-              opacity: 0.25,
-            ),
-          Positioned(
-            left: 12,
-            bottom: 12,
-            child: Opacity(
-              opacity: 0.25,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: _isNightMode ? Colors.black54 : Colors.white70,
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Text(
-                  'MxEnc',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: _isNightMode ? Colors.white70 : Colors.black54,
-                  ),
-                ),
-              ),
-            ),
-          ),
+          const StaticWatermark(opacity: 0.1),
         ],
       ),
     );
@@ -226,7 +193,10 @@ class _NovelReaderScreenState extends State<NovelReaderScreen> {
       final id = StorageService.newId();
       String coverPath = 'assets/placeholder.png';
       if (widget.coverBytes != null && widget.coverBytes!.isNotEmpty) {
-        coverPath = await StorageService.storeCoverBytes(id, widget.coverBytes!);
+        coverPath = await StorageService.storeCoverBytes(
+          id,
+          widget.coverBytes!,
+        );
       }
       final item = {
         'id': id,
@@ -332,9 +302,9 @@ class _NovelReaderScreenState extends State<NovelReaderScreen> {
         gradient: LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
-              colors: _isNightMode
-                  ? [Colors.black87, Colors.black.withValues(alpha: 0.0)]
-                  : [Colors.white, Colors.transparent],
+          colors: _isNightMode
+              ? [Colors.black87, Colors.black.withValues(alpha: 0.0)]
+              : [Colors.white, Colors.transparent],
         ),
       ),
       padding: const EdgeInsets.fromLTRB(16, 40, 16, 0),

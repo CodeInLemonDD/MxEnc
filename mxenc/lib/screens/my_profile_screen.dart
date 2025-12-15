@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import '../utils/auth_service.dart';
 import '../utils/settings_service.dart';
@@ -91,21 +90,6 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
     }
   }
 
-  // 切换 Debug 授权
-  void _toggleDebugAuth() async {
-    if (!mounted) return;
-    final newAuthStatus = !_isPremiumUser;
-    setState(() {
-      _isPremiumUser = newAuthStatus;
-    });
-    await _authService.setPremiumUser(newAuthStatus);
-    if (mounted) {
-      _showToast(newAuthStatus ? '已启用 Debug 授权' : '已禁用 Debug 授权');
-      // 重新加载用户信息以更新显示
-      _loadUserInfo();
-    }
-  }
-
   // 复制设备ID
   void _copyDeviceId() async {
     if (_deviceId.isEmpty) {
@@ -188,9 +172,7 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
             const SizedBox(height: 16),
             ElevatedButton(
               onPressed: () async {
-                await Clipboard.setData(
-                  const ClipboardData(text: '868140659'),
-                );
+                await Clipboard.setData(const ClipboardData(text: '868140659'));
                 _showToast('群号已复制到剪贴板');
                 if (!context.mounted) return;
                 Navigator.pop(context);

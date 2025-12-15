@@ -4,11 +4,14 @@ import '../../rust_bridge.dart';
 import 'novel_detail_screen.dart';
 import 'image_preview_screen.dart';
 import 'viewer_screen.dart';
+import '../models/novel.dart';
 import '../utils/storage_service.dart';
 import 'package:flutter/foundation.dart';
-import 'comic_reader_screen.dart';
-import 'rich_reader_screen.dart';
+import 'comic_detail_screen.dart';
+import 'rich_detail_screen.dart';
 import '../widgets/loading_dialog.dart';
+import '../utils/progress.dart';
+// import 'dart:typed_data';
 
 // 定义书籍/图片项目模型
 class BookshelfItem {
@@ -178,15 +181,94 @@ class _BookshelfScreenState extends State<BookshelfScreen> {
       return;
     }
     if (item.isNovel) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context) => NovelDetailScreen(item: item)),
-      );
+      _openNovelDetailWithDecrypt(item);
     } else {
       Navigator.push(
         context,
         MaterialPageRoute(builder: (context) => ImagePreviewScreen(item: item)),
       );
+    }
+  }
+
+  Future<void> _openNovelDetailWithDecrypt(BookshelfItem item) async {
+    try {
+      final pwd = await StorageService.getItemPassword(item.filePath) ?? '';
+      String password = pwd;
+      if (password.isEmpty) {
+        if (!mounted) return;
+        final input = await showDialog<String>(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) {
+            final ctrl = TextEditingController();
+            return AlertDialog(
+              title: const Text('输入密码'),
+              content: TextField(
+                controller: ctrl,
+                obscureText: true,
+                decoration: const InputDecoration(labelText: '密码'),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('取消'),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.pop(context, ctrl.text),
+                  child: const Text('确定'),
+                ),
+              ],
+            );
+          },
+        );
+        if (input == null || input.isEmpty) return;
+        password = input;
+      }
+      final fileBytes = await File(item.filePath).readAsBytes();
+      final controller = LoadingController(0);
+      if (!mounted) return;
+      showLoadingDialog(context, controller: controller, label: '解密中');
+      controller.set(0.05);
+      final stream = widget.rustBridge.decryptFileProgress(
+        mxencData: fileBytes,
+        password: password,
+      );
+      Uint8List? decrypted;
+      await for (final ev in stream) {
+        controller.set(ev.percent);
+        if (ev.phase == ProgressPhase.done && ev.data != null) {
+          decrypted = ev.data!;
+        }
+      }
+      if (decrypted == null) {
+        if (mounted) {
+          if (Navigator.canPop(context)) Navigator.pop(context);
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('解密失败：无数据')));
+        }
+        return;
+      }
+      NovelData? novel;
+      try {
+        final obj = await compute(decodeNovelFull, decrypted);
+        novel = NovelData.fromJson(obj);
+      } catch (_) {}
+      if (!mounted) return;
+      if (Navigator.canPop(context)) Navigator.pop(context);
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => NovelDetailScreen(item: item, novel: novel),
+        ),
+      );
+    } catch (e) {
+      if (mounted) {
+        if (Navigator.canPop(context)) Navigator.pop(context);
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('解密失败: $e')));
+      }
     }
   }
 
@@ -203,10 +285,20 @@ class _BookshelfScreenState extends State<BookshelfScreen> {
             final ctrl = TextEditingController();
             return AlertDialog(
               title: const Text('输入密码'),
-              content: TextField(controller: ctrl, obscureText: true, decoration: const InputDecoration(labelText: '密码')),
+              content: TextField(
+                controller: ctrl,
+                obscureText: true,
+                decoration: const InputDecoration(labelText: '密码'),
+              ),
               actions: [
-                TextButton(onPressed: () => Navigator.pop(context), child: const Text('取消')),
-                TextButton(onPressed: () => Navigator.pop(context, ctrl.text), child: const Text('确定')),
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('取消'),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.pop(context, ctrl.text),
+                  child: const Text('确定'),
+                ),
               ],
             );
           },
@@ -217,17 +309,33 @@ class _BookshelfScreenState extends State<BookshelfScreen> {
 
       final fileBytes = await File(item.filePath).readAsBytes();
       final controller = LoadingController(0);
-      // 非阻塞加载对话框
-      // ignore: discarded_futures
       if (!mounted) return;
       showLoadingDialog(context, controller: controller, label: '解密中');
-      controller.set(0.1);
-      final result = await widget.rustBridge.decryptFile(mxencData: fileBytes, password: password);
-      controller.set(0.9);
-      final decrypted = result.$2;
+      controller.set(0.05);
+      final stream = widget.rustBridge.decryptFileProgress(
+        mxencData: fileBytes,
+        password: password,
+      );
+      Uint8List? decrypted;
+      await for (final ev in stream) {
+        controller.set(ev.percent);
+        if (ev.phase == ProgressPhase.done && ev.data != null) {
+          decrypted = ev.data!;
+        }
+      }
+      if (decrypted == null) {
+        if (mounted) {
+          if (Navigator.canPop(context)) Navigator.pop(context);
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('解密失败：无数据')));
+        }
+        return;
+      }
 
       if (item.isComic == true) {
-        final packed = await compute(unpackComicEntry, decrypted);
+        final Uint8List data = decrypted;
+        final packed = await compute(unpackComicEntry, data);
         final manifest = packed['manifest'] as Map<String, dynamic>;
         final start = packed['start'] as int;
         if (mounted) {
@@ -235,9 +343,9 @@ class _BookshelfScreenState extends State<BookshelfScreen> {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) => ComicReaderScreen(
+              builder: (context) => ComicDetailScreen(
                 manifest: manifest,
-                payload: decrypted,
+                payload: data,
                 start: start,
                 sourcePath: item.filePath,
                 password: password,
@@ -249,7 +357,8 @@ class _BookshelfScreenState extends State<BookshelfScreen> {
       }
 
       if (item.isRichNovel == true) {
-        final packed = await compute(unpackRichEntry, decrypted);
+        final Uint8List data = decrypted;
+        final packed = await compute(unpackRichEntry, data);
         final manifest = packed['manifest'] as Map<String, dynamic>;
         final start = packed['start'] as int;
         if (mounted) {
@@ -257,9 +366,9 @@ class _BookshelfScreenState extends State<BookshelfScreen> {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) => RichReaderScreen(
+              builder: (context) => RichDetailScreen(
                 manifest: manifest,
-                payload: decrypted,
+                payload: data,
                 start: start,
                 sourcePath: item.filePath,
                 password: password,
@@ -272,12 +381,16 @@ class _BookshelfScreenState extends State<BookshelfScreen> {
 
       if (mounted) {
         if (Navigator.canPop(context)) Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('无法识别的内容类型')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('无法识别的内容类型')));
       }
     } catch (e) {
       if (mounted) {
         if (Navigator.canPop(context)) Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('解密失败: $e')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('解密失败: $e')));
       }
     }
   }
@@ -562,7 +675,9 @@ class _BookshelfScreenState extends State<BookshelfScreen> {
                       color: theme.colorScheme.surfaceContainerHighest,
                       boxShadow: [
                         BoxShadow(
-                          color: theme.colorScheme.shadow.withValues(alpha: 0.1),
+                          color: theme.colorScheme.shadow.withValues(
+                            alpha: 0.1,
+                          ),
                           spreadRadius: 0,
                           blurRadius: 4,
                           offset: const Offset(0, 2),
@@ -683,77 +798,53 @@ class _BookshelfScreenState extends State<BookshelfScreen> {
                     ),
                   ),
                   const SizedBox(height: 4),
-                  if (item.isNovel)
-                    Text(
-                      item.author,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.onSurface.withValues(
-                          alpha: 0.6,
+                  Row(
+                    children: [
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(10),
+                        child: SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: (() {
+                            final path = (item.authorAvatarPath ?? '')
+                                .toString();
+                            if (path.isNotEmpty && path.startsWith('assets/')) {
+                              return Image.asset(path, fit: BoxFit.cover);
+                            }
+                            try {
+                              if (path.isNotEmpty) {
+                                final f = File(path);
+                                if (f.existsSync()) {
+                                  return Image.file(f, fit: BoxFit.cover);
+                                }
+                              }
+                            } catch (_) {}
+                            return Image.asset(
+                              'assets/default_avatar.jpg',
+                              fit: BoxFit.cover,
+                            );
+                          })(),
                         ),
                       ),
-                    )
-                  else
-                    Row(
-                      children: [
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(10),
-                          child: SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: (() {
-                              final path = (item.authorAvatarPath ?? '')
-                                  .toString();
-                              if (path.isNotEmpty &&
-                                  path.startsWith('assets/')) {
-                                return Image.asset(path, fit: BoxFit.cover);
-                              }
-                              try {
-                                if (path.isNotEmpty) {
-                                  final f = File(path);
-                                  if (f.existsSync()) {
-                                    return Image.file(f, fit: BoxFit.cover);
-                                  }
-                                }
-                              } catch (_) {}
-                              return Image.asset(
-                                'assets/default_avatar.jpg',
-                                fit: BoxFit.cover,
-                              );
-                            })(),
-                          ),
-                        ),
-                        const SizedBox(width: 6),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                item.author,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: theme.textTheme.bodySmall?.copyWith(
-                                  fontWeight: FontWeight.w600,
-                                  color: theme.colorScheme.onSurface,
-                                ),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              item.author,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                fontWeight: FontWeight.w600,
+                                color: theme.colorScheme.onSurface,
                               ),
-                              if ((item.authorSignature ?? '').isNotEmpty)
-                                Text(
-                                  item.authorSignature!,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: theme.textTheme.bodySmall?.copyWith(
-                                    color: theme.colorScheme.onSurface
-                                        .withValues(alpha: 0.6),
-                                    fontSize: 11,
-                                  ),
-                                ),
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
+                  ),
                 ],
               ),
             ),
