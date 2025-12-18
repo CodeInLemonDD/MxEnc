@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import '../utils/theme_provider.dart';
 import '../utils/user_service.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'dart:io';
 
 class MyProfileScreen extends StatefulWidget {
@@ -24,6 +25,7 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
   String _currentTheme = '默认';
   String? _nickname;
   String? _avatarPath;
+  String _version = '';
   final AuthService _authService = AuthService();
   final SettingsService _settingsService = SettingsService();
   final UserService _userService = UserService();
@@ -38,6 +40,10 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
   // 加载用户信息
   void _loadUserInfo() async {
     try {
+      // 获取版本信息
+      final packageInfo = await PackageInfo.fromPlatform();
+      _version = 'v${packageInfo.version}';
+
       // 获取设备ID
       _deviceId = await _authService.getDeviceId();
       // 检查是否为授权用户
@@ -690,7 +696,7 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
     return Align(
       alignment: Alignment.center,
       child: Text(
-        'MxEnc v0.1.0',
+        'MxEnc $_version',
         style: TextStyle(fontSize: 12, color: Colors.grey[500]),
       ),
     );

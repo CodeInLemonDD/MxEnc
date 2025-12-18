@@ -1,8 +1,64 @@
 import 'dart:io';
 import 'dart:typed_data';
 import 'dart:math' as math;
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image/image.dart' as img;
+
+class CropParams {
+  final Uint8List bytes;
+  final double viewW;
+  final double viewH;
+  final double scaleX;
+  final double scaleY;
+  final double transX;
+  final double transY;
+
+  CropParams({
+    required this.bytes,
+    required this.viewW,
+    required this.viewH,
+    required this.scaleX,
+    required this.scaleY,
+    required this.transX,
+    required this.transY,
+  });
+}
+
+Future<Uint8List> _cropImageTask(CropParams params) async {
+  final src = img.decodeImage(params.bytes);
+  if (src == null) throw Exception('Failed to decode image');
+  
+  final cropW = params.viewW * 0.8;
+  final cropH = cropW * 4 / 3;
+  final cropLeft = (params.viewW - cropW) / 2;
+  final cropTop = (params.viewH - cropH) / 2;
+
+  final fitScale = math.min(params.viewW / src.width, params.viewH / src.height);
+  final dispW = src.width * fitScale;
+  final dispH = src.height * fitScale;
+  final offsetX = (params.viewW - dispW) / 2;
+  final offsetY = (params.viewH - dispH) / 2;
+
+  final childX = (cropLeft - params.transX) / params.scaleX;
+  final childY = (cropTop - params.transY) / params.scaleY;
+  final childW = cropW / params.scaleX;
+  final childH = cropH / params.scaleY;
+
+  final imgX = (childX - offsetX) / fitScale;
+  final imgY = (childY - offsetY) / fitScale;
+  final imgW = childW / fitScale;
+  final imgH = childH / fitScale;
+
+  int x = imgX.round().clamp(0, src.width - 1);
+  int y = imgY.round().clamp(0, src.height - 1);
+  int w = imgW.round().clamp(1, src.width - x);
+  int h = imgH.round().clamp(1, src.height - y);
+
+  final cropped = img.copyCrop(src, x: x, y: y, width: w, height: h);
+  
+  return Uint8List.fromList(img.encodeJpg(cropped, quality: 90));
+}
 
 class CoverEditorScreen extends StatefulWidget {
   final File sourceFile;
@@ -18,49 +74,34 @@ class _CoverEditorScreenState extends State<CoverEditorScreen> {
 
   Future<void> _confirm() async {
     setState(() { _isProcessing = true; });
-    final bytes = await widget.sourceFile.readAsBytes();
-    final src = img.decodeImage(bytes)!;
-    final renderBox = _cropKey.currentContext!.findRenderObject() as RenderBox;
-    final size = renderBox.size;
-    final matrix = _controller.value;
-    final scaleX = matrix.storage[0];
-    final scaleY = matrix.storage[5];
-    final transX = matrix.storage[12];
-    final transY = matrix.storage[13];
-    final viewW = size.width;
-    final viewH = size.height;
-    final cropW = viewW * 0.8;
-    final cropH = cropW * 4 / 3;
-    final cropLeft = (viewW - cropW) / 2;
-    final cropTop = (viewH - cropH) / 2;
-    // BoxFit.contain 显示时的基础缩放与居中偏移
-    final fitScale = math.min(viewW / src.width, viewH / src.height);
-    final dispW = src.width * fitScale;
-    final dispH = src.height * fitScale;
-    final offsetX = (viewW - dispW) / 2;
-    final offsetY = (viewH - dispH) / 2;
+    try {
+      final bytes = await widget.sourceFile.readAsBytes();
+      final renderBox = _cropKey.currentContext!.findRenderObject() as RenderBox;
+      final size = renderBox.size;
+      final matrix = _controller.value;
 
-    // 将裁剪框从视图坐标映射到图像像素坐标：
-    // 先去除交互变换的平移与缩放得到子坐标，再去除 BoxFit 的偏移与基础缩放
-    final childX = (cropLeft - transX) / scaleX;
-    final childY = (cropTop - transY) / scaleY;
-    final childW = cropW / scaleX;
-    final childH = cropH / scaleY;
+      final out = await compute(_cropImageTask, CropParams(
+        bytes: bytes,
+        viewW: size.width,
+        viewH: size.height,
+        scaleX: matrix.storage[0],
+        scaleY: matrix.storage[5],
+        transX: matrix.storage[12],
+        transY: matrix.storage[13],
+      ));
 
-    final imgX = (childX - offsetX) / fitScale;
-    final imgY = (childY - offsetY) / fitScale;
-    final imgW = childW / fitScale;
-    final imgH = childH / fitScale;
-
-    int x = imgX.round().clamp(0, src.width - 1);
-    int y = imgY.round().clamp(0, src.height - 1);
-    int w = imgW.round().clamp(1, src.width - x);
-    int h = imgH.round().clamp(1, src.height - y);
-    final cropped = img.copyCrop(src, x: x, y: y, width: w, height: h);
-    final out = img.encodeJpg(cropped, quality: 90);
-    if (mounted) {
-      setState(() { _isProcessing = false; });
-      Navigator.pop(context, Uint8List.fromList(out));
+      if (mounted) {
+        setState(() { _isProcessing = false; });
+        Navigator.pop(context, out);
+      }
+    } catch (e) {
+      debugPrint('Error cropping image: $e');
+      if (mounted) {
+        setState(() { _isProcessing = false; });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('裁剪失败')),
+        );
+      }
     }
   }
 
