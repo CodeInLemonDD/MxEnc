@@ -5,12 +5,12 @@ use aes_gcm::{
 use anyhow::{anyhow, Result};
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 use rand::{Rng, RngCore};
-use std::io::{Cursor, Read, Write};
+use std::io::{Cursor, Read, Seek, Write};
 use zeroize::Zeroize;
 use flutter_rust_bridge::frb;
 
 // 常量定义
-const MAGIC: &[u8] = b"MXENC20"; // 升级到版本2.0
+const MAGIC: &[u8] = &[77, 88, 69, 78, 67, 50, 48]; // [77, 88, 69, 78, 67, 50, 48] matches Dart's [77, 88, 69, 78, 67, 50, 48]
 const SALT_SIZE: usize = 32;
 const NONCE_SIZE: usize = 12;
 const KEY_SIZE: usize = 32;
@@ -58,8 +58,12 @@ impl MxEncFile {
         let mut key = derive_key(password, &salt)?;
         
         // 加密数据
+        // 使用 AEAD 参数 (Key, Nonce, Associated Data=Empty)
+        // 兼容 Dart 实现: cipher.init(true, AEADParameters(KeyParameter(key), 128, nonce, Uint8List(0)));
         let cipher = Aes256Gcm::new(&key);
         let nonce_ref = Nonce::from_slice(&nonce);
+        
+        // 注意：aes-gcm crate 默认使用空的 associated data
         let ciphertext = cipher
             .encrypt(nonce_ref, plaintext)
             .map_err(|e| anyhow!("加密失败: {}", e))?;
@@ -163,6 +167,7 @@ impl MxEncFile {
         cursor.read_exact(&mut magic)?;
         
         // 支持旧版本格式的向后兼容性
+        // b"MXENC10" = [77, 88, 69, 78, 67, 49, 48]
         let is_v1_format = magic.as_slice() == b"MXENC10";
         if !is_v1_format && magic.as_slice() != MAGIC {
             return Err(anyhow!("无效的 MxEnc 文件格式"));
@@ -324,9 +329,15 @@ impl MxEncFile {
             
             // 读取元数据长度和内容
             let metadata_len = cursor.read_u32::<BigEndian>()? as usize;
-            if metadata_len > 0 && metadata_len <= 65536 { // 限制元数据大小
-                metadata.resize(metadata_len, 0);
-                cursor.read_exact(&mut metadata)?;
+            if metadata_len > 0 {
+                if metadata_len <= 65536 { // 限制元数据大小
+                    metadata.resize(metadata_len, 0);
+                    cursor.read_exact(&mut metadata)?;
+                } else {
+                    // 如果元数据过大，跳过读取（可能是损坏的文件或恶意构造）
+                    // 必须跳过这些字节，否则后续读取盐值会出错
+                    cursor.seek(std::io::SeekFrom::Current(metadata_len as i64))?;
+                }
             }
         }
         
@@ -353,31 +364,47 @@ impl MxEncFile {
     }
 }
 
-/// 从密码和盐值派生加密密钥
-fn derive_key(password: &str, salt: &[u8]) -> Result<Key<Aes256Gcm>> {
-    // 兼容 Dart 实现：使用 PBKDF2 (SHA256, 100000 iterations)
-    // Dart: _pbkdf2(password, salt, 32)
-    
-    use pbkdf2::pbkdf2;
-    use hmac::Hmac;
-    use sha2::Sha256;
+    /// 从密码和盐值派生加密密钥
+    fn derive_key(password: &str, salt: &[u8]) -> Result<Key<Aes256Gcm>> {
+        // 兼容 Dart 实现：使用 PBKDF2 (SHA256, 100000 iterations)
+        // Dart: _pbkdf2(password, salt, 32)
+        // HMAC-SHA256
+        
+        use pbkdf2::pbkdf2;
+        use hmac::Hmac;
+        use sha2::Sha256;
 
-    let mut key_bytes = [0u8; KEY_SIZE];
-    
-    pbkdf2::<Hmac<Sha256>>(
-        password.as_bytes(),
-        salt,
-        100000,
-        &mut key_bytes
-    ).map_err(|e| anyhow!("密钥派生失败: {}", e))?;
-    
-    let key = Key::<Aes256Gcm>::from_slice(&key_bytes).clone();
-    
-    // 安全清除临时密钥字节
-    key_bytes.zeroize();
-    
-    Ok(key)
-}
+        let mut key_bytes = [0u8; KEY_SIZE];
+        
+        // 注意：Dart的String.codeUnits获取的是UTF-16代码单元（如果包含非BMP字符），但通常对于ASCII是相同的
+        // 对于中文等多字节字符，Dart的 codeUnits 返回的是 UTF-16 编码单元列表
+        // 而 Rust 的 as_bytes() 返回的是 UTF-8 字节序列
+        // 为了完全兼容 Dart 的 Uint8List.fromList(password.codeUnits)，如果密码只包含 ASCII，两者是一样的
+        // 如果包含非 ASCII 字符，Dart 的实现实际上使用了 UTF-16 的低字节（如果直接转换）或者依赖于具体实现
+        // 
+        // 仔细看 Dart 代码: Uint8List.fromList(password.codeUnits)
+        // 这实际上会将每个 char code (16-bit) 截断为 8-bit！
+        // 例如 '中' (U+4E2D = 20013) -> 20013 & 0xFF = 45
+        // 这是一个非常特殊的行为，Rust 必须模拟这个行为才能兼容
+        
+        let password_bytes: Vec<u8> = password.encode_utf16()
+            .map(|c| (c & 0xFF) as u8)
+            .collect();
+
+        pbkdf2::<Hmac<Sha256>>(
+            &password_bytes,
+            salt,
+            100000,
+            &mut key_bytes
+        ).map_err(|e| anyhow!("密钥派生失败: {}", e))?;
+        
+        let key = Key::<Aes256Gcm>::from_slice(&key_bytes).clone();
+        
+        // 安全清除临时密钥字节
+        key_bytes.zeroize();
+        
+        Ok(key)
+    }
 
 /// 生成设备指纹（增强版，基于系统信息）
 pub fn generate_device_fingerprint() -> String {

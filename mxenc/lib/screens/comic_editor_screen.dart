@@ -105,8 +105,10 @@ class _ComicEditorScreenState extends State<ComicEditorScreen> {
     List<String> tags = [];
     String? tmpCover;
     Uint8List? tmpCoverBytes;
+    bool confirmExport = false;
     await showDialog(
       context: context,
+      barrierDismissible: false,
       builder: (context) {
         final tCtrl = TextEditingController(text: title);
         final tagCtrl = TextEditingController();
@@ -181,6 +183,7 @@ class _ComicEditorScreenState extends State<ComicEditorScreen> {
                         .map((e) => e.trim())
                         .where((e) => e.isNotEmpty)
                         .toList();
+                    confirmExport = true;
                     Navigator.pop(context);
                   },
                   child: const Text('确定'),
@@ -191,6 +194,8 @@ class _ComicEditorScreenState extends State<ComicEditorScreen> {
         );
       },
     );
+
+    if (!confirmExport) return;
     // 封面路径仅用于对话框展示，裁剪后的字节用于容器封面
     final images = <Uint8List>[];
     final imageIdMap = <String, int>{};
@@ -241,13 +246,15 @@ class _ComicEditorScreenState extends State<ComicEditorScreen> {
     if (Platform.isAndroid) {
       if (!await _requestPermission()) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('需要存储权限才能保存文件')),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('需要存储权限才能保存文件')));
         }
         return;
       }
-      final dir = await FilePicker.platform.getDirectoryPath(dialogTitle: '选择保存位置');
+      final dir = await FilePicker.platform.getDirectoryPath(
+        dialogTitle: '选择保存位置',
+      );
       if (dir == null || dir.isEmpty) return;
       savePath = path.join(dir, '$title.mxenc');
     } else {
@@ -313,16 +320,16 @@ class _ComicEditorScreenState extends State<ComicEditorScreen> {
     } catch (e) {
       debugPrint('Save failed at $savePath: $e');
       bool saved = false;
-      
+
       // 尝试保存到下载目录 (Android)
       if (!saved && Platform.isAndroid) {
         try {
           final downloadsDir = Directory('/storage/emulated/0/Download');
           if (await downloadsDir.exists()) {
-             final fallbackPath = path.join(downloadsDir.path, '$title.mxenc');
-             await File(fallbackPath).writeAsBytes(encrypted, flush: true);
-             finalPath = fallbackPath;
-             saved = true;
+            final fallbackPath = path.join(downloadsDir.path, '$title.mxenc');
+            await File(fallbackPath).writeAsBytes(encrypted, flush: true);
+            finalPath = fallbackPath;
+            saved = true;
           }
         } catch (_) {}
       }
@@ -330,34 +337,34 @@ class _ComicEditorScreenState extends State<ComicEditorScreen> {
       // 尝试保存到应用外部存储
       if (!saved) {
         try {
-           final extDir = await getExternalStorageDirectory();
-           if (extDir != null) {
-             final fallbackPath = path.join(extDir.path, '$title.mxenc');
-             await File(fallbackPath).writeAsBytes(encrypted, flush: true);
-             finalPath = fallbackPath;
-             saved = true;
-           }
+          final extDir = await getExternalStorageDirectory();
+          if (extDir != null) {
+            final fallbackPath = path.join(extDir.path, '$title.mxenc');
+            await File(fallbackPath).writeAsBytes(encrypted, flush: true);
+            finalPath = fallbackPath;
+            saved = true;
+          }
         } catch (_) {}
       }
 
       // 尝试保存到临时目录
       if (!saved) {
         try {
-           final tempDir = await getTemporaryDirectory();
-           final fallbackPath = path.join(tempDir.path, '$title.mxenc');
-           await File(fallbackPath).writeAsBytes(encrypted, flush: true);
-           finalPath = fallbackPath;
-           saved = true;
+          final tempDir = await getTemporaryDirectory();
+          final fallbackPath = path.join(tempDir.path, '$title.mxenc');
+          await File(fallbackPath).writeAsBytes(encrypted, flush: true);
+          finalPath = fallbackPath;
+          saved = true;
         } catch (_) {}
       }
-      
+
       if (!saved) {
-         if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-               SnackBar(content: Text('保存失败: $e')),
-            );
-         }
-         return;
+        if (mounted) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('保存失败: $e')));
+        }
+        return;
       }
     }
 
@@ -535,7 +542,7 @@ class _ComicEditorScreenState extends State<ComicEditorScreen> {
     if (await Permission.manageExternalStorage.status.isGranted) {
       return true;
     }
-    
+
     if (await Permission.storage.status.isGranted) {
       return true;
     }

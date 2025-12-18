@@ -80,6 +80,8 @@ pub fn encrypt_file_with_metadata(
         0 => FileType::Generic,
         1 => FileType::Image,
         2 => FileType::Novel,
+        3 => FileType::Comic,
+        4 => FileType::RichNovel,
         _ => FileType::Other,
     };
     match crypto::MxEncFile::encrypt_with_metadata(
@@ -123,6 +125,8 @@ pub fn encrypt_file_by_path(
         0 => FileType::Generic,
         1 => FileType::Image,
         2 => FileType::Novel,
+        3 => FileType::Comic,
+        4 => FileType::RichNovel,
         _ => FileType::Other,
     };
 

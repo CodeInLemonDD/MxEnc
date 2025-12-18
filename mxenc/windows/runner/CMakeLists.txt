@@ -38,3 +38,38 @@ target_include_directories(${BINARY_NAME} PRIVATE "${CMAKE_SOURCE_DIR}")
 
 # Run the Flutter tool portions of the build. This must not be removed.
 add_dependencies(${BINARY_NAME} flutter_assemble)
+
+# --- Rust Build Integration ---
+set(RUST_PROJECT_DIR "${CMAKE_SOURCE_DIR}/../rust_core")
+set(RUST_TARGET_DIR "${RUST_PROJECT_DIR}/target")
+set(RUST_LIB_NAME "mxenc_core.dll")
+
+if(CMAKE_BUILD_TYPE MATCHES "Debug")
+  set(RUST_BUILD_TYPE "release")
+  set(RUST_CARGO_FLAG "--release")
+else()
+  set(RUST_BUILD_TYPE "release")
+  set(RUST_CARGO_FLAG "--release")
+endif()
+
+set(RUST_LIB_PATH "${RUST_TARGET_DIR}/${RUST_BUILD_TYPE}/${RUST_LIB_NAME}")
+
+# Build Rust library
+add_custom_command(
+  OUTPUT ${RUST_LIB_PATH}
+  COMMAND cargo build ${RUST_CARGO_FLAG}
+  WORKING_DIRECTORY ${RUST_PROJECT_DIR}
+  VERBATIM
+)
+
+# Create a target to trigger the build
+add_custom_target(rust_build ALL DEPENDS ${RUST_LIB_PATH})
+add_dependencies(${BINARY_NAME} rust_build)
+
+# Copy DLL to output directory for running
+add_custom_command(
+  TARGET ${BINARY_NAME} POST_BUILD
+  COMMAND ${CMAKE_COMMAND} -E copy_if_different
+    ${RUST_LIB_PATH}
+    $<TARGET_FILE_DIR:${BINARY_NAME}>/${RUST_LIB_NAME}
+)

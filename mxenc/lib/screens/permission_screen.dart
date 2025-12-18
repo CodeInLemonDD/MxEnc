@@ -92,10 +92,11 @@ class _PermissionScreenState extends State<PermissionScreen> {
       final remain = await _licenseService.getRemainingWithBonus(
         deviceId: deviceId,
       );
-      if (mounted)
+      if (mounted) {
         setState(() {
           _remainingSec = remain > 0 ? remain : 0;
         });
+      }
     } catch (_) {}
   }
 
@@ -171,10 +172,11 @@ class _PermissionScreenState extends State<PermissionScreen> {
         ).showSnackBar(const SnackBar(content: Text('激活异常')));
       }
     } finally {
-      if (mounted)
+      if (mounted) {
         setState(() {
           _activating = false;
         });
+      }
     }
   }
 

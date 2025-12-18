@@ -117,10 +117,12 @@ class _ViewerScreenState extends State<ViewerScreen> {
           .parseMxencHeaderByPath(inputPath: _selectedFile!.path);
 
       final decoded = _decodeFilenameUnicode(filename);
-      
+
       // 转换 int 到 Enum
       MxEncFileType type = MxEncFileType.values.firstWhere(
-          (e) => e.value == fileTypeInt, orElse: () => MxEncFileType.generic);
+        (e) => e.value == fileTypeInt,
+        orElse: () => MxEncFileType.generic,
+      );
 
       setState(() {
         _originalFilename = _normalizePreviewFilename(decoded);
@@ -195,10 +197,19 @@ class _ViewerScreenState extends State<ViewerScreen> {
         password: _passwordController.text,
       );
       await for (final ev in stream) {
-        _progress = ev.percent;
-        _progressLabel = ev.label;
-        setState(() {});
-        loading.set(_progress);
+        if (!mounted) break; // 避免组件销毁后更新状态
+
+        // 只有当进度有显著变化或状态改变时才更新UI，避免频繁setState导致卡顿
+        if ((ev.percent - _progress).abs() > 0.01 ||
+            ev.label != _progressLabel ||
+            ev.phase == ProgressPhase.done) {
+          setState(() {
+            _progress = ev.percent;
+            _progressLabel = ev.label;
+          });
+          loading.set(_progress);
+        }
+
         if (ev.phase == ProgressPhase.done &&
             ev.data != null &&
             ev.filename != null) {
@@ -206,6 +217,40 @@ class _ViewerScreenState extends State<ViewerScreen> {
             _decodeFilenameUnicode(ev.filename!),
           );
           final decryptedBytes = ev.data!;
+
+          // 尝试智能识别文件类型
+          if (_fileType == MxEncFileType.generic ||
+              _fileType == null ||
+              _fileType == MxEncFileType.other) {
+            // 尝试解析为小说
+            try {
+              final parsed = await compute(decodeNovelMeta, decryptedBytes);
+              if (parsed.$1.isNotEmpty) {
+                _fileType = MxEncFileType.novel;
+              }
+            } catch (_) {}
+
+            // 尝试解析为漫画
+            if (_fileType != MxEncFileType.novel) {
+              try {
+                final packed = await compute(unpackComicEntry, decryptedBytes);
+                if (packed['manifest'] != null && packed['start'] != null) {
+                  _fileType = MxEncFileType.comic;
+                }
+              } catch (_) {}
+            }
+
+            // 尝试解析为富文本
+            if (_fileType != MxEncFileType.novel &&
+                _fileType != MxEncFileType.comic) {
+              try {
+                final packed = await compute(unpackRichEntry, decryptedBytes);
+                if (packed['manifest'] != null && packed['start'] != null) {
+                  _fileType = MxEncFileType.richNovel;
+                }
+              } catch (_) {}
+            }
+          }
 
           // 根据文件类型处理内容
           if (_fileType == MxEncFileType.novel) {

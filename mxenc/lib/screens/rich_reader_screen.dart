@@ -168,11 +168,21 @@ class _RichReaderScreenState extends State<RichReaderScreen> {
                   if (entry != null) {
                     final off = (entry['byteOffset'] as int) + widget.start;
                     final len = entry['length'] as int;
-                    final bytes = widget.payload.sublist(off, off + len);
-                    return Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: Image.memory(bytes, fit: BoxFit.contain),
-                    );
+                    // 确保不会越界
+                    if (off + len <= widget.payload.length) {
+                      final bytes = widget.payload.buffer.asUint8List(
+                        widget.payload.offsetInBytes + off,
+                        len,
+                      );
+                      return Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: Image.memory(
+                          bytes,
+                          fit: BoxFit.contain,
+                          gaplessPlayback: true,
+                        ),
+                      );
+                    }
                   }
                   return const SizedBox.shrink();
                 }

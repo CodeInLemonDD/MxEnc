@@ -66,54 +66,71 @@ class _RichEditorScreenState extends State<RichEditorScreen> {
   void _manageChapters() {
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
       builder: (context) {
+        final scrollController = ScrollController();
         return StatefulBuilder(
           builder: (context, setSheet) {
-            return Padding(
-              padding: const EdgeInsets.all(12.0),
+            return Container(
+              height: MediaQuery.of(context).size.height * 0.8,
+              padding: EdgeInsets.only(
+                left: 12,
+                right: 12,
+                top: 12,
+                bottom: MediaQuery.of(context).viewInsets.bottom + 12,
+              ),
               child: Column(
-                mainAxisSize: MainAxisSize.min,
                 children: [
                   const Text(
                     '章节管理',
                     style: TextStyle(fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 8),
-                  for (int i = 0; i < _chapters.length; i++)
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextFormField(
-                            initialValue: (_chapters[i]['title'] ?? '')
-                                .toString(),
-                            onChanged: (v) {
-                              setSheet(() {
-                                _chapters[i]['title'] = v;
-                              });
-                            },
-                          ),
-                        ),
-                        IconButton(
-                          onPressed: () {
-                            final removedId = _chapters[i]['id'];
-                            setSheet(() {
-                              _chapters.removeAt(i);
-                            });
-                            setState(() {
-                              _blocks.removeWhere(
-                                (b) => b['chapterId'] == removedId,
-                              );
-                              if (_currentChapterIndex >= _chapters.length) {
-                                _currentChapterIndex = _chapters.isEmpty
-                                    ? -1
-                                    : _chapters.length - 1;
-                              }
-                            });
-                          },
-                          icon: const Icon(Icons.delete),
-                        ),
-                      ],
+                  Expanded(
+                    child: Scrollbar(
+                      controller: scrollController,
+                      thumbVisibility: true,
+                      child: ListView.builder(
+                        controller: scrollController,
+                        itemCount: _chapters.length,
+                        itemBuilder: (context, i) {
+                          return Row(
+                            children: [
+                              Expanded(
+                                child: TextFormField(
+                                  initialValue: (_chapters[i]['title'] ?? '')
+                                      .toString(),
+                                  onChanged: (v) {
+                                    _chapters[i]['title'] = v;
+                                  },
+                                ),
+                              ),
+                              IconButton(
+                                onPressed: () {
+                                  final removedId = _chapters[i]['id'];
+                                  setSheet(() {
+                                    _chapters.removeAt(i);
+                                  });
+                                  setState(() {
+                                    _blocks.removeWhere(
+                                      (b) => b['chapterId'] == removedId,
+                                    );
+                                    if (_currentChapterIndex >=
+                                        _chapters.length) {
+                                      _currentChapterIndex = _chapters.isEmpty
+                                          ? -1
+                                          : _chapters.length - 1;
+                                    }
+                                  });
+                                },
+                                icon: const Icon(Icons.delete),
+                              ),
+                            ],
+                          );
+                        },
+                      ),
                     ),
+                  ),
                   const SizedBox(height: 8),
                   FilledButton(
                     onPressed: () {
@@ -140,8 +157,10 @@ class _RichEditorScreenState extends State<RichEditorScreen> {
     List<String> tags = [];
     Uint8List? tmpCoverBytes;
     String? tmpCover;
+    bool confirmExport = false;
     await showDialog(
       context: context,
+      barrierDismissible: false,
       builder: (context) {
         final tCtrl = TextEditingController(text: title);
         final tagCtrl = TextEditingController();
@@ -216,6 +235,7 @@ class _RichEditorScreenState extends State<RichEditorScreen> {
                         .map((e) => e.trim())
                         .where((e) => e.isNotEmpty)
                         .toList();
+                    confirmExport = true;
                     Navigator.pop(context);
                   },
                   child: const Text('确定'),
@@ -226,6 +246,8 @@ class _RichEditorScreenState extends State<RichEditorScreen> {
         );
       },
     );
+
+    if (!confirmExport) return;
     // 封面路径仅用于对话框展示，裁剪后的字节用于容器封面
     _exportProgress = 0.2;
     _exportLabel = '收集资源';
@@ -296,13 +318,15 @@ class _RichEditorScreenState extends State<RichEditorScreen> {
     if (Platform.isAndroid) {
       if (!await _requestPermission()) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('需要存储权限才能保存文件')),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('需要存储权限才能保存文件')));
         }
         return;
       }
-      final dir = await FilePicker.platform.getDirectoryPath(dialogTitle: '选择保存位置');
+      final dir = await FilePicker.platform.getDirectoryPath(
+        dialogTitle: '选择保存位置',
+      );
       if (dir == null || dir.isEmpty) return;
       savePath = path.join(dir, '$title.mxenc');
     } else {
@@ -368,48 +392,48 @@ class _RichEditorScreenState extends State<RichEditorScreen> {
     } catch (e) {
       debugPrint('Save failed at $savePath: $e');
       bool saved = false;
-      
+
       if (!saved && Platform.isAndroid) {
         try {
           final downloadsDir = Directory('/storage/emulated/0/Download');
           if (await downloadsDir.exists()) {
-             final fallbackPath = path.join(downloadsDir.path, '$title.mxenc');
-             await File(fallbackPath).writeAsBytes(encrypted, flush: true);
-             finalPath = fallbackPath;
-             saved = true;
+            final fallbackPath = path.join(downloadsDir.path, '$title.mxenc');
+            await File(fallbackPath).writeAsBytes(encrypted, flush: true);
+            finalPath = fallbackPath;
+            saved = true;
           }
         } catch (_) {}
       }
 
       if (!saved) {
         try {
-           final extDir = await getExternalStorageDirectory();
-           if (extDir != null) {
-             final fallbackPath = path.join(extDir.path, '$title.mxenc');
-             await File(fallbackPath).writeAsBytes(encrypted, flush: true);
-             finalPath = fallbackPath;
-             saved = true;
-           }
+          final extDir = await getExternalStorageDirectory();
+          if (extDir != null) {
+            final fallbackPath = path.join(extDir.path, '$title.mxenc');
+            await File(fallbackPath).writeAsBytes(encrypted, flush: true);
+            finalPath = fallbackPath;
+            saved = true;
+          }
         } catch (_) {}
       }
 
       if (!saved) {
         try {
-           final tempDir = await getTemporaryDirectory();
-           final fallbackPath = path.join(tempDir.path, '$title.mxenc');
-           await File(fallbackPath).writeAsBytes(encrypted, flush: true);
-           finalPath = fallbackPath;
-           saved = true;
+          final tempDir = await getTemporaryDirectory();
+          final fallbackPath = path.join(tempDir.path, '$title.mxenc');
+          await File(fallbackPath).writeAsBytes(encrypted, flush: true);
+          finalPath = fallbackPath;
+          saved = true;
         } catch (_) {}
       }
-      
+
       if (!saved) {
-         if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-               SnackBar(content: Text('保存失败: $e')),
-            );
-         }
-         return;
+        if (mounted) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('保存失败: $e')));
+        }
+        return;
       }
     }
 
@@ -652,7 +676,7 @@ class _RichEditorScreenState extends State<RichEditorScreen> {
     if (await Permission.manageExternalStorage.status.isGranted) {
       return true;
     }
-    
+
     if (await Permission.storage.status.isGranted) {
       return true;
     }

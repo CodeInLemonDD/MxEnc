@@ -49,7 +49,12 @@ class _ComicDetailScreenState extends State<ComicDetailScreen> {
       final bytes = widget.payload.sublist(off, off + len);
       return ClipRRect(
         borderRadius: BorderRadius.circular(10),
-        child: Image.memory(bytes, width: width, height: width * 1.4, fit: BoxFit.cover),
+        child: Image.memory(
+          bytes,
+          width: width,
+          height: width * 1.4,
+          fit: BoxFit.cover,
+        ),
       );
     }
     return Container(
@@ -70,19 +75,30 @@ class _ComicDetailScreenState extends State<ComicDetailScreen> {
     final avatarPath = (widget.manifest['authorAvatarPath'] ?? '').toString();
     final title = (widget.manifest['title'] ?? '漫画').toString();
     final theme = Theme.of(context);
-    List<String> _splitTags(dynamic v) {
+    List<String> splitTags(dynamic v) {
       final List<String> out = [];
       if (v is String) {
-        out.addAll(v.split(RegExp(r'[，,]')).map((e) => e.trim()).where((e) => e.isNotEmpty));
+        out.addAll(
+          v
+              .split(RegExp(r'[，,]'))
+              .map((e) => e.trim())
+              .where((e) => e.isNotEmpty),
+        );
       } else if (v is List) {
         for (final el in v) {
           final s = (el ?? '').toString();
-          out.addAll(s.split(RegExp(r'[，,]')).map((e) => e.trim()).where((e) => e.isNotEmpty));
+          out.addAll(
+            s
+                .split(RegExp(r'[，,]'))
+                .map((e) => e.trim())
+                .where((e) => e.isNotEmpty),
+          );
         }
       }
       return out;
     }
-    final tags = _splitTags(widget.manifest['tags']);
+
+    final tags = splitTags(widget.manifest['tags']);
     return Scaffold(
       appBar: AppBar(title: Text(title)),
       body: ListView(
@@ -97,7 +113,12 @@ class _ComicDetailScreenState extends State<ComicDetailScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(title, style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
+                    Text(
+                      title,
+                      style: theme.textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
                     const SizedBox(height: 8),
                     Row(
                       children: [
@@ -108,7 +129,10 @@ class _ComicDetailScreenState extends State<ComicDetailScreen> {
                             height: 48,
                             child: (() {
                               if (avatarPath.startsWith('assets/')) {
-                                return Image.asset(avatarPath, fit: BoxFit.cover);
+                                return Image.asset(
+                                  avatarPath,
+                                  fit: BoxFit.cover,
+                                );
                               }
                               try {
                                 final f = File(avatarPath);
@@ -116,7 +140,10 @@ class _ComicDetailScreenState extends State<ComicDetailScreen> {
                                   return Image.file(f, fit: BoxFit.cover);
                                 }
                               } catch (_) {}
-                              return Image.asset('assets/default_avatar.jpg', fit: BoxFit.cover);
+                              return Image.asset(
+                                'assets/default_avatar.jpg',
+                                fit: BoxFit.cover,
+                              );
                             })(),
                           ),
                         ),
@@ -127,7 +154,13 @@ class _ComicDetailScreenState extends State<ComicDetailScreen> {
                             children: [
                               Text(author, style: theme.textTheme.titleMedium),
                               if (signature.isNotEmpty)
-                                Text(signature, style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurface.withValues(alpha: 0.6))),
+                                Text(
+                                  signature,
+                                  style: theme.textTheme.bodySmall?.copyWith(
+                                    color: theme.colorScheme.onSurface
+                                        .withValues(alpha: 0.6),
+                                  ),
+                                ),
                             ],
                           ),
                         ),
@@ -148,12 +181,20 @@ class _ComicDetailScreenState extends State<ComicDetailScreen> {
               children: [
                 for (final t in tags)
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: theme.colorScheme.primary.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(15),
                     ),
-                    child: Text(t, style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.primary)),
+                    child: Text(
+                      t,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.primary,
+                      ),
+                    ),
                   ),
               ],
             ),
@@ -210,13 +251,16 @@ class _ComicDetailScreenState extends State<ComicDetailScreen> {
                 'isComic': true,
                 'importTime': DateTime.now().toIso8601String(),
                 'creationTime': null,
-                'authorDeviceId': (widget.manifest['authorDeviceId'] ?? '').toString(),
+                'authorDeviceId': (widget.manifest['authorDeviceId'] ?? '')
+                    .toString(),
                 'authorSignature': signature,
                 'authorAvatarPath': avatarPath,
               };
               await StorageService.saveShelfItem(item);
               if (!context.mounted) return;
-              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('已保存到书架')));
+              ScaffoldMessenger.of(
+                context,
+              ).showSnackBar(const SnackBar(content: Text('已保存到书架')));
             },
             icon: const Icon(Icons.bookmark_add),
             label: const Text('添加到书架'),

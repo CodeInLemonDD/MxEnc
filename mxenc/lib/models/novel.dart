@@ -31,11 +31,21 @@ class NovelData {
   static List<String> _splitTags(dynamic v) {
     final List<String> out = [];
     if (v is String) {
-      out.addAll(v.split(RegExp(r'[，,]')).map((e) => e.trim()).where((e) => e.isNotEmpty));
+      out.addAll(
+        v
+            .split(RegExp(r'[，,]'))
+            .map((e) => e.trim())
+            .where((e) => e.isNotEmpty),
+      );
     } else if (v is List) {
       for (final el in v) {
         final s = (el ?? '').toString();
-        out.addAll(s.split(RegExp(r'[，,]')).map((e) => e.trim()).where((e) => e.isNotEmpty));
+        out.addAll(
+          s
+              .split(RegExp(r'[，,]'))
+              .map((e) => e.trim())
+              .where((e) => e.isNotEmpty),
+        );
       }
     }
     return out;

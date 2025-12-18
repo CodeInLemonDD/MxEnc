@@ -43,7 +43,10 @@ class _ComicReaderScreenState extends State<ComicReaderScreen> {
   void initState() {
     super.initState();
     PlatformSecure.enableSecureScreen();
-    _chapterIndex = widget.initialChapterIndex.clamp(0, _chapters.isEmpty ? 0 : _chapters.length - 1);
+    _chapterIndex = widget.initialChapterIndex.clamp(
+      0,
+      _chapters.isEmpty ? 0 : _chapters.length - 1,
+    );
     _scrollController.addListener(() {
       if (_overlayVisible) {
         setState(() {
@@ -146,13 +149,21 @@ class _ComicReaderScreenState extends State<ComicReaderScreen> {
                   final entry = _idx[imageId];
                   final off = (entry['byteOffset'] as int) + widget.start;
                   final len = entry['length'] as int;
-                  final bytes = widget.payload.sublist(off, off + len);
+                  // 使用 view 而不是 sublist 以避免内存拷贝和提升性能
+                  final bytes = widget.payload.buffer.asUint8List(
+                    widget.payload.offsetInBytes + off,
+                    len,
+                  );
                   return Padding(
                     padding: const EdgeInsets.all(8.0),
                     child: InteractiveViewer(
                       minScale: 0.5,
                       maxScale: 5.0,
-                      child: Image.memory(bytes, fit: BoxFit.contain),
+                      child: Image.memory(
+                        bytes,
+                        fit: BoxFit.contain,
+                        gaplessPlayback: true, // 防止重建时闪烁导致列表高度坍塌
+                      ),
                     ),
                   );
                 }
