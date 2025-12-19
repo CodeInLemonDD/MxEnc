@@ -69,6 +69,7 @@ dev_dependencies:
   flutter_lints: ^6.0.0
   ffigen: ^8.0.0
   flutter_launcher_icons: ^0.13.1
+  msix: ^3.16.12
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -115,7 +116,19 @@ flutter:
 flutter_launcher_icons:
   android: true
   ios: true
+  windows:
+    generate: true
+    image_path: assets/logo.jpg
+    icon_size: 48
   image_path: assets/logo.jpg
   adaptive_icon_background: "#ffffff"
   adaptive_icon_foreground: assets/logo.jpg
   remove_alpha_ios: true
+
+msix_config:
+  display_name: "猫鸮加密"
+  publisher_display_name: "极光科技"
+  identity_name: "com.aurora.mxenc"
+  msix_version: "1.0.0.1"
+  logo_path: "assets/logo.jpg"
+  capabilities: internetClient, location
