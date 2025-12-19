@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter/services.dart';
-import '../utils/storage_service.dart';
 import '../utils/theme_provider.dart';
 import '../utils/dynamic_watermark.dart';
 import '../utils/platform_secure.dart';
@@ -63,59 +62,6 @@ class _ComicReaderScreenState extends State<ComicReaderScreen> {
     super.dispose();
   }
 
-  Future<void> _addToShelf() async {
-    try {
-      final id = StorageService.newId();
-      final title = (widget.manifest['title'] ?? '未命名').toString();
-      String coverPath = 'assets/placeholder.png';
-      final coverRef = widget.manifest['coverRef'];
-      if (coverRef is int && coverRef >= 0 && coverRef < _idx.length) {
-        final entry = _idx[coverRef];
-        final off = (entry['byteOffset'] as int) + widget.start;
-        final len = entry['length'] as int;
-        final bytes = widget.payload.sublist(off, off + len);
-        coverPath = await StorageService.storeCoverBytes(id, bytes);
-      } else {
-        final bd = await rootBundle.load('assets/logo.jpg');
-        final def = bd.buffer.asUint8List();
-        coverPath = await StorageService.storeCoverBytes(id, def);
-      }
-      final item = {
-        'id': id,
-        'title': title,
-        'author': (widget.manifest['authorNickname'] ?? '未知作者').toString(),
-        'coverPath': coverPath,
-        'filePath': widget.sourcePath,
-        'isNovel': false,
-        'isComic': true,
-        'importTime': DateTime.now().toIso8601String(),
-        'creationTime': null,
-        'authorDeviceId': (widget.manifest['authorDeviceId'] ?? '').toString(),
-        'authorSignature': (widget.manifest['authorSignature'] ?? '')
-            .toString(),
-        'authorAvatarPath': (widget.manifest['authorAvatarPath'] ?? '')
-            .toString(),
-      };
-      await StorageService.saveShelfItem(item);
-      try {
-        final pwd = widget.password;
-        if (pwd != null && pwd.isNotEmpty) {
-          await StorageService.saveItemPassword(widget.sourcePath, pwd);
-        }
-      } catch (_) {}
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('已保存到书架')));
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('保存失败: $e')));
-      }
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -295,10 +241,6 @@ class _ComicReaderScreenState extends State<ComicReaderScreen> {
                             });
                           },
                           icon: const Icon(Icons.skip_previous),
-                        ),
-                        IconButton(
-                          onPressed: _addToShelf,
-                          icon: const Icon(Icons.bookmark_add),
                         ),
                       ],
                     ),

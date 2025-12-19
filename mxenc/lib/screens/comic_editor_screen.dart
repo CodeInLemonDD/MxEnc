@@ -5,6 +5,7 @@ import 'dart:io';
 import 'package:path/path.dart' as path;
 import 'package:path_provider/path_provider.dart';
 import 'package:flutter/services.dart';
+import 'package:share_plus/share_plus.dart';
 import '../rust_bridge.dart';
 import '../utils/mxenc_dart.dart';
 import '../utils/user_service.dart';
@@ -372,9 +373,28 @@ class _ComicEditorScreenState extends State<ComicEditorScreen> {
       _exportProgress = 1.0;
       _exportLabel = '完成';
       setState(() {});
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('已导出至: $finalPath')));
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('导出成功'),
+          content: Text('已导出至:\n$finalPath'),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+                SharePlus.instance.share(
+                  ShareParams(files: [XFile(finalPath)]),
+                );
+              },
+              child: const Text('分享'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('确定'),
+            ),
+          ],
+        ),
+      );
     }
   }
 

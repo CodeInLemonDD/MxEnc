@@ -17,6 +17,10 @@ import 'utils/auth_service.dart';
 import 'screens/oobe_screen.dart';
 import 'utils/user_service.dart';
 
+import 'package:receive_sharing_intent/receive_sharing_intent.dart';
+import 'dart:async';
+import 'package:flutter/services.dart';
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -137,12 +141,32 @@ class _MainPageState extends State<MainPage> {
 
   // 页面控制器
   final PageController _pageController = PageController(initialPage: 0);
+  StreamSubscription? _intentSub;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _maybeLaunchOobe();
+      _initIntentListener();
+    });
+  }
+
+  void _initIntentListener() {
+    // 监听应用运行时接收到的分享意图
+    _intentSub = ReceiveSharingIntent.instance.getMediaStream().listen((List<SharedMediaFile> value) {
+      if (value.isNotEmpty) {
+        _handleSharedFile(value.first.path);
+      }
+    }, onError: (err) {
+      debugPrint("getIntentDataStream error: $err");
+    });
+
+    // 检查应用启动时的分享意图
+    ReceiveSharingIntent.instance.getInitialMedia().then((List<SharedMediaFile> value) {
+      if (value.isNotEmpty) {
+        _handleSharedFile(value.first.path);
+      }
     });
   }
 
@@ -160,8 +184,90 @@ class _MainPageState extends State<MainPage> {
     } catch (_) {}
   }
 
+  void _handleSharedFile(String path) async {
+    if (!mounted) return;
+    String decodedPath = path;
+    bool isContentUri = path.startsWith('content://');
+    bool isFileUri = path.startsWith('file://');
+
+    // 处理路径解码
+    if (isFileUri) {
+      try {
+        decodedPath = Uri.parse(path).toFilePath();
+      } catch (_) {
+        // Fallback for malformed file URIs
+        String p = path.substring(7);
+        decodedPath = Uri.decodeFull(p);
+      }
+    } else if (!isContentUri) {
+      // 原始路径，不做 decodeFull，除非它看起来像是有 URL 编码
+      // 很多时候插件返回的是绝对路径 /storage/...
+      // 如果路径包含 %，尝试解码，但要小心误伤
+      // 安全策略：如果解码后文件存在，则使用解码后的，否则使用原始的
+      try {
+        if (path.contains('%')) {
+          String tryDecoded = Uri.decodeFull(path);
+          if (File(tryDecoded).existsSync()) {
+            decodedPath = tryDecoded;
+          }
+        }
+      } catch (_) {}
+    }
+
+    // 如果是 content:// URI，或者文件不存在（可能是未处理的 content uri），尝试复制到临时文件
+    if (isContentUri ||
+        decodedPath.startsWith('content://') ||
+        (!File(decodedPath).existsSync() && path.contains('content://'))) {
+      try {
+        // 使用 MethodChannel 调用原生代码复制文件
+        final channel = MethodChannel('com.maoxiao.mxenc/file_utils');
+        final String? tempPath =
+            await channel.invokeMethod('copyContentUri', {'uri': path});
+        if (tempPath != null) {
+          decodedPath = tempPath;
+        }
+      } catch (e) {
+        debugPrint('Failed to copy content uri: $e');
+        // 继续尝试使用原始路径，虽然可能会失败
+      }
+    }
+
+    if (!mounted) return;
+
+    // 获取原始文件名用于显示
+    String? displayName;
+    try {
+      if (path.startsWith('content://')) {
+        // 尝试从URI中提取文件名
+        final uri = Uri.parse(path);
+        final lastSegment = uri.pathSegments.lastOrNull;
+        if (lastSegment != null && lastSegment.isNotEmpty) {
+          displayName = Uri.decodeFull(lastSegment);
+        }
+      } else {
+        displayName = path.split('/').last;
+        if (displayName.contains('%')) {
+          displayName = Uri.decodeFull(displayName);
+        }
+      }
+    } catch (_) {}
+
+    // 导航到解密页面并传入文件
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ViewerScreen(
+          rustBridge: widget.rustBridge,
+          initialFile: File(decodedPath),
+          importedName: displayName,
+        ),
+      ),
+    );
+  }
+
   @override
   void dispose() {
+    _intentSub?.cancel();
     _pageController.dispose();
     super.dispose();
   }

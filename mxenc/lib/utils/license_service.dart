@@ -93,11 +93,20 @@ class LicenseService {
     await p.remove(_bonusSecondsKey);
   }
 
+  Future<void> clearLicense() async {
+    final p = await _prefs();
+    await p.remove(_licenseKey);
+  }
+
   Future<int> getRemainingWithBonus({required String deviceId}) async {
     try {
       final obj = await decodeLicense();
       final bonus = await getBonusSeconds();
       if (obj == null) return bonus;
+      final licDevice = (obj['deviceId'] ?? '').toString();
+      if (licDevice.isNotEmpty && licDevice != deviceId) {
+        return bonus;
+      }
       final exp = int.tryParse((obj['exp'] ?? '').toString()) ?? 0;
       final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
       final remain = exp - now;

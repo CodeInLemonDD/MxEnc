@@ -50,11 +50,12 @@ class _PermissionScreenState extends State<PermissionScreen> {
   }
 
   Future<void> _copyToClipboard() async {
-    await Clipboard.setData(ClipboardData(text: deviceId));
+    final text = '设备序列号: \n$deviceId\n验证码: \n$_activationCode';
+    await Clipboard.setData(ClipboardData(text: text));
     if (!mounted) return;
     ScaffoldMessenger.of(
       context,
-    ).showSnackBar(const SnackBar(content: Text('序列号已复制到剪贴板')));
+    ).showSnackBar(const SnackBar(content: Text('信息已复制到剪贴板')));
   }
 
   Future<void> _loadPremium() async {
@@ -126,6 +127,10 @@ class _PermissionScreenState extends State<PermissionScreen> {
       final newCode = (newObj['code'] ?? '').toString();
       if (newExp <= 0) throw Exception('卡密过期或无效');
       if (newCode.isEmpty || newCode != _activationCode) throw Exception('验证码不匹配');
+      
+      // Capture old license
+      final oldLic = await _licenseService.getLicense();
+      
       // 先验证新卡密有效
       await _licenseService.setLicense(newLic);
       final ok = await _licenseService.isLicenseValid(deviceId: deviceId);
@@ -159,6 +164,13 @@ class _PermissionScreenState extends State<PermissionScreen> {
           Navigator.pop(context, true);
         }
       } else {
+        // Revert to old license if validation fails
+        if (oldLic != null) {
+          await _licenseService.setLicense(oldLic);
+        } else {
+          await _licenseService.clearLicense();
+        }
+        
         if (mounted) {
           ScaffoldMessenger.of(
             context,
@@ -303,7 +315,7 @@ class _PermissionScreenState extends State<PermissionScreen> {
                   borderRadius: BorderRadius.circular(10),
                 ),
               ),
-              child: const Text('复制序列号', style: TextStyle(fontSize: 16)),
+              child: const Text('复制信息', style: TextStyle(fontSize: 16)),
             ),
             const SizedBox(height: 24),
             const Text('输入卡密激活'),

@@ -3,6 +3,7 @@ import 'package:file_picker/file_picker.dart';
 import 'dart:io';
 import 'package:path/path.dart' as path;
 import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 import '../utils/keyboard_utils.dart';
 import '../widgets/loading_dialog.dart';
 import '../rust_bridge.dart';
@@ -184,8 +185,27 @@ class _EncryptScreenState extends State<EncryptScreen> {
         if (Navigator.canPop(context)) {
           Navigator.of(context).pop();
         }
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('文件已加密并保存到: $encryptedFilePath')),
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('加密成功'),
+            content: Text('文件已保存到:\n$encryptedFilePath'),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  SharePlus.instance.share(
+                    ShareParams(files: [XFile(encryptedFilePath)]),
+                  );
+                },
+                child: const Text('分享'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('确定'),
+              ),
+            ],
+          ),
         );
         setState(() {
           _selectedFile = null;

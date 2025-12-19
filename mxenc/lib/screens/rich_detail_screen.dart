@@ -10,6 +10,8 @@ class RichDetailScreen extends StatefulWidget {
   final int start;
   final String sourcePath;
   final String? password;
+  final bool fromShelf;
+
   const RichDetailScreen({
     super.key,
     required this.manifest,
@@ -17,6 +19,7 @@ class RichDetailScreen extends StatefulWidget {
     required this.start,
     required this.sourcePath,
     this.password,
+    this.fromShelf = false,
   });
 
   @override
@@ -33,9 +36,12 @@ class _RichDetailScreenState extends State<RichDetailScreen> {
       (widget.manifest['resourcesIndex'] as List<dynamic>? ?? [])
           .cast<Map<String, dynamic>>();
 
+  bool _isSaved = false;
+
   @override
   void initState() {
     super.initState();
+    _isSaved = widget.fromShelf;
     final coverRef = widget.manifest['coverRef'];
     if (coverRef is int && coverRef >= 0 && coverRef < _idx.length) {
       _coverEntry = _idx[coverRef];
@@ -231,45 +237,56 @@ class _RichDetailScreenState extends State<RichDetailScreen> {
           }),
         ],
       ),
-      bottomNavigationBar: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: FilledButton.icon(
-            onPressed: () async {
-              final id = StorageService.newId();
-              String coverPath = 'assets/placeholder.png';
-              if (_coverEntry != null) {
-                final off = (_coverEntry!['byteOffset'] as int) + widget.start;
-                final len = _coverEntry!['length'] as int;
-                final bytes = widget.payload.sublist(off, off + len);
-                coverPath = await StorageService.storeCoverBytes(id, bytes);
-              }
-              final item = {
-                'id': id,
-                'title': title,
-                'author': author,
-                'coverPath': coverPath,
-                'filePath': widget.sourcePath,
-                'isNovel': true,
-                'isRichNovel': true,
-                'importTime': DateTime.now().toIso8601String(),
-                'creationTime': null,
-                'authorDeviceId': (widget.manifest['authorDeviceId'] ?? '')
-                    .toString(),
-                'authorSignature': signature,
-                'authorAvatarPath': avatarPath,
-              };
-              await StorageService.saveShelfItem(item);
-              if (!context.mounted) return;
-              ScaffoldMessenger.of(
-                context,
-              ).showSnackBar(const SnackBar(content: Text('已保存到书架')));
-            },
-            icon: const Icon(Icons.bookmark_add),
-            label: const Text('添加到书架'),
-          ),
-        ),
-      ),
+      bottomNavigationBar: _isSaved
+          ? null
+          : SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: FilledButton.icon(
+                  onPressed: () async {
+                    final id = StorageService.newId();
+                    String coverPath = 'assets/placeholder.png';
+                    if (_coverEntry != null) {
+                      final off =
+                          (_coverEntry!['byteOffset'] as int) + widget.start;
+                      final len = _coverEntry!['length'] as int;
+                      // 确保不会越界
+                      if (off + len <= widget.payload.length) {
+                        final bytes = widget.payload.sublist(off, off + len);
+                        coverPath =
+                            await StorageService.storeCoverBytes(id, bytes);
+                      }
+                    }
+                    final item = {
+                      'id': id,
+                      'title': title,
+                      'author': author,
+                      'coverPath': coverPath,
+                      'filePath': widget.sourcePath,
+                      'isNovel': true,
+                      'isRichNovel': true,
+                      'importTime': DateTime.now().toIso8601String(),
+                      'creationTime': null,
+                      'authorDeviceId':
+                          (widget.manifest['authorDeviceId'] ?? '').toString(),
+                      'authorSignature': signature,
+                      'authorAvatarPath': avatarPath,
+                      'tags': tags,
+                    };
+                    await StorageService.saveShelfItem(item);
+                    if (!context.mounted) return;
+                    setState(() {
+                      _isSaved = true;
+                    });
+                    ScaffoldMessenger.of(
+                      context,
+                    ).showSnackBar(const SnackBar(content: Text('已保存到书架')));
+                  },
+                  icon: const Icon(Icons.bookmark_add),
+                  label: const Text('添加到书架'),
+                ),
+              ),
+            ),
     );
   }
 }

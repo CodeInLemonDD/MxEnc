@@ -24,8 +24,14 @@ import 'rich_detail_screen.dart';
 class ViewerScreen extends StatefulWidget {
   final RustBridge rustBridge;
   final File? initialFile;
+  final String? importedName;
 
-  const ViewerScreen({super.key, required this.rustBridge, this.initialFile});
+  const ViewerScreen({
+    super.key, 
+    required this.rustBridge, 
+    this.initialFile,
+    this.importedName,
+  });
 
   @override
   State<ViewerScreen> createState() => _ViewerScreenState();
@@ -46,6 +52,7 @@ class _ViewerScreenState extends State<ViewerScreen> {
   Uint8List? _previewImage; // 用于小说封面预览
 
   String? _deviceId; // 真实设备指纹（来自Rust）
+  bool _isSaved = false;
 
   @override
   void initState() {
@@ -388,13 +395,21 @@ class _ViewerScreenState extends State<ViewerScreen> {
       }
     } catch (e) {
       if (mounted) {
-        setState(() {
-          _errorMessage = '解密失败: $e';
-          _isDecrypting = false;
-        });
-        if (Navigator.canPop(context)) {
-          Navigator.of(context).pop();
+        String errorMsg = '解密失败: $e';
+        // 尝试检测是否为密码错误（根据 Rust 端可能的错误信息）
+        if (e.toString().contains('MAC check failed') || 
+            e.toString().contains('Invalid password') ||
+            e.toString().contains('CipherError')) {
+          errorMsg = '密码错误';
         }
+        
+        setState(() {
+          _errorMessage = errorMsg;
+          _isDecrypting = false;
+          _progress = 0.0;
+          _progressLabel = '';
+        });
+        // 不再自动 pop，让用户留在页面重试
         KeyboardUtils.hide(context);
       }
     }
@@ -516,6 +531,9 @@ class _ViewerScreenState extends State<ViewerScreen> {
         }
       } catch (_) {}
       if (mounted) {
+        setState(() {
+          _isSaved = true;
+        });
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(const SnackBar(content: Text('已保存到书架')));
@@ -537,11 +555,12 @@ class _ViewerScreenState extends State<ViewerScreen> {
               title: Text('查看: ${path.basename(_originalFilename!)}'),
               backgroundColor: Theme.of(context).colorScheme.inversePrimary,
               actions: [
-                IconButton(
-                  icon: const Icon(Icons.bookmark_add),
-                  onPressed: _saveToBookshelf,
-                  tooltip: '保存到书架',
-                ),
+                if (!_isSaved)
+                  IconButton(
+                    icon: const Icon(Icons.bookmark_add),
+                    onPressed: _saveToBookshelf,
+                    tooltip: '保存到书架',
+                  ),
               ],
             )
           : AppBar(title: const Text('文件解密')),
@@ -621,9 +640,7 @@ class _ViewerScreenState extends State<ViewerScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('已选择: ${path.basename(_selectedFile!.path)}'),
-                  if (_originalFilename != null)
-                    Text('原始文件: ${path.basename(_originalFilename!)}'),
+                  Text('已选择: ${widget.importedName ?? path.basename(_selectedFile!.path)}'),
                 ],
               ),
             ),
@@ -690,7 +707,7 @@ class _ViewerScreenState extends State<ViewerScreen> {
             ),
 
           // 保存到书架按钮（仅在解密后显示在表单中）
-          if (_decryptedContent != null)
+          if (_decryptedContent != null && !_isSaved)
             Column(
               children: [
                 const SizedBox(height: 16),
@@ -767,16 +784,17 @@ class _ViewerScreenState extends State<ViewerScreen> {
       children: [
         contentWidget,
         // 保存到书架悬浮按钮
-        Positioned(
-          bottom: 20,
-          right: 20,
-          child: FloatingActionButton(
-            onPressed: _saveToBookshelf,
-            backgroundColor: Theme.of(context).colorScheme.primary,
-            tooltip: '保存到书架',
-            child: const Icon(Icons.bookmark_add),
+        if (!_isSaved)
+          Positioned(
+            bottom: 20,
+            right: 20,
+            child: FloatingActionButton(
+              onPressed: _saveToBookshelf,
+              backgroundColor: Theme.of(context).colorScheme.primary,
+              tooltip: '保存到书架',
+              child: const Icon(Icons.bookmark_add),
+            ),
           ),
-        ),
         // 动态水印层
         if (_deviceId != null)
           DynamicWatermark(

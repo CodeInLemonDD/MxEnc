@@ -1,4 +1,5 @@
 import 'package:shared_preferences/shared_preferences.dart';
+import 'storage_service.dart';
 
 class UserService {
   static const _avatarKey = 'user_avatar_path';
@@ -9,8 +10,12 @@ class UserService {
   Future<SharedPreferences> _prefs() async => await SharedPreferences.getInstance();
 
   Future<void> setAvatarPath(String path) async {
-    final p = await _prefs();
-    await p.setString(_avatarKey, path);
+    final prefs = await _prefs();
+    // Use StorageService to persist the avatar file
+    final savedPath = await StorageService.saveUserAvatar(path);
+    if (savedPath != null) {
+      await prefs.setString(_avatarKey, savedPath);
+    }
   }
 
   Future<void> setNickname(String nickname) async {
@@ -56,4 +61,3 @@ class UserService {
     return (nick != null && nick.isNotEmpty) && (sig != null && sig.isNotEmpty) && (ava != null && ava.isNotEmpty);
   }
 }
-

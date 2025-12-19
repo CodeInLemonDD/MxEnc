@@ -3,6 +3,7 @@ import 'package:file_picker/file_picker.dart';
 import 'dart:io';
 import 'package:path/path.dart' as path;
 import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 import '../rust_bridge.dart';
 import '../utils/auth_service.dart';
 import '../utils/user_service.dart';
@@ -191,8 +192,29 @@ class _EncryptImageScreenState extends State<EncryptImageScreen> {
         if (Navigator.canPop(context)) {
           Navigator.of(context).pop();
         }
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('图片已加密并保存到: $savePath')),
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('加密成功'),
+            content: Text('图片已保存到:\n$savePath'),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  // 使用 SharePlus.instance.share 替代已弃用的 Share.shareXFiles
+                  // 注意：需要使用 ShareParams 包装文件列表
+                  SharePlus.instance.share(
+                    ShareParams(files: [XFile(savePath)]),
+                  );
+                },
+                child: const Text('分享'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('确定'),
+              ),
+            ],
+          ),
         );
         setState(() {
           _selectedImage = null;

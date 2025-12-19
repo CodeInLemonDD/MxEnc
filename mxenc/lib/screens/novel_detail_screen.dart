@@ -24,8 +24,14 @@ class Volume {
 class NovelDetailScreen extends StatefulWidget {
   final BookshelfItem item;
   final NovelData? novel;
+  final bool fromShelf;
 
-  const NovelDetailScreen({super.key, required this.item, this.novel});
+  const NovelDetailScreen({
+    super.key,
+    required this.item,
+    this.novel,
+    this.fromShelf = false,
+  });
 
   @override
   State<NovelDetailScreen> createState() => _NovelDetailScreenState();
@@ -37,10 +43,12 @@ class _NovelDetailScreenState extends State<NovelDetailScreen> {
   int _totalWordCount = 0;
   final Map<String, String> _chapterContentById = {};
   bool _showDirectory = true;
+  bool _isSaved = false;
 
   @override
   void initState() {
     super.initState();
+    _isSaved = widget.fromShelf;
     _loadNovelData();
   }
 
@@ -109,11 +117,12 @@ class _NovelDetailScreenState extends State<NovelDetailScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: Text(widget.item.title), elevation: 0, actions: [
-        IconButton(
-          icon: const Icon(Icons.bookmark_add),
-          tooltip: '加入到书架',
-          onPressed: _addToShelf,
-        )
+        if (!_isSaved)
+          IconButton(
+            icon: const Icon(Icons.bookmark_add),
+            tooltip: '加入到书架',
+            onPressed: _addToShelf,
+          )
       ]),
       body: Column(
         children: [
@@ -550,6 +559,9 @@ class _NovelDetailScreenState extends State<NovelDetailScreen> {
       };
       await StorageService.saveShelfItem(item);
       if (mounted) {
+        setState(() {
+          _isSaved = true;
+        });
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('已加入到书架')));
       }
     } catch (e) {

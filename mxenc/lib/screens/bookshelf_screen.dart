@@ -28,6 +28,7 @@ class BookshelfItem {
   final String? authorDeviceId;
   final bool? isComic;
   final bool? isRichNovel;
+  final List<String> tags;
 
   BookshelfItem({
     required this.id,
@@ -43,6 +44,7 @@ class BookshelfItem {
     this.authorDeviceId,
     this.isComic,
     this.isRichNovel,
+    this.tags = const [],
   });
 }
 
@@ -72,6 +74,11 @@ class _BookshelfScreenState extends State<BookshelfScreen> {
   SortType _currentSort = SortType.importTimeDesc;
   bool _multiSelect = false;
   final Set<String> _selectedIds = {};
+  
+  // 搜索相关
+  bool _isSearching = false;
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
 
   @override
   void initState() {
@@ -102,6 +109,8 @@ class _BookshelfScreenState extends State<BookshelfScreen> {
             authorDeviceId: e['authorDeviceId'],
             isComic: e['isComic'] == true,
             isRichNovel: e['isRichNovel'] == true,
+            tags:
+                (e['tags'] as List?)?.map((e) => e.toString()).toList() ?? [],
           ),
         )
         .toList();
@@ -116,6 +125,21 @@ class _BookshelfScreenState extends State<BookshelfScreen> {
   // 应用筛选和排序
   void _applyFiltersAndSort() {
     List<BookshelfItem> filtered = _items;
+
+    // 应用搜索
+    if (_searchQuery.isNotEmpty) {
+      final query = _searchQuery.toLowerCase();
+      filtered = filtered.where((item) {
+        // 搜索标签
+        if (item.tags.any((tag) => tag.toLowerCase().contains(query))) {
+          return true;
+        }
+        // 搜索标题和作者
+        if (item.title.toLowerCase().contains(query)) return true;
+        if (item.author.toLowerCase().contains(query)) return true;
+        return false;
+      }).toList();
+    }
 
     // 应用筛选
     switch (_currentFilter) {
@@ -175,18 +199,19 @@ class _BookshelfScreenState extends State<BookshelfScreen> {
   }
 
   // 处理项目点击
-  void _onItemTap(BookshelfItem item) {
+  Future<void> _onItemTap(BookshelfItem item) async {
     if (item.isComic == true || item.isRichNovel == true) {
-      _openEncryptedContainerDirect(item);
+      await _openEncryptedContainerDirect(item);
       return;
     }
     if (item.isNovel) {
       _openNovelDetailWithDecrypt(item);
     } else {
-      Navigator.push(
+      await Navigator.push(
         context,
         MaterialPageRoute(builder: (context) => ImagePreviewScreen(item: item)),
       );
+      _loadBookshelfItems();
     }
   }
 
@@ -249,6 +274,10 @@ class _BookshelfScreenState extends State<BookshelfScreen> {
         }
         return;
       }
+      
+      // 解密成功，保存密码
+      await StorageService.saveItemPassword(item.filePath, password);
+
       NovelData? novel;
       try {
         final obj = await compute(decodeNovelFull, decrypted);
@@ -256,12 +285,14 @@ class _BookshelfScreenState extends State<BookshelfScreen> {
       } catch (_) {}
       if (!mounted) return;
       if (Navigator.canPop(context)) Navigator.pop(context);
-      Navigator.push(
+      await Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (context) => NovelDetailScreen(item: item, novel: novel),
+          builder: (context) =>
+              NovelDetailScreen(item: item, novel: novel, fromShelf: true),
         ),
       );
+      _loadBookshelfItems();
     } catch (e) {
       if (mounted) {
         if (Navigator.canPop(context)) Navigator.pop(context);
@@ -333,6 +364,9 @@ class _BookshelfScreenState extends State<BookshelfScreen> {
         return;
       }
 
+      // 解密成功，保存密码
+      await StorageService.saveItemPassword(item.filePath, password);
+
       if (item.isComic == true) {
         final Uint8List data = decrypted;
         final packed = await compute(unpackComicEntry, data);
@@ -340,7 +374,7 @@ class _BookshelfScreenState extends State<BookshelfScreen> {
         final start = packed['start'] as int;
         if (mounted) {
           if (Navigator.canPop(context)) Navigator.pop(context);
-          Navigator.push(
+          await Navigator.push(
             context,
             MaterialPageRoute(
               builder: (context) => ComicDetailScreen(
@@ -349,9 +383,11 @@ class _BookshelfScreenState extends State<BookshelfScreen> {
                 start: start,
                 sourcePath: item.filePath,
                 password: password,
+                fromShelf: true,
               ),
             ),
           );
+          _loadBookshelfItems();
         }
         return;
       }
@@ -363,7 +399,7 @@ class _BookshelfScreenState extends State<BookshelfScreen> {
         final start = packed['start'] as int;
         if (mounted) {
           if (Navigator.canPop(context)) Navigator.pop(context);
-          Navigator.push(
+          await Navigator.push(
             context,
             MaterialPageRoute(
               builder: (context) => RichDetailScreen(
@@ -372,9 +408,11 @@ class _BookshelfScreenState extends State<BookshelfScreen> {
                 start: start,
                 sourcePath: item.filePath,
                 password: password,
+                fromShelf: true,
               ),
             ),
           );
+          _loadBookshelfItems();
         }
         return;
       }
@@ -429,13 +467,28 @@ class _BookshelfScreenState extends State<BookshelfScreen> {
   Widget build(BuildContext context) {
     List<BookshelfItem> displayItems = _items;
 
+    // 应用搜索
+    if (_searchQuery.isNotEmpty) {
+      final query = _searchQuery.toLowerCase();
+      displayItems = displayItems.where((item) {
+        // 搜索标签
+        if (item.tags.any((tag) => tag.toLowerCase().contains(query))) {
+          return true;
+        }
+        // 搜索标题和作者
+        if (item.title.toLowerCase().contains(query)) return true;
+        if (item.author.toLowerCase().contains(query)) return true;
+        return false;
+      }).toList();
+    }
+
     // 根据当前筛选条件过滤项目
     switch (_currentFilter) {
       case FilterType.novels:
-        displayItems = _items.where((item) => item.isNovel).toList();
+        displayItems = displayItems.where((item) => item.isNovel).toList();
         break;
       case FilterType.images:
-        displayItems = _items.where((item) => !item.isNovel).toList();
+        displayItems = displayItems.where((item) => !item.isNovel).toList();
         break;
       default:
         break;
@@ -460,12 +513,54 @@ class _BookshelfScreenState extends State<BookshelfScreen> {
     final theme = Theme.of(context);
     return Scaffold(
       appBar: AppBar(
-        title: const Text('书架'),
+        title: _isSearching
+            ? TextField(
+                controller: _searchController,
+                autofocus: true,
+                style: theme.textTheme.titleMedium,
+                decoration: InputDecoration(
+                  hintText: '搜索标签、标题或作者',
+                  border: InputBorder.none,
+                  hintStyle: theme.textTheme.titleMedium?.copyWith(
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+                  ),
+                ),
+                onChanged: (value) {
+                  setState(() {
+                    _searchQuery = value;
+                    _applyFiltersAndSort();
+                  });
+                },
+              )
+            : const Text('书架'),
         elevation: 0,
         scrolledUnderElevation: 1,
         actions: [
+          if (_isSearching)
+            IconButton(
+              icon: const Icon(Icons.close),
+              tooltip: '关闭搜索',
+              onPressed: () {
+                setState(() {
+                  _isSearching = false;
+                  _searchQuery = '';
+                  _searchController.clear();
+                  _applyFiltersAndSort();
+                });
+              },
+            )
+          else
+            IconButton(
+              icon: const Icon(Icons.search),
+              tooltip: '搜索',
+              onPressed: () {
+                setState(() {
+                  _isSearching = true;
+                });
+              },
+            ),
           IconButton(
-            icon: Icon(_multiSelect ? Icons.close : Icons.more_vert),
+            icon: Icon(_multiSelect ? Icons.close : Icons.checklist),
             tooltip: _multiSelect ? '取消多选' : '多选',
             onPressed: () {
               setState(() {
@@ -618,7 +713,7 @@ class _BookshelfScreenState extends State<BookshelfScreen> {
   // 构建书架网格
   Widget _buildBooksGrid(List<BookshelfItem> items, ThemeData theme) {
     return GridView.builder(
-      padding: const EdgeInsets.all(16.0),
+      padding: const EdgeInsets.fromLTRB(16.0, 16.0, 16.0, 80.0),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 3,
         crossAxisSpacing: 16.0,
@@ -892,9 +987,10 @@ class _BookshelfScreenState extends State<BookshelfScreen> {
             ),
             const SizedBox(height: 32),
             FilledButton.icon(
-              onPressed: () {
+              onPressed: () async {
                 // 导航到解密页面
-                Navigator.pushNamed(context, '/decrypt');
+                await Navigator.pushNamed(context, '/decrypt');
+                _loadBookshelfItems();
               },
               icon: const Icon(Icons.lock_open),
               label: const Text('去解密'),

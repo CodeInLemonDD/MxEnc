@@ -13,7 +13,7 @@
         <activity
             android:name=".MainActivity"
             android:exported="true"
-            android:launchMode="singleTop"
+            android:launchMode="singleTask"
             android:taskAffinity=""
             android:theme="@style/LaunchTheme"
             android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
@@ -30,6 +30,90 @@
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter>
+            
+            <!-- Filter 1: File scheme with generic mimeType -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="file" />
+                <data android:host="*" />
+                <data android:mimeType="*/*" />
+                <data android:pathPattern=".*\\.mxenc" />
+                <data android:pathPattern=".*\\..*\\.mxenc" />
+                <data android:pathPattern=".*\\..*\\..*\\.mxenc" />
+                <data android:pathPattern=".*\\..*\\..*\\..*\\.mxenc" />
+                <data android:pathPattern=".*\\..*\\..*\\..*\\..*\\.mxenc" />
+                <data android:pathPattern=".*\\..*\\..*\\..*\\..*\\..*\\.mxenc" />
+                <data android:pathPattern=".*\\..*\\..*\\..*\\..*\\..*\\..*\\.mxenc" />
+                <data android:pathPattern=".*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.mxenc" />
+            </intent-filter>
+
+            <!-- Filter 2: File scheme WITHOUT mimeType (important for some file managers) -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="file" />
+                <data android:host="*" />
+                <data android:pathPattern=".*\\.mxenc" />
+                <data android:pathPattern=".*\\..*\\.mxenc" />
+                <data android:pathPattern=".*\\..*\\..*\\.mxenc" />
+                <data android:pathPattern=".*\\..*\\..*\\..*\\.mxenc" />
+                <data android:pathPattern=".*\\..*\\..*\\..*\\..*\\.mxenc" />
+                <data android:pathPattern=".*\\..*\\..*\\..*\\..*\\..*\\.mxenc" />
+                <data android:pathPattern=".*\\..*\\..*\\..*\\..*\\..*\\..*\\.mxenc" />
+                <data android:pathPattern=".*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.mxenc" />
+            </intent-filter>
+
+            <!-- Filter 3: Content scheme with pathPattern (for apps that leak paths like QQ) -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="content" />
+                <data android:host="*" />
+                <data android:mimeType="*/*" />
+                <data android:pathPattern=".*\\.mxenc" />
+                <data android:pathPattern=".*\\..*\\.mxenc" />
+                <data android:pathPattern=".*\\..*\\..*\\.mxenc" />
+                <data android:pathPattern=".*\\..*\\..*\\..*\\.mxenc" />
+                <data android:pathPattern=".*\\..*\\..*\\..*\\..*\\.mxenc" />
+                <data android:pathPattern=".*\\..*\\..*\\..*\\..*\\..*\\.mxenc" />
+                <data android:pathPattern=".*\\..*\\..*\\..*\\..*\\..*\\..*\\.mxenc" />
+                <data android:pathPattern=".*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.mxenc" />
+            </intent-filter>
+
+            <!-- Filter 4: Content scheme with application/octet-stream (fallback for generic providers) -->
+            <!-- We don't use pathPattern here to catch opaque URIs, relying on mimeType -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="content" />
+                <data android:mimeType="application/octet-stream" />
+            </intent-filter>
+            
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="content" />
+                <data android:mimeType="application/mxenc" />
+            </intent-filter>
+
+            <!-- Support receiving shared files (SEND/SEND_MULTIPLE) -->
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="*/*" />
+            </intent-filter>
+
+            <intent-filter>
+                <action android:name="android.intent.action.SEND_MULTIPLE" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="*/*" />
             </intent-filter>
         </activity>
         <!-- Don't delete the meta-data below.

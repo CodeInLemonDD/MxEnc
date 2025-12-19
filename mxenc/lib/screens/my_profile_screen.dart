@@ -214,10 +214,13 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
         children: [
           // 用户信息卡片
           GestureDetector(
-            onTap: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const EditProfileScreen()),
-            ),
+            onTap: () async {
+              await Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const EditProfileScreen()),
+              );
+              if (mounted) _loadUserInfo();
+            },
             child: _buildUserInfoCard(),
           ),
           const SizedBox(height: 16),
