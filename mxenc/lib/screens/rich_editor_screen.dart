@@ -29,14 +29,22 @@ class _RichEditorScreenState extends State<RichEditorScreen> {
   double _exportProgress = 0.0;
   String _exportLabel = '';
 
+  @override
+  void initState() {
+    super.initState();
+    _addChapter(initial: true);
+  }
+
   void _addText() {
+    if (_chapters.isEmpty || _currentChapterIndex < 0) {
+      _addChapter();
+    }
     setState(() {
       _blocks.add({
+        'id': DateTime.now().microsecondsSinceEpoch.toString(), // Unique ID
         'type': 'text',
         'content': '',
-        'chapterId': _currentChapterIndex >= 0
-            ? _chapters[_currentChapterIndex]['id']
-            : null,
+        'chapterId': _chapters[_currentChapterIndex]['id'],
       });
     });
   }
@@ -44,22 +52,24 @@ class _RichEditorScreenState extends State<RichEditorScreen> {
   Future<void> _addImage() async {
     final result = await FilePicker.platform.pickFiles(type: FileType.image);
     if (result != null && result.files.single.path != null) {
+      if (_chapters.isEmpty || _currentChapterIndex < 0) {
+        _addChapter();
+      }
       setState(() {
         _blocks.add({
+          'id': DateTime.now().microsecondsSinceEpoch.toString(), // Unique ID
           'type': 'image',
           'path': result.files.single.path,
-          'chapterId': _currentChapterIndex >= 0
-              ? _chapters[_currentChapterIndex]['id']
-              : null,
+          'chapterId': _chapters[_currentChapterIndex]['id'],
         });
       });
     }
   }
 
-  void _addChapter() {
+  void _addChapter({bool initial = false}) {
     final id = DateTime.now().microsecondsSinceEpoch.toString();
     setState(() {
-      _chapters.add({'id': id, 'title': '未命名章节'});
+      _chapters.add({'id': id, 'title': initial ? '第一章' : '未命名章节'});
       _currentChapterIndex = _chapters.length - 1;
     });
   }
@@ -111,16 +121,24 @@ class _RichEditorScreenState extends State<RichEditorScreen> {
                                   final removedId = _chapters[i]['id'];
                                   setSheet(() {
                                     _chapters.removeAt(i);
+                                    if (_chapters.isEmpty) {
+                                      // 如果删除了所有章节，重置当前索引为 -1
+                                      // 外部会处理索引越界，但这里需要确保状态一致
+                                      // 实际上，我们应该避免无章节状态，所以这里可以自动添加一个新章节
+                                      final id = DateTime.now().microsecondsSinceEpoch.toString();
+                                      _chapters.add({'id': id, 'title': '未命名章节'});
+                                    }
                                   });
                                   setState(() {
                                     _blocks.removeWhere(
                                       (b) => b['chapterId'] == removedId,
                                     );
-                                    if (_currentChapterIndex >=
-                                        _chapters.length) {
-                                      _currentChapterIndex = _chapters.isEmpty
-                                          ? -1
-                                          : _chapters.length - 1;
+                                    // 修正当前章节索引
+                                    if (_currentChapterIndex >= _chapters.length) {
+                                      _currentChapterIndex = _chapters.length - 1;
+                                    }
+                                    if (_currentChapterIndex < 0 && _chapters.isNotEmpty) {
+                                        _currentChapterIndex = 0;
                                     }
                                   });
                                 },
@@ -249,6 +267,18 @@ class _RichEditorScreenState extends State<RichEditorScreen> {
     );
 
     if (!confirmExport) return;
+    
+    // 数据清洗：确保所有 Block 都有 chapterId
+    if (_chapters.isEmpty) {
+      _addChapter(initial: true);
+    }
+    final defaultChapterId = _chapters.first['id'].toString();
+    for (final b in _blocks) {
+      if (b['chapterId'] == null) {
+        b['chapterId'] = defaultChapterId;
+      }
+    }
+
     // 封面路径仅用于对话框展示，裁剪后的字节用于容器封面
     _exportProgress = 0.2;
     _exportLabel = '收集资源';
@@ -268,11 +298,12 @@ class _RichEditorScreenState extends State<RichEditorScreen> {
       }
     }
     final blocks = _blocks.map((b) {
+      final cid = (b['chapterId'] ?? defaultChapterId).toString();
       if (b['type'] == 'text') {
         return {
           'type': 'text',
-          'content': b['content'] ?? '',
-          'chapterId': b['chapterId'],
+          'content': (b['content'] ?? '').toString(),
+          'chapterId': cid,
         };
       } else {
         final p = (b['path']?.toString() ?? '');
@@ -280,16 +311,22 @@ class _RichEditorScreenState extends State<RichEditorScreen> {
         return {
           'type': 'image',
           'ref': id,
-          'name': p.split('/').last,
-          'chapterId': b['chapterId'],
+          'name': path.basename(p),
+          'chapterId': cid,
         };
       }
     }).toList();
+
+    // 强制清洗 chapters 中的 ID 为字符串
+    final cleanChapters = _chapters.map((c) => {
+      'id': (c['id'] ?? '').toString(),
+      'title': (c['title'] ?? '章节').toString(),
+    }).toList();
+
     final manifest = {
       'title': title,
       'blocks': blocks,
-      'resourcesIndex': [],
-      'chapters': _chapters,
+      'chapters': cleanChapters,
       'tags': tags,
       'authorNickname': await (UserService().getNickname()) ?? '',
       'authorSignature': await (UserService().getSignature()) ?? '',
@@ -469,225 +506,301 @@ class _RichEditorScreenState extends State<RichEditorScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('富文本编辑器'),
-        actions: [
-          IconButton(onPressed: _addText, icon: const Icon(Icons.text_fields)),
-          IconButton(onPressed: _addImage, icon: const Icon(Icons.image)),
-          IconButton(onPressed: _manageChapters, icon: const Icon(Icons.list)),
-          IconButton(
-            onPressed: _exportEncrypted,
-            icon: const Icon(Icons.lock),
-            tooltip: '导出加密',
-          ),
-        ],
-      ),
-      body: Stack(
-        children: [
-          Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            child: Offstage(
-              offstage: !(_exportProgress > 0 && _exportProgress < 1.0),
-              child: Column(
-                children: [
-                  LinearProgressIndicator(value: _exportProgress),
-                  Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: Text(_exportLabel),
-                  ),
-                ],
-              ),
+    final currentBlocks = _chapters.isEmpty || _currentChapterIndex < 0
+        ? <Map<String, dynamic>>[]
+        : _blocks
+            .where((b) =>
+                b['chapterId'] == _chapters[_currentChapterIndex]['id'])
+            .toList();
+
+    return GestureDetector(
+      onTap: () => KeyboardUtils.hide(context),
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('富文本编辑器'),
+          actions: [
+            IconButton(
+              onPressed: _manageChapters, 
+              icon: const Icon(Icons.format_list_bulleted),
+              tooltip: '章节管理',
             ),
-          ),
-          ListView.builder(
-            itemCount: _blocks.length,
-            itemBuilder: (context, index) {
-              final b = _blocks[index];
-              if (_currentChapterIndex >= 0) {
-                final id = _chapters[_currentChapterIndex]['id'];
-                if (b['chapterId'] != id) return const SizedBox.shrink();
-              }
-              if (b['type'] == 'text') {
-                return Card(
-                  margin: const EdgeInsets.all(12),
-                  child: Padding(
-                    padding: const EdgeInsets.all(12),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        TextFormField(
-                          initialValue: b['content'],
-                          maxLines: null,
-                          decoration: const InputDecoration(
-                            border: OutlineInputBorder(),
-                            labelText: '文本块',
-                          ),
-                          onChanged: (v) => b['content'] = v,
-                        ),
-                        const SizedBox(height: 8),
-                        Row(
-                          children: [
-                            IconButton(
-                              icon: const Icon(Icons.text_fields),
-                              tooltip: '在上方插入文本',
-                              onPressed: () {
-                                setState(() {
-                                  _blocks.insert(index, {
-                                    'type': 'text',
-                                    'content': '',
-                                    'chapterId': b['chapterId'],
-                                  });
-                                });
-                              },
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.image),
-                              tooltip: '在上方插入图片',
-                              onPressed: () async {
-                                final res = await FilePicker.platform.pickFiles(
-                                  type: FileType.image,
-                                );
-                                if (res != null &&
-                                    res.files.single.path != null) {
-                                  setState(() {
-                                    _blocks.insert(index, {
-                                      'type': 'image',
-                                      'path': res.files.single.path,
-                                      'chapterId': b['chapterId'],
-                                    });
-                                  });
-                                }
-                              },
-                            ),
-                            const Spacer(),
-                            IconButton(
-                              icon: const Icon(Icons.delete),
-                              tooltip: '删除此块',
-                              onPressed: () {
-                                setState(() {
-                                  _blocks.removeAt(index);
-                                });
-                              },
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              } else {
-                return Card(
-                  margin: const EdgeInsets.all(12),
-                  child: ListTile(
-                    leading: const Icon(Icons.image),
-                    title: Text(
-                      (b['path']?.toString() ?? '图片').split('/').last,
-                    ),
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        IconButton(
-                          icon: const Icon(Icons.text_fields),
-                          tooltip: '在上方插入文本',
-                          onPressed: () {
-                            setState(() {
-                              _blocks.insert(index, {
-                                'type': 'text',
-                                'content': '',
-                                'chapterId': b['chapterId'],
-                              });
-                            });
-                          },
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.image),
-                          tooltip: '在上方插入图片',
-                          onPressed: () async {
-                            final res = await FilePicker.platform.pickFiles(
-                              type: FileType.image,
-                            );
-                            if (res != null && res.files.single.path != null) {
-                              setState(() {
-                                _blocks.insert(index, {
-                                  'type': 'image',
-                                  'path': res.files.single.path,
-                                  'chapterId': b['chapterId'],
-                                });
-                              });
-                            }
-                          },
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.delete),
-                          tooltip: '删除此块',
-                          onPressed: () {
-                            setState(() {
-                              _blocks.removeAt(index);
-                            });
-                          },
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              }
-            },
-          ),
-        ],
-      ),
-      bottomNavigationBar: SafeArea(
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-          decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surface,
-            border: Border(
-              top: BorderSide(
-                color: Theme.of(
-                  context,
-                ).colorScheme.outline.withValues(alpha: 0.12),
-              ),
+            IconButton(
+              onPressed: _exportEncrypted,
+              icon: const Icon(Icons.save_alt),
+              tooltip: '保存导出',
             ),
-          ),
-          child: Row(
-            children: [
-              Expanded(
-                child: DropdownButton<int>(
-                  value: _currentChapterIndex >= 0
-                      ? _currentChapterIndex
-                      : null,
-                  hint: const Text('选择章节'),
-                  items: [
-                    for (int i = 0; i < _chapters.length; i++)
-                      DropdownMenuItem(
-                        value: i,
-                        child: Text((_chapters[i]['title'] ?? '章节').toString()),
-                      ),
+          ],
+        ),
+        body: Column(
+          children: [
+            // 导出进度条
+            if (_exportProgress > 0 && _exportProgress < 1.0)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: Column(
+                  children: [
+                    LinearProgressIndicator(value: _exportProgress),
+                    const SizedBox(height: 4),
+                    Text(_exportLabel, style: Theme.of(context).textTheme.bodySmall),
                   ],
-                  onChanged: (v) {
-                    setState(() {
-                      _currentChapterIndex = v ?? -1;
-                    });
-                  },
                 ),
               ),
-              IconButton(onPressed: _addChapter, icon: const Icon(Icons.add)),
-              IconButton(
-                onPressed: _addText,
-                icon: const Icon(Icons.text_fields),
-              ),
-              IconButton(onPressed: _addImage, icon: const Icon(Icons.image)),
-              FilledButton(
-                onPressed: _exportEncrypted,
-                child: const Text('保存'),
-              ),
-            ],
+            
+            // 主要内容列表
+            Expanded(
+              child: _chapters.isEmpty 
+                  ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.library_books, size: 64, color: Colors.grey),
+                          const SizedBox(height: 16),
+                          const Text('暂无章节', style: TextStyle(color: Colors.grey)),
+                          const SizedBox(height: 16),
+                          FilledButton(
+                            onPressed: () => _addChapter(initial: true),
+                            child: const Text('创建新章节'),
+                          ),
+                        ],
+                      ),
+                    )
+                  : ListView.builder(
+                      padding: const EdgeInsets.all(16),
+                      itemCount: currentBlocks.length,
+                      itemBuilder: (context, index) {
+                        final block = currentBlocks[index];
+                        // 确保每个 Block 都有 ID，如果没有（旧数据），临时生成一个
+                        final keyId = block['id'] ??= DateTime.now().microsecondsSinceEpoch.toString() + index.toString();
+                        return _buildBlockItem(block, keyId);
+                      },
+                    ),
+            ),
+          ],
+        ),
+        bottomNavigationBar: _buildBottomToolbar(),
+      ),
+    );
+  }
+
+  Widget _buildBottomToolbar() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 4,
+            offset: const Offset(0, -2),
           ),
+        ],
+      ),
+      padding: EdgeInsets.only(
+        left: 16,
+        right: 16,
+        top: 8,
+        bottom: MediaQuery.of(context).viewInsets.bottom + 8,
+      ),
+      child: SafeArea(
+        child: Row(
+          children: [
+            // 章节切换
+            Expanded(
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: DropdownButtonHideUnderline(
+                  child: DropdownButton<int>(
+                    isExpanded: true,
+                    value: _currentChapterIndex >= 0 ? _currentChapterIndex : null,
+                    hint: const Text('选择章节'),
+                    items: List.generate(_chapters.length, (index) {
+                      return DropdownMenuItem(
+                        value: index,
+                        child: Text(
+                          (_chapters[index]['title'] ?? '章节').toString(),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      );
+                    }),
+                    onChanged: (v) {
+                      if (v != null) {
+                        setState(() => _currentChapterIndex = v);
+                      }
+                    },
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            // 操作按钮
+            IconButton.filledTonal(
+              onPressed: _addText,
+              icon: const Icon(Icons.text_fields),
+              tooltip: '添加文本',
+            ),
+            const SizedBox(width: 8),
+            IconButton.filledTonal(
+              onPressed: _addImage,
+              icon: const Icon(Icons.image),
+              tooltip: '添加图片',
+            ),
+            const SizedBox(width: 8),
+            IconButton(
+              onPressed: _addChapter,
+              icon: const Icon(Icons.add),
+              tooltip: '新章节',
+            ),
+          ],
         ),
       ),
     );
+  }
+
+  Widget _buildBlockItem(Map<String, dynamic> block, String keyId) {
+    return Card(
+      key: ValueKey(keyId),
+      margin: const EdgeInsets.only(bottom: 16),
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // 内容区域
+          if (block['type'] == 'text')
+            Padding(
+              padding: const EdgeInsets.all(12),
+              child: TextFormField(
+                initialValue: block['content'],
+                maxLines: null,
+                minLines: 3,
+                decoration: const InputDecoration(
+                  border: InputBorder.none,
+                  hintText: '在此输入内容...',
+                  isDense: true,
+                ),
+                onChanged: (v) => block['content'] = v,
+              ),
+            )
+          else
+            Stack(
+              children: [
+                ClipRRect(
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+                  child: Image.file(
+                    File(block['path'] ?? ''),
+                    fit: BoxFit.cover,
+                    width: double.infinity,
+                    height: 200,
+                    errorBuilder: (_, __, ___) => Container(
+                      height: 150,
+                      color: Colors.grey[200],
+                      alignment: Alignment.center,
+                      child: const Icon(Icons.broken_image, color: Colors.grey),
+                    ),
+                  ),
+                ),
+                Positioned(
+                  bottom: 8,
+                  left: 8,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.black54,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Text(
+                      path.basename(block['path'] ?? ''),
+                      style: const TextStyle(color: Colors.white, fontSize: 10),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            
+          // 底部操作栏（更紧凑）
+          Container(
+            decoration: BoxDecoration(
+              border: Border(top: BorderSide(color: Theme.of(context).dividerColor.withValues(alpha: 0.1))),
+              color: Theme.of(context).colorScheme.surfaceContainerLow.withValues(alpha: 0.3),
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                _buildActionButton(
+                  icon: Icons.vertical_align_top, 
+                  label: '插文', 
+                  onTap: () => _insertBlock(block, 'text', before: true)
+                ),
+                _buildActionButton(
+                  icon: Icons.add_photo_alternate_outlined, 
+                  label: '插图', 
+                  onTap: () => _insertBlock(block, 'image', before: true)
+                ),
+                const Spacer(),
+                IconButton(
+                  icon: const Icon(Icons.delete_outline, size: 20, color: Colors.red),
+                  onPressed: () => _deleteBlock(block),
+                  tooltip: '删除',
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildActionButton({required IconData icon, required String label, required VoidCallback onTap}) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(4),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+        child: Row(
+          children: [
+            Icon(icon, size: 16, color: Theme.of(context).colorScheme.primary),
+            const SizedBox(width: 4),
+            Text(label, style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.primary)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _deleteBlock(Map<String, dynamic> block) {
+    setState(() {
+      _blocks.remove(block);
+    });
+  }
+
+  Future<void> _insertBlock(Map<String, dynamic> targetBlock, String type, {bool before = false}) async {
+    final index = _blocks.indexOf(targetBlock);
+    if (index < 0) return;
+
+    final newBlock = {
+      'id': DateTime.now().microsecondsSinceEpoch.toString(),
+      'type': type,
+      'chapterId': targetBlock['chapterId'],
+    };
+
+    if (type == 'text') {
+      newBlock['content'] = '';
+      setState(() {
+        _blocks.insert(before ? index : index + 1, newBlock);
+      });
+    } else {
+      final result = await FilePicker.platform.pickFiles(type: FileType.image);
+      if (result != null && result.files.single.path != null) {
+        newBlock['path'] = result.files.single.path;
+        setState(() {
+          _blocks.insert(before ? index : index + 1, newBlock);
+        });
+      }
+    }
   }
 
   Future<bool> _requestPermission() async {

@@ -68,8 +68,9 @@ class _RichReaderScreenState extends State<RichReaderScreen> {
 
   List<Map<String, dynamic>> _chapterBlocks() {
     if (_chapters.isEmpty) return _blocks;
-    final id = _chapters[_chapterIndex]['id'];
-    return _blocks.where((b) => b['chapterId'] == id).toList();
+    final id = _chapters[_chapterIndex]['id']?.toString();
+    if (id == null) return [];
+    return _blocks.where((b) => b['chapterId']?.toString() == id).toList();
   }
 
 
@@ -86,10 +87,19 @@ class _RichReaderScreenState extends State<RichReaderScreen> {
         }),
         child: Stack(
           children: [
-            ListView.builder(
-              key: PageStorageKey(
-                'rich_reader_${widget.sourcePath}_$_chapterIndex',
-              ),
+            if (blocks.isEmpty)
+              Center(
+                child: Text(
+                  '本章节无内容\n(Debug: ${_chapters.isNotEmpty ? _chapters[_chapterIndex]['id'] : 'NoID'})',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: Colors.grey),
+                ),
+              )
+            else
+              ListView.builder(
+                key: PageStorageKey(
+                  'rich_reader_${widget.sourcePath}_$_chapterIndex',
+                ),
               controller: _scrollController,
               physics: const ClampingScrollPhysics(),
               itemCount: blocks.length,

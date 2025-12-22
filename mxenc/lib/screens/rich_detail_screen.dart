@@ -50,20 +50,30 @@ class _RichDetailScreenState extends State<RichDetailScreen> {
 
   Widget _buildCover(double width) {
     if (_coverEntry != null) {
-      final off = (_coverEntry!['byteOffset'] as int) + widget.start;
-      final len = _coverEntry!['length'] as int;
-      // 确保不会越界
-      if (off + len <= widget.payload.length) {
-        final bytes = widget.payload.sublist(off, off + len);
-        return ClipRRect(
-          borderRadius: BorderRadius.circular(10),
-          child: Image.memory(
-            bytes,
-            width: width,
-            height: width * 1.4,
-            fit: BoxFit.cover,
-          ),
-        );
+      try {
+        final off = (_coverEntry!['byteOffset'] as int) + widget.start;
+        final len = _coverEntry!['length'] as int;
+        // 确保不会越界
+        if (off + len <= widget.payload.length) {
+          final bytes = widget.payload.sublist(off, off + len);
+          return ClipRRect(
+            borderRadius: BorderRadius.circular(10),
+            child: Image.memory(
+              bytes,
+              width: width,
+              height: width * 1.4,
+              fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) => Container(
+                width: width,
+                height: width * 1.4,
+                color: Colors.grey[300],
+                child: const Icon(Icons.broken_image),
+              ),
+            ),
+          );
+        }
+      } catch (e) {
+        debugPrint('Load cover failed: $e');
       }
     }
     return Container(

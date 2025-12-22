@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MxEnc 卡密生成器</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #2563eb;
+            --primary-hover: #1d4ed8;
+            --bg-color: #f3f4f6;
+            --card-bg: #ffffff;
+            --text-main: #1f2937;
+            --text-secondary: #6b7280;
+            --border-color: #e5e7eb;
+            --success: #059669;
+            --error: #dc2626;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            margin: 0;
+            padding: 2rem 1rem;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+        }
+
+        .container {
+            background: var(--card-bg);
+            width: 100%;
+            max-width: 700px;
+            padding: 2.5rem;
+            border-radius: 16px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+
+        h1 {
+            margin: 0 0 2rem 0;
+            font-size: 1.75rem;
+            font-weight: 600;
+            text-align: center;
+            color: var(--text-main);
+        }
+
+        .section-title {
+            font-size: 0.875rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-secondary);
+            margin-bottom: 0.75rem;
+            font-weight: 600;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            color: var(--text-main);
+            font-size: 0.95rem;
+        }
+
+        input, textarea {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            box-sizing: border-box;
+            font-family: inherit;
+            font-size: 0.95rem;
+            transition: all 0.2s;
+            background-color: #f9fafb;
+        }
+
+        input:focus, textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+            background-color: #fff;
+        }
+
+        textarea {
+            height: 120px;
+            resize: vertical;
+            line-height: 1.5;
+        }
+
+        .grid-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+        }
+
+        @media (max-width: 600px) {
+            .grid-row {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        button.primary-btn {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 0.875rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 500;
+            width: 100%;
+            transition: background-color 0.2s;
+            box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+        }
+
+        button.primary-btn:hover {
+            background-color: var(--primary-hover);
+        }
+
+        button.primary-btn:active {
+            transform: translateY(1px);
+        }
+
+        .result-area {
+            margin-top: 2rem;
+            padding: 1.5rem;
+            background-color: #f8fafc;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            display: none;
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        .result-area.visible {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .license-code {
+            font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+            font-size: 0.95rem;
+            word-break: break-all;
+            color: #4b5563;
+            background: #fff;
+            padding: 1rem;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+            margin-bottom: 1rem;
+        }
+
+        .copy-btn {
+            background-color: white;
+            color: var(--text-main);
+            border: 1px solid var(--border-color);
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .copy-btn:hover {
+            background-color: #f3f4f6;
+            border-color: #d1d5db;
+        }
+
+        .error {
+            color: var(--error);
+            background-color: #fef2f2;
+            border: 1px solid #fee2e2;
+            padding: 0.75rem;
+            border-radius: 6px;
+            margin-top: 1rem;
+            display: none;
+            font-size: 0.9rem;
+        }
+
+        .input-hint {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            margin-top: 0.25rem;
+        }
+        
+        /* Flash animation for auto-fill */
+        @keyframes flash {
+            0% { background-color: #dbeafe; }
+            100% { background-color: #fff; }
+        }
+        .auto-filled {
+            animation: flash 1s;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>MxEnc 卡密生成器</h1>
+        
+        <div class="form-group">
+            <div class="section-title">智能解析</div>
+            <textarea id="rawInput" placeholder="在此粘贴包含设备ID和验证码的文本...
+例如：
+设备id: AND-1766175521303533
+验证码: xId4"></textarea>
+            <div class="input-hint">支持自动识别“设备id/序列号”和“验证码”</div>
+        </div>
+
+        <div class="section-title">详细配置</div>
+        
+        <div class="grid-row">
+            <div class="form-group">
+                <label for="deviceId">设备 ID / 序列号</label>
+                <input type="text" id="deviceId" placeholder="自动填充或手动输入">
+            </div>
+            <div class="form-group">
+                <label for="code">验证码 (4位)</label>
+                <input type="text" id="code" placeholder="自动填充或手动输入" maxlength="4">
+            </div>
+        </div>
+
+        <div class="grid-row">
+            <div class="form-group">
+                <label for="days">有效期 (天)</label>
+                <input type="number" id="days" value="365">
+            </div>
+            <div class="form-group">
+                <label for="secret">密钥 (Secret)</label>
+                <input type="text" id="secret" value="maoxiaoencoder">
+            </div>
+        </div>
+
+        <button class="primary-btn" onclick="generateLicense()">生成激活卡密</button>
+        <div id="errorMsg" class="error"></div>
+
+        <div id="result" class="result-area">
+            <label style="margin-bottom: 0.75rem; display: block;">生成的卡密：</label>
+            <div id="licenseOutput" class="license-code"></div>
+            <button class="copy-btn" onclick="copyResult()">
+                <span id="copyIcon">📋</span>
+                <span id="copyText">复制卡密</span>
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // Auto-parse input
+        const rawInput = document.getElementById('rawInput');
+        const deviceIdInput = document.getElementById('deviceId');
+        const codeInput = document.getElementById('code');
+
+        function triggerFlash(element) {
+            element.classList.remove('auto-filled');
+            void element.offsetWidth; // trigger reflow
+            element.classList.add('auto-filled');
+        }
+
+        rawInput.addEventListener('input', () => {
+            const text = rawInput.value;
+            
+            // Try to match Device ID
+            // Pattern: (设备id|设备序列号): followed by whitespace/newlines then captured group (non-whitespace)
+            const deviceMatch = text.match(/(?:设备id|设备序列号)[:：]?\s*([^\s]+)/i);
+            if (deviceMatch && deviceMatch[1]) {
+                const newValue = deviceMatch[1].trim();
+                if (deviceIdInput.value !== newValue) {
+                    deviceIdInput.value = newValue;
+                    triggerFlash(deviceIdInput);
+                }
+            }
+
+            // Try to match Code
+            // Pattern: 验证码: followed by whitespace/newlines then captured group
+            const codeMatch = text.match(/验证码[:：]?\s*([a-zA-Z0-9]{4})/i);
+            if (codeMatch && codeMatch[1]) {
+                const newValue = codeMatch[1].trim();
+                if (codeInput.value !== newValue) {
+                    codeInput.value = newValue;
+                    triggerFlash(codeInput);
+                }
+            }
+        });
+
+        async function generateLicense() {
+            const secret = document.getElementById('secret').value;
+            const deviceId = document.getElementById('deviceId').value.trim();
+            const days = parseInt(document.getElementById('days').value);
+            const code = document.getElementById('code').value.trim();
+            const errorMsg = document.getElementById('errorMsg');
+            const resultArea = document.getElementById('result');
+
+            errorMsg.style.display = 'none';
+            resultArea.classList.remove('visible');
+
+            if (!deviceId) {
+                showError('请输入设备 ID');
+                return;
+            }
+            if (!code || code.length !== 4) {
+                showError('验证码必须为4位');
+                return;
+            }
+
+            try {
+                const lic = await makeLicense(secret, deviceId, days, code);
+                document.getElementById('licenseOutput').textContent = lic;
+                resultArea.classList.add('visible');
+            } catch (e) {
+                showError('生成失败: ' + e.message);
+                console.error(e);
+            }
+        }
+
+        function showError(msg) {
+            const el = document.getElementById('errorMsg');
+            el.textContent = msg;
+            el.style.display = 'block';
+        }
+
+        async function copyResult() {
+            const text = document.getElementById('licenseOutput').textContent;
+            const copyText = document.getElementById('copyText');
+            const copyIcon = document.getElementById('copyIcon');
+            
+            try {
+                await navigator.clipboard.writeText(text);
+                copyText.textContent = '已复制!';
+                copyIcon.textContent = '✅';
+                
+                setTimeout(() => {
+                    copyText.textContent = '复制卡密';
+                    copyIcon.textContent = '📋';
+                }, 2000);
+            } catch (err) {
+                alert('复制失败，请手动复制');
+            }
+        }
+
+        async function makeLicense(secret, deviceId, ttlDays, code) {
+            // Python: exp = int(time.time()) + ttl_days * 24 * 3600
+            const exp = Math.floor(Date.now() / 1000) + ttlDays * 24 * 3600;
+            
+            // Python: message = f"{device_id}|{exp}|{code}".encode('utf-8')
+            const messageStr = `${deviceId}|${exp}|${code}`;
+            const encoder = new TextEncoder();
+            const messageBytes = encoder.encode(messageStr);
+            const secretBytes = encoder.encode(secret);
+            
+            // HMAC-SHA256
+            const key = await crypto.subtle.importKey(
+                "raw", secretBytes, 
+                { name: "HMAC", hash: "SHA-256" }, 
+                false, ["sign"]
+            );
+            
+            const sigBytes = await crypto.subtle.sign("HMAC", key, messageBytes);
+            
+            // Python: base64.b64encode(sig).decode('ascii') -> Standard Base64
+            const sigBase64 = arrayBufferToBase64(sigBytes);
+            
+            const lic = {
+                'deviceId': deviceId,
+                'exp': exp,
+                'sig': sigBase64,
+                'code': code
+            };
+            
+            // JSON.stringify handles unicode correctly
+            const jsonStr = JSON.stringify(lic);
+            
+            // Python: base64.urlsafe_b64encode(json.dumps(...).encode('utf-8'))
+            const jsonBytes = encoder.encode(jsonStr);
+            const jsonBase64 = bytesToBase64(jsonBytes);
+            
+            // Convert to URL Safe: + -> -, / -> _
+            return jsonBase64.replace(/\+/g, '-').replace(/\//g, '_');
+        }
+
+        function arrayBufferToBase64(buffer) {
+            let binary = '';
+            const bytes = new Uint8Array(buffer);
+            const len = bytes.byteLength;
+            for (let i = 0; i < len; i++) {
+                binary += String.fromCharCode(bytes[i]);
+            }
+            return btoa(binary);
+        }
+
+        function bytesToBase64(bytes) {
+            let binary = '';
+            const len = bytes.byteLength;
+            for (let i = 0; i < len; i++) {
+                binary += String.fromCharCode(bytes[i]);
+            }
+            return btoa(binary);
+        }
+    </script>
+</body>
+</html>

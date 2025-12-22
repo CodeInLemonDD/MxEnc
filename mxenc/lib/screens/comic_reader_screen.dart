@@ -102,15 +102,7 @@ class _ComicReaderScreenState extends State<ComicReaderScreen> {
                   );
                   return Padding(
                     padding: const EdgeInsets.all(8.0),
-                    child: InteractiveViewer(
-                      minScale: 0.5,
-                      maxScale: 5.0,
-                      child: Image.memory(
-                        bytes,
-                        fit: BoxFit.contain,
-                        gaplessPlayback: true, // 防止重建时闪烁导致列表高度坍塌
-                      ),
-                    ),
+                    child: _ComicImageItem(bytes: bytes),
                   );
                 }
                 return const SizedBox.shrink();
@@ -249,6 +241,58 @@ class _ComicReaderScreenState extends State<ComicReaderScreen> {
               ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _ComicImageItem extends StatefulWidget {
+  final Uint8List bytes;
+  const _ComicImageItem({required this.bytes});
+
+  @override
+  State<_ComicImageItem> createState() => _ComicImageItemState();
+}
+
+class _ComicImageItemState extends State<_ComicImageItem> {
+  final TransformationController _controller = TransformationController();
+  bool _panEnabled = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller.addListener(_onTransformationChange);
+  }
+
+  @override
+  void dispose() {
+    _controller.removeListener(_onTransformationChange);
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _onTransformationChange() {
+    final scale = _controller.value.getMaxScaleOnAxis();
+    // 当缩放比例接近1.0时，禁用拖拽，允许列表滚动
+    final shouldEnable = scale > 1.05;
+    if (_panEnabled != shouldEnable) {
+      setState(() {
+        _panEnabled = shouldEnable;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return InteractiveViewer(
+      transformationController: _controller,
+      panEnabled: _panEnabled,
+      minScale: 1.0,
+      maxScale: 5.0,
+      child: Image.memory(
+        widget.bytes,
+        fit: BoxFit.contain,
+        gaplessPlayback: true,
       ),
     );
   }

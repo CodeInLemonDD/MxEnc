@@ -363,7 +363,16 @@ class _ViewerScreenState extends State<ViewerScreen> {
                 );
                 return;
               }
-            } catch (_) {}
+            } catch (e) {
+              debugPrint('Unpack RichNovel failed: $e');
+              if (mounted) {
+                setState(() {
+                  _errorMessage = '文件解析失败: $e';
+                  _isDecrypting = false;
+                });
+              }
+              return;
+            }
           } else if (_fileType == MxEncFileType.image ||
               _isImageFile(originalFilename)) {
             _previewImage = decryptedBytes;
@@ -838,10 +847,18 @@ class _ViewerScreenState extends State<ViewerScreen> {
 }
 
 // isolate helpers must be top-level
-Map<String, dynamic> unpackComicEntry(Uint8List payload) =>
-    MxencDart.unpackComicContainer(payload);
-Map<String, dynamic> unpackRichEntry(Uint8List payload) =>
-    MxencDart.unpackRichNovelContainer(payload);
+Map<String, dynamic> unpackComicEntry(Uint8List payload) {
+  final res = MxencDart.unpackComicContainer(payload);
+  res.remove('payload'); // 移除 payload 避免跨 isolate 拷贝导致 OOM
+  return res;
+}
+
+Map<String, dynamic> unpackRichEntry(Uint8List payload) {
+  final res = MxencDart.unpackRichNovelContainer(payload);
+  res.remove('payload'); // 移除 payload 避免跨 isolate 拷贝导致 OOM
+  return res;
+}
+
 Map<String, dynamic> _decodeJson(Uint8List data) =>
     jsonDecode(utf8.decode(data, allowMalformed: true)) as Map<String, dynamic>;
 String decodeUtf8Safe(Uint8List data) =>

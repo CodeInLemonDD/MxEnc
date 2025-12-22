@@ -214,7 +214,7 @@ class _ComicEditorScreenState extends State<ComicEditorScreen> {
     }
     final chapters = _chapters.map((ch) {
       final arr = (ch['images'] as List<String>)
-          .map((p) => {'id': imageIdMap[p] ?? 0, 'name': p.split('/').last})
+          .map((p) => {'id': imageIdMap[p] ?? 0, 'name': path.basename(p)})
           .toList();
       return {'id': ch['id'], 'title': ch['title'], 'images': arr};
     }).toList();
