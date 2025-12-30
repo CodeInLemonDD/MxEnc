@@ -164,6 +164,9 @@ class _EncryptScreenState extends State<EncryptScreen> {
         case MxEncFileType.novel:
           fileTypeVal = 2;
           break;
+        case MxEncFileType.richNovel:
+          fileTypeVal = 4;
+          break;
         default:
           fileTypeVal = 0;
       }
@@ -259,6 +262,10 @@ class _EncryptScreenState extends State<EncryptScreen> {
         lower.endsWith('.mobi') ||
         lower.endsWith('.pdf')) {
       return MxEncFileType.novel;
+    }
+    // 富文本小说
+    if (lower.endsWith('.rich')) {
+      return MxEncFileType.richNovel;
     }
     return MxEncFileType.generic;
   }
