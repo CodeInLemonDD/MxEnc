@@ -127,6 +127,7 @@ class StorageService {
       'importTime': DateTime.now().toIso8601String(),
       'creationTime': DateTime.now().toIso8601String(),
       'tags': ['系列'],
+      'authorAvatarPath': await UserService().getAvatarPath(),
     };
     
     await saveShelfItem(item);

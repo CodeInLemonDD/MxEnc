@@ -780,6 +780,9 @@ class _BookshelfScreenState extends State<BookshelfScreen> {
       case FilterType.images:
         displayItems = displayItems.where((item) => !item.isNovel).toList();
         break;
+      case FilterType.series:
+        displayItems = displayItems.where((item) => item.isSeries).toList();
+        break;
       default:
         break;
     }
