@@ -137,4 +137,52 @@ class MxencDart {
       'payload': payload,
     };
   }
+
+  static Uint8List encryptKeyStore(Map<String, String> passwords, String masterPassword) {
+    final jsonStr = jsonEncode(passwords);
+    final plaintext = Uint8List.fromList(utf8.encode(jsonStr));
+    final salt = _rand(32);
+    final nonce = _rand(12);
+    final key = _pbkdf2(masterPassword, salt, 32);
+    final ciphertext = _aesGcmEncrypt(key, nonce, plaintext);
+    
+    final out = BytesBuilder();
+    out.add(salt);
+    out.add(nonce);
+    out.add(ciphertext);
+    return out.toBytes();
+  }
+
+  static Map<String, String> decryptKeyStore(Uint8List data, String masterPassword) {
+    if (data.length < 44) throw ArgumentError('Invalid key store data');
+    final salt = data.sublist(0, 32);
+    final nonce = data.sublist(32, 44);
+    final ciphertext = data.sublist(44);
+    
+    final key = _pbkdf2(masterPassword, salt, 32);
+    try {
+      final plaintext = _aesGcmDecrypt(key, nonce, ciphertext);
+      final jsonStr = utf8.decode(plaintext);
+      final map = jsonDecode(jsonStr) as Map<String, dynamic>;
+      return map.cast<String, String>();
+    } catch (e) {
+      throw ArgumentError('Decryption failed');
+    }
+  }
 }
+
+// Isolate helpers
+Map<String, dynamic> unpackComicEntry(Uint8List payload) {
+  final res = MxencDart.unpackComicContainer(payload);
+  res.remove('payload');
+  return res;
+}
+
+Map<String, dynamic> unpackRichEntry(Uint8List payload) {
+  final res = MxencDart.unpackRichNovelContainer(payload);
+  res.remove('payload');
+  return res;
+}
+
+String decodeUtf8Safe(Uint8List data) =>
+    utf8.decode(data, allowMalformed: true);

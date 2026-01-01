@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import '../utils/theme_provider.dart';
 import '../utils/dynamic_watermark.dart';
 import '../utils/platform_secure.dart';
+import '../utils/storage_service.dart';
 
 class RichReaderScreen extends StatefulWidget {
   final Map<String, dynamic> manifest;
@@ -12,6 +13,7 @@ class RichReaderScreen extends StatefulWidget {
   final String sourcePath;
   final String? password;
   final int initialChapterIndex;
+  final String? itemId;
   const RichReaderScreen({
     super.key,
     required this.manifest,
@@ -20,6 +22,7 @@ class RichReaderScreen extends StatefulWidget {
     required this.sourcePath,
     this.password,
     this.initialChapterIndex = 0,
+    this.itemId,
   });
 
   @override
@@ -57,10 +60,47 @@ class _RichReaderScreenState extends State<RichReaderScreen> {
         });
       }
     });
+    _restoreProgress();
+  }
+
+  Future<void> _restoreProgress() async {
+    if (widget.itemId == null) return;
+    try {
+      final items = await StorageService.loadShelf();
+      final item = items.firstWhere((e) => e['id'] == widget.itemId, orElse: () => {});
+      if (item.isNotEmpty && item['readProgress'] != null) {
+        final p = item['readProgress'];
+        final chIdx = (p['chapterIndex'] as int?) ?? 0;
+        final offset = (p['offset'] as num?)?.toDouble() ?? 0.0;
+        
+        if (mounted) {
+          if (chIdx != _chapterIndex) {
+            setState(() {
+              _chapterIndex = chIdx;
+            });
+          }
+          // Restore scroll offset
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (_scrollController.hasClients) {
+              _scrollController.jumpTo(offset);
+            }
+          });
+        }
+      }
+    } catch (e) {
+      debugPrint('Restore rich progress failed: $e');
+    }
   }
 
   @override
   void dispose() {
+    if (widget.itemId != null) {
+      StorageService.updateReadProgress(widget.itemId!, {
+        'chapterIndex': _chapterIndex,
+        'offset': _scrollController.hasClients ? _scrollController.offset : 0.0,
+      });
+    }
+
     _scrollController.dispose();
     PlatformSecure.disableSecureScreen();
     super.dispose();
@@ -270,19 +310,6 @@ class _RichReaderScreenState extends State<RichReaderScreen> {
                           onPressed: () {
                             if (_chapters.isNotEmpty) {
                               setState(() {
-                                _chapterIndex = (_chapterIndex + 1).clamp(
-                                  0,
-                                  _chapters.length - 1,
-                                );
-                              });
-                            }
-                          },
-                          icon: const Icon(Icons.skip_next),
-                        ),
-                        IconButton(
-                          onPressed: () {
-                            if (_chapters.isNotEmpty) {
-                              setState(() {
                                 _chapterIndex = (_chapterIndex - 1).clamp(
                                   0,
                                   _chapters.length - 1,
@@ -291,6 +318,19 @@ class _RichReaderScreenState extends State<RichReaderScreen> {
                             }
                           },
                           icon: const Icon(Icons.skip_previous),
+                        ),
+                        IconButton(
+                          onPressed: () {
+                            if (_chapters.isNotEmpty) {
+                              setState(() {
+                                _chapterIndex = (_chapterIndex + 1).clamp(
+                                  0,
+                                  _chapters.length - 1,
+                                );
+                              });
+                            }
+                          },
+                          icon: const Icon(Icons.skip_next),
                         ),
                       ],
                     ),

@@ -11,6 +11,7 @@ class ComicDetailScreen extends StatefulWidget {
   final String sourcePath;
   final String? password;
   final bool fromShelf;
+  final String? itemId;
 
   const ComicDetailScreen({
     super.key,
@@ -20,6 +21,7 @@ class ComicDetailScreen extends StatefulWidget {
     required this.sourcePath,
     this.password,
     this.fromShelf = false,
+    this.itemId,
   });
 
   @override
@@ -226,6 +228,7 @@ class _ComicDetailScreenState extends State<ComicDetailScreen> {
                       sourcePath: widget.sourcePath,
                       password: widget.password,
                       initialChapterIndex: idx,
+                      itemId: widget.itemId,
                     ),
                   ),
                 );
@@ -267,7 +270,10 @@ class _ComicDetailScreenState extends State<ComicDetailScreen> {
                       'authorAvatarPath': avatarPath,
                       'tags': tags,
                     };
-                    await StorageService.saveShelfItem(item);
+                    await StorageService.saveShelfItem(
+                      item,
+                      password: widget.password,
+                    );
                     if (!context.mounted) return;
                     setState(() {
                       _isSaved = true;

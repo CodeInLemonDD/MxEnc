@@ -1,3 +1,6 @@
+import 'package:mxenc/widgets/loading_dialog.dart';
+import 'package:flutter/foundation.dart';
+import 'utils/mxenc_dart.dart';
 import 'package:flutter/material.dart';
 import 'dart:io';
 import 'screens/comic_editor_screen.dart';
@@ -16,6 +19,11 @@ import 'screens/novel_upload_screen.dart';
 import 'utils/auth_service.dart';
 import 'screens/oobe_screen.dart';
 import 'utils/user_service.dart';
+import 'utils/storage_service.dart';
+// import 'models/novel.dart'; // Deprecated
+// import 'screens/novel_detail_screen.dart'; // Deprecated
+import 'screens/comic_detail_screen.dart';
+import 'screens/rich_detail_screen.dart';
 
 import 'package:receive_sharing_intent/receive_sharing_intent.dart';
 import 'dart:async';
@@ -149,7 +157,190 @@ class _MainPageState extends State<MainPage> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _maybeLaunchOobe();
       _initIntentListener();
+      // _checkLastRead(); // Disable auto-open as requested
     });
+  }
+
+  Future<void> _checkLastRead() async {
+    try {
+      final lastRead = await StorageService.getLastReadItem();
+      if (lastRead != null && mounted) {
+        final item = BookshelfItem(
+          id: lastRead['id'],
+          title: lastRead['title'],
+          author: lastRead['author'],
+          coverPath: lastRead['coverPath'],
+          filePath: lastRead['filePath'],
+          isNovel: lastRead['isNovel'] == true,
+          importTime: DateTime.tryParse(lastRead['importTime'] ?? '') ?? DateTime.now(),
+          creationTime: lastRead['creationTime'] != null ? DateTime.tryParse(lastRead['creationTime']) : null,
+          authorSignature: lastRead['authorSignature'],
+          authorAvatarPath: lastRead['authorAvatarPath'],
+          authorDeviceId: lastRead['authorDeviceId'],
+          isComic: lastRead['isComic'] == true,
+          isRichNovel: lastRead['isRichNovel'] == true,
+          isSeries: lastRead['isSeries'] == true,
+          tags: (lastRead['tags'] as List?)?.map((e) => e.toString()).toList() ?? [],
+        );
+        
+        if (item.isSeries) return; // Don't auto-open series folder
+        
+        // Show loading and open
+        await _openItem(item);
+      }
+    } catch (e) {
+      debugPrint('Error opening last read: $e');
+    }
+  }
+
+  Future<void> _openItem(BookshelfItem item) async {
+     // Check file existence
+     if (!File(item.filePath).existsSync()) return;
+
+     final result = await _decryptWithRetry(item);
+     if (result == null) return;
+     final (decrypted, password) = result;
+     
+     // Update password cache
+     await StorageService.saveItemPassword(item.filePath, password);
+     
+     if (!mounted) return;
+
+     if (item.isComic == true) {
+        final Uint8List data = decrypted;
+        final packed = await compute(unpackComicEntry, data);
+        final manifest = packed['manifest'] as Map<String, dynamic>;
+        final start = packed['start'] as int;
+        
+        if (!mounted) return;
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ComicDetailScreen(
+              manifest: manifest,
+              payload: data,
+              start: start,
+              sourcePath: item.filePath,
+              password: password,
+              fromShelf: true,
+              itemId: item.id,
+            ),
+          ),
+        );
+     } else if (item.isRichNovel == true) {
+        final Uint8List data = decrypted;
+        final packed = await compute(unpackRichEntry, data);
+        final manifest = packed['manifest'] as Map<String, dynamic>;
+        final start = packed['start'] as int;
+        
+        if (!mounted) return;
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => RichDetailScreen(
+              manifest: manifest,
+              payload: data,
+              start: start,
+              sourcePath: item.filePath,
+              password: password,
+              fromShelf: true,
+              itemId: item.id,
+            ),
+          ),
+        );
+     }
+  }
+
+  Future<(Uint8List, String)?> _decryptWithRetry(BookshelfItem item) async {
+    String password = await StorageService.getItemPassword(item.filePath) ?? '';
+    bool isFirstAttempt = true;
+
+    while (true) {
+      final controller = LoadingController(0);
+      if (!mounted) return null;
+      showLoadingDialog(context, controller: controller, label: '正在打开上次阅读...');
+      controller.set(0.05);
+
+      try {
+        final stream = widget.rustBridge.decryptFileByPathWithProgress(
+          inputPath: item.filePath,
+          password: password,
+        );
+        Uint8List? decrypted;
+        await for (final ev in stream) {
+          controller.set(ev.percent);
+          if (ev.phase == ProgressPhase.done && ev.data != null) {
+            decrypted = ev.data!;
+          }
+        }
+
+        if (mounted && Navigator.canPop(context)) Navigator.pop(context);
+
+        if (decrypted != null) {
+          return (decrypted, password);
+        } else {
+          throw Exception('解密失败：无数据');
+        }
+      } catch (e) {
+        if (mounted && Navigator.canPop(context)) Navigator.pop(context);
+
+        if (!mounted) return null;
+
+        // If auto-open fails, maybe we shouldn't block the user with a dialog immediately?
+        // But the user asked for "Directly open". So we should ask for password if needed.
+        
+        final input = await showDialog<String>(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) {
+            final ctrl = TextEditingController();
+            return AlertDialog(
+              title: const Text('输入密码'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (!isFirstAttempt || password.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 8.0),
+                      child: Text(
+                        '自动打开失败，请检查密码',
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.error,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                  TextField(
+                    controller: ctrl,
+                    obscureText: true,
+                    autofocus: true,
+                    decoration: const InputDecoration(
+                      labelText: '密码',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('取消'),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.pop(context, ctrl.text),
+                  child: const Text('确定'),
+                ),
+              ],
+            );
+          },
+        );
+
+        if (input == null) return null; // Cancelled
+        password = input;
+        isFirstAttempt = false;
+      }
+    }
   }
 
   void _initIntentListener() {
@@ -253,6 +444,33 @@ class _MainPageState extends State<MainPage> {
     } catch (_) {}
 
     // 导航到解密页面并传入文件
+    // 检查是否为 mxzip 系列包
+    if (decodedPath.toLowerCase().endsWith('.mxzip')) {
+       // 提示导入系列
+       showDialog(
+         context: context,
+         barrierDismissible: false,
+         builder: (context) => AlertDialog(
+           title: const Text('导入系列'),
+           content: Text('检测到系列包 "${displayName ?? '未命名'}"，是否导入到书架？'),
+           actions: [
+             TextButton(
+               onPressed: () => Navigator.pop(context),
+               child: const Text('取消'),
+             ),
+             TextButton(
+               onPressed: () async {
+                 Navigator.pop(context); // Close dialog
+                 await _handleImportSeries(decodedPath);
+               },
+               child: const Text('导入'),
+             ),
+           ],
+         ),
+       );
+       return;
+    }
+
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -263,6 +481,102 @@ class _MainPageState extends State<MainPage> {
         ),
       ),
     );
+  }
+
+  Future<void> _handleImportSeries(String path) async {
+    final controller = LoadingController(0);
+    showLoadingDialog(context, controller: controller, label: '正在导入...');
+    
+    try {
+      await StorageService.importSeriesFromZip(path);
+      if (mounted) Navigator.pop(context);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('导入成功')));
+        // Switch to bookshelf tab
+        _onItemTapped(1);
+        // Refresh logic would ideally happen here, but BookshelfScreen handles its own loading.
+        // Since we are switching tab, BookshelfScreen might rebuild or we might need a way to notify it.
+        // But simply switching tab doesn't force rebuild if keepAlive is true or state is preserved.
+        // However, in this simple implementation, BookshelfScreen calls loadShelf on initState.
+        // If it's already alive, we might need a GlobalKey or EventBus.
+        // For now, let's assume user will pull to refresh or it reloads on focus (if implemented).
+        // Wait, BookshelfScreen doesn't have auto-reload on focus yet.
+        // But BookshelfScreen.build is called when we switch tab? No, only if not kept alive.
+        // Let's rely on user interaction or maybe trigger a rebuild if possible.
+        // Actually, we can just navigate to BookshelfScreen directly via pushReplacement if we wanted, but we use PageView.
+        // A simple workaround: User will see the new folder eventually.
+      }
+    } on SeriesImportException catch (e) {
+      if (mounted) Navigator.pop(context); // Close loading
+      
+      if (e.type == 'password_required' || e.type == 'invalid_password') {
+        String? password;
+        bool isFirst = e.type == 'password_required';
+        while (true) {
+          if (!mounted) return;
+          final input = await showDialog<String>(
+            context: context,
+            builder: (context) {
+              final ctrl = TextEditingController();
+              return AlertDialog(
+                title: const Text('输入系列密码'),
+                content: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (!isFirst) 
+                      Text('密码错误，请重试', style: TextStyle(color: Theme.of(context).colorScheme.error)),
+                    TextField(
+                      controller: ctrl,
+                      obscureText: true,
+                      autofocus: true,
+                      decoration: const InputDecoration(labelText: '密码'),
+                    ),
+                  ],
+                ),
+                actions: [
+                  TextButton(onPressed: () => Navigator.pop(context), child: const Text('取消')),
+                  TextButton(onPressed: () => Navigator.pop(context, ctrl.text), child: const Text('确定')),
+                ],
+              );
+            },
+          );
+          
+          if (input == null) return; // Cancelled
+          password = input;
+          
+          // Retry import
+          if (!mounted) return;
+          showLoadingDialog(context, controller: controller, label: '正在导入...');
+          try {
+            await StorageService.importSeriesFromZip(path, password: password);
+            if (mounted) Navigator.pop(context);
+            if (mounted) {
+               ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('导入成功')));
+               _onItemTapped(1);
+            }
+            return;
+          } on SeriesImportException catch (retryE) {
+            if (mounted) Navigator.pop(context);
+            if (retryE.type == 'invalid_password') {
+              isFirst = false;
+              continue;
+            } else {
+               if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('导入失败: $retryE')));
+               return;
+            }
+          } catch (otherE) {
+             if (mounted) Navigator.pop(context);
+             if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('导入失败: $otherE')));
+             return;
+          }
+        }
+      }
+    } catch (e) {
+      if (mounted) Navigator.pop(context);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('导入失败: $e')));
+      }
+    }
   }
 
   @override

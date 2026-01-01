@@ -8,9 +8,9 @@ import 'package:path/path.dart' as path;
 import '../rust_bridge.dart';
 // import '../utils/progress.dart';
 import '../utils/dynamic_watermark.dart';
-import '../models/novel.dart';
-import 'novel_detail_screen.dart';
-import 'bookshelf_screen.dart';
+// import '../models/novel.dart';
+// import 'novel_detail_screen.dart';
+// import 'bookshelf_screen.dart';
 import '../utils/platform_secure.dart';
 import '../utils/storage_service.dart';
 import '../utils/user_service.dart';
@@ -53,6 +53,8 @@ class _ViewerScreenState extends State<ViewerScreen> {
 
   String? _deviceId; // 真实设备指纹（来自Rust）
   bool _isSaved = false;
+  // ignore: unused_field
+  String? _lastSuccessPassword;
 
   @override
   void initState() {
@@ -107,6 +109,7 @@ class _ViewerScreenState extends State<ViewerScreen> {
         _textContent = null;
         _previewImage = null;
         _errorMessage = null;
+        _lastSuccessPassword = null;
       });
 
       _parseHeader();
@@ -144,20 +147,6 @@ class _ViewerScreenState extends State<ViewerScreen> {
         }
       } catch (_) {}
 
-      // 解析完整头部以尝试获取元数据（用于小说封面预览）
-      if (type == MxEncFileType.novel) {
-        try {
-          final result = await widget.rustBridge.parseMxencFullHeaderByPath(
-            inputPath: _selectedFile!.path,
-          );
-          final metadata = result.$3;
-          if (metadata.isNotEmpty) {
-            setState(() {
-              _previewImage = metadata;
-            });
-          }
-        } catch (_) {}
-      }
     } catch (e) {
       setState(() {
         _errorMessage = '无法解析文件: $e';
@@ -185,6 +174,7 @@ class _ViewerScreenState extends State<ViewerScreen> {
     // 非阻塞显示加载对话框
     // ignore: discarded_futures
     showLoadingDialog(context, controller: loading, label: '解密中');
+    bool dialogOpen = true;
     setState(() {
       _isDecrypting = true;
       _errorMessage = null;
@@ -197,11 +187,10 @@ class _ViewerScreenState extends State<ViewerScreen> {
     loading.set(_progress);
 
     try {
-      // final fileBytes = await _selectedFile!.readAsBytes(); // 移除大文件读取
-
+      final currentPassword = _passwordController.text; // Capture password at start of decryption
       final stream = widget.rustBridge.decryptFileByPathWithProgress(
         inputPath: _selectedFile!.path,
-        password: _passwordController.text,
+        password: currentPassword,
       );
       await for (final ev in stream) {
         if (!mounted) break; // 避免组件销毁后更新状态
@@ -220,6 +209,7 @@ class _ViewerScreenState extends State<ViewerScreen> {
         if (ev.phase == ProgressPhase.done &&
             ev.data != null &&
             ev.filename != null) {
+          _lastSuccessPassword = currentPassword;
           final originalFilename = _normalizePreviewFilename(
             _decodeFilenameUnicode(ev.filename!),
           );
@@ -229,16 +219,16 @@ class _ViewerScreenState extends State<ViewerScreen> {
           if (_fileType == MxEncFileType.generic ||
               _fileType == null ||
               _fileType == MxEncFileType.other) {
-            // 尝试解析为小说
+            // 优先尝试解析为富文本
             try {
-              final parsed = await compute(decodeNovelMeta, decryptedBytes);
-              if (parsed.$1.isNotEmpty) {
-                _fileType = MxEncFileType.novel;
+              final packed = await compute(unpackRichEntry, decryptedBytes);
+              if (packed['manifest'] != null && packed['start'] != null) {
+                _fileType = MxEncFileType.richNovel;
               }
             } catch (_) {}
 
             // 尝试解析为漫画
-            if (_fileType != MxEncFileType.novel) {
+            if (_fileType != MxEncFileType.richNovel) {
               try {
                 final packed = await compute(unpackComicEntry, decryptedBytes);
                 if (packed['manifest'] != null && packed['start'] != null) {
@@ -246,74 +236,17 @@ class _ViewerScreenState extends State<ViewerScreen> {
                 }
               } catch (_) {}
             }
-
-            // 尝试解析为富文本
-            if (_fileType != MxEncFileType.novel &&
-                _fileType != MxEncFileType.comic) {
-              try {
-                final packed = await compute(unpackRichEntry, decryptedBytes);
-                if (packed['manifest'] != null && packed['start'] != null) {
-                  _fileType = MxEncFileType.richNovel;
-                }
-              } catch (_) {}
-            }
           }
 
           // 根据文件类型处理内容
           if (_fileType == MxEncFileType.novel) {
-            final parsed = await compute(decodeNovelMeta, decryptedBytes);
-            final novelTitle = parsed.$1.isEmpty ? originalFilename : parsed.$1;
-            final author = parsed.$2.isEmpty ? '未知作者' : parsed.$2;
-
-            if (mounted) {
-              setState(() {
-                _isDecrypting = false;
-              });
-              String coverPath = 'assets/placeholder.png';
-              if (_previewImage != null) {
-                final id = StorageService.newId();
-                String masked = '';
-                try {
-                  final s = utf8.decode(decryptedBytes, allowMalformed: true);
-                  final map = jsonDecode(s) as Map<String, dynamic>;
-                  final dev = (map['authorDeviceId'] ?? '').toString();
-                  if (dev.isNotEmpty) {
-                    masked = dev.length > 8
-                        ? '${dev.substring(0, 4)}****${dev.substring(dev.length - 4)}'
-                        : dev;
-                  }
-                } catch (_) {}
-                coverPath = await StorageService.storeCoverBytes(
-                  id,
-                  _previewImage!,
-                  watermarkText: masked,
-                );
-              }
-              final item = BookshelfItem(
-                id: StorageService.newId(),
-                title: novelTitle,
-                author: author,
-                coverPath: coverPath,
-                filePath: _selectedFile?.path ?? '',
-                isNovel: true,
-                importTime: DateTime.now(),
-                creationTime: null,
-              );
-              NovelData? novel;
-              try {
-                final obj = await compute(decodeNovelFull, decryptedBytes);
-                novel = NovelData.fromJson(obj);
-              } catch (_) {}
-              if (!mounted) return;
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(
-                  builder: (context) =>
-                      NovelDetailScreen(item: item, novel: novel),
-                ),
-              );
-              return;
-            }
+             if (mounted) {
+               setState(() {
+                 _isDecrypting = false;
+                 _errorMessage = '该格式已弃用';
+               });
+             }
+             return;
           } else if (_fileType == MxEncFileType.comic) {
             try {
               final packed = await compute(unpackComicEntry, decryptedBytes);
@@ -332,7 +265,7 @@ class _ViewerScreenState extends State<ViewerScreen> {
                       payload: decryptedBytes,
                       start: start,
                       sourcePath: _selectedFile?.path ?? '',
-                      password: _passwordController.text,
+                      password: currentPassword,
                     ),
                   ),
                 );
@@ -357,7 +290,7 @@ class _ViewerScreenState extends State<ViewerScreen> {
                       payload: decryptedBytes,
                       start: start,
                       sourcePath: _selectedFile?.path ?? '',
-                      password: _passwordController.text,
+                      password: currentPassword,
                     ),
                   ),
                 );
@@ -395,12 +328,30 @@ class _ViewerScreenState extends State<ViewerScreen> {
               _progress = 1.0;
               _progressLabel = '完成';
             });
-            if (Navigator.canPop(context)) {
+            if (dialogOpen && Navigator.canPop(context)) {
               Navigator.of(context).pop();
+              dialogOpen = false;
             }
           }
           break;
         }
+      }
+
+      if (_decryptedContent == null && _isDecrypting && _errorMessage == null) {
+         if (mounted) {
+           setState(() {
+             _isDecrypting = false;
+             _errorMessage = '解密失败，可能是密码错误';
+             _progress = 0.0;
+             _progressLabel = '';
+           });
+           KeyboardUtils.hide(context);
+           // Ensure dialog is closed on logic failure
+           if (dialogOpen && Navigator.canPop(context)) {
+             Navigator.of(context).pop();
+             dialogOpen = false;
+           }
+         }
       }
     } catch (e) {
       if (mounted) {
@@ -408,8 +359,10 @@ class _ViewerScreenState extends State<ViewerScreen> {
         // 尝试检测是否为密码错误（根据 Rust 端可能的错误信息）
         if (e.toString().contains('MAC check failed') || 
             e.toString().contains('Invalid password') ||
-            e.toString().contains('CipherError')) {
-          errorMsg = '密码错误';
+            e.toString().contains('CipherError') ||
+            e.toString().contains('failed') // 放宽条件
+           ) {
+          errorMsg = '解密失败，可能是密码错误';
         }
         
         setState(() {
@@ -418,7 +371,11 @@ class _ViewerScreenState extends State<ViewerScreen> {
           _progress = 0.0;
           _progressLabel = '';
         });
-        // 不再自动 pop，让用户留在页面重试
+        // 确保弹窗关闭
+        if (dialogOpen && Navigator.canPop(context)) {
+          Navigator.of(context).pop();
+          dialogOpen = false;
+        }
         KeyboardUtils.hide(context);
       }
     }
@@ -448,52 +405,35 @@ class _ViewerScreenState extends State<ViewerScreen> {
       final id = StorageService.newId();
       String title = _originalFilename ?? '未命名';
       String author = '未知作者';
-      bool isNovel = _fileType == MxEncFileType.novel;
+      bool isNovel = false; // Deprecated
       DateTime now = DateTime.now();
       String authorDeviceId = '';
       String authorSignature = '';
       String authorAvatarPath = '';
 
       String coverPath = 'assets/placeholder.png';
-      if (isNovel) {
-        if (_previewImage != null) {
-          coverPath = await StorageService.storeCoverBytes(id, _previewImage!);
+      
+      if (_decryptedContent != null) {
+        String masked = '';
+        if (authorDeviceId.isNotEmpty) {
+          masked = authorDeviceId.length > 8
+              ? '${authorDeviceId.substring(0, 4)}****${authorDeviceId.substring(authorDeviceId.length - 4)}'
+              : authorDeviceId;
         }
-        if (_decryptedContent != null) {
-          try {
-            final obj = String.fromCharCodes(_decryptedContent!);
-            if (obj.isNotEmpty) {
-              final map = jsonDecode(obj) as Map<String, dynamic>;
-              title = (map['title'] ?? title).toString();
-              author = (map['author'] ?? author).toString();
-              authorSignature = (map['authorSignature'] ?? '').toString();
-              authorAvatarPath = (map['authorAvatarPath'] ?? '').toString();
-            }
-          } catch (_) {}
-        }
-      } else {
-        if (_decryptedContent != null) {
-          String masked = '';
-          if (authorDeviceId.isNotEmpty) {
-            masked = authorDeviceId.length > 8
-                ? '${authorDeviceId.substring(0, 4)}****${authorDeviceId.substring(authorDeviceId.length - 4)}'
-                : authorDeviceId;
-          }
-          coverPath = await StorageService.storeCoverBytes(
-            id,
-            _decryptedContent!,
-            watermarkText: masked,
-          );
-        }
-        try {
-          final us = UserService();
-          final auth = AuthService();
-          author = (await us.getNickname()) ?? author;
-          authorDeviceId = await auth.getDeviceId();
-          authorSignature = (await us.getSignature()) ?? '';
-          authorAvatarPath = (await us.getAvatarPath()) ?? '';
-        } catch (_) {}
+        coverPath = await StorageService.storeCoverBytes(
+          id,
+          _decryptedContent!,
+          watermarkText: masked,
+        );
       }
+      try {
+        final us = UserService();
+        final auth = AuthService();
+        author = (await us.getNickname()) ?? author;
+        authorDeviceId = await auth.getDeviceId();
+        authorSignature = (await us.getSignature()) ?? '';
+        authorAvatarPath = (await us.getAvatarPath()) ?? '';
+      } catch (_) {}
 
       final item = {
         'id': id,
@@ -504,41 +444,15 @@ class _ViewerScreenState extends State<ViewerScreen> {
         'isNovel': isNovel,
         'importTime': now.toIso8601String(),
         'creationTime': null,
-        'authorDeviceId': (() {
-          if (isNovel && _decryptedContent != null) {
-            try {
-              final obj =
-                  jsonDecode(String.fromCharCodes(_decryptedContent!))
-                      as Map<String, dynamic>;
-              final v = (obj['authorDeviceId'] ?? '').toString();
-              return v;
-            } catch (_) {}
-          }
-          return authorDeviceId;
-        })(),
+        'authorDeviceId': authorDeviceId,
         'authorSignature': authorSignature,
         'authorAvatarPath': authorAvatarPath,
-        'workId': (() {
-          final baseDev = (() {
-            if (isNovel && _decryptedContent != null) {
-              try {
-                final s = String.fromCharCodes(_decryptedContent!);
-                final map = jsonDecode(s) as Map<String, dynamic>;
-                return (map['authorDeviceId'] ?? '').toString();
-              } catch (_) {}
-            }
-            return authorDeviceId;
-          })();
-          return '$title|$baseDev';
-        })(),
+        'workId': '$title|$authorDeviceId',
       };
-      await StorageService.saveShelfItem(item);
-      try {
-        final fp = _selectedFile?.path ?? '';
-        if (fp.isNotEmpty && _passwordController.text.isNotEmpty) {
-          await StorageService.saveItemPassword(fp, _passwordController.text);
-        }
-      } catch (_) {}
+
+      final passwordToSave = _lastSuccessPassword ?? _passwordController.text;
+      await StorageService.saveShelfItem(item, password: passwordToSave);
+
       if (mounted) {
         setState(() {
           _isSaved = true;
@@ -846,32 +760,4 @@ class _ViewerScreenState extends State<ViewerScreen> {
   }
 }
 
-// isolate helpers must be top-level
-Map<String, dynamic> unpackComicEntry(Uint8List payload) {
-  final res = MxencDart.unpackComicContainer(payload);
-  res.remove('payload'); // 移除 payload 避免跨 isolate 拷贝导致 OOM
-  return res;
-}
 
-Map<String, dynamic> unpackRichEntry(Uint8List payload) {
-  final res = MxencDart.unpackRichNovelContainer(payload);
-  res.remove('payload'); // 移除 payload 避免跨 isolate 拷贝导致 OOM
-  return res;
-}
-
-Map<String, dynamic> _decodeJson(Uint8List data) =>
-    jsonDecode(utf8.decode(data, allowMalformed: true)) as Map<String, dynamic>;
-String decodeUtf8Safe(Uint8List data) =>
-    utf8.decode(data, allowMalformed: true);
-Map<String, dynamic> decodeNovelFull(Uint8List data) => _decodeJson(data);
-(String, String) decodeNovelMeta(Uint8List data) {
-  try {
-    final obj = _decodeJson(data);
-    if (obj.containsKey('chapters')) {
-      final title = (obj['title'] ?? '').toString();
-      final author = (obj['author'] ?? '').toString();
-      return (title, author);
-    }
-  } catch (_) {}
-  return ('', '');
-}

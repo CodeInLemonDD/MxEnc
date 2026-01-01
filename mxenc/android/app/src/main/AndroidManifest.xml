@@ -48,6 +48,15 @@
                 <data android:pathPattern=".*\\..*\\..*\\..*\\..*\\..*\\.mxenc" />
                 <data android:pathPattern=".*\\..*\\..*\\..*\\..*\\..*\\..*\\.mxenc" />
                 <data android:pathPattern=".*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.mxenc" />
+                <!-- mxzip support -->
+                <data android:pathPattern=".*\\.mxzip" />
+                <data android:pathPattern=".*\\..*\\.mxzip" />
+                <data android:pathPattern=".*\\..*\\..*\\.mxzip" />
+                <data android:pathPattern=".*\\..*\\..*\\..*\\.mxzip" />
+                <data android:pathPattern=".*\\..*\\..*\\..*\\..*\\.mxzip" />
+                <data android:pathPattern=".*\\..*\\..*\\..*\\..*\\..*\\.mxzip" />
+                <data android:pathPattern=".*\\..*\\..*\\..*\\..*\\..*\\..*\\.mxzip" />
+                <data android:pathPattern=".*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.mxzip" />
             </intent-filter>
 
             <!-- Filter 2: File scheme WITHOUT mimeType (important for some file managers) -->
@@ -65,6 +74,15 @@
                 <data android:pathPattern=".*\\..*\\..*\\..*\\..*\\..*\\.mxenc" />
                 <data android:pathPattern=".*\\..*\\..*\\..*\\..*\\..*\\..*\\.mxenc" />
                 <data android:pathPattern=".*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.mxenc" />
+                <!-- mxzip support -->
+                <data android:pathPattern=".*\\.mxzip" />
+                <data android:pathPattern=".*\\..*\\.mxzip" />
+                <data android:pathPattern=".*\\..*\\..*\\.mxzip" />
+                <data android:pathPattern=".*\\..*\\..*\\..*\\.mxzip" />
+                <data android:pathPattern=".*\\..*\\..*\\..*\\..*\\.mxzip" />
+                <data android:pathPattern=".*\\..*\\..*\\..*\\..*\\..*\\.mxzip" />
+                <data android:pathPattern=".*\\..*\\..*\\..*\\..*\\..*\\..*\\.mxzip" />
+                <data android:pathPattern=".*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.mxzip" />
             </intent-filter>
 
             <!-- Filter 3: Content scheme with pathPattern (for apps that leak paths like QQ) -->
@@ -83,6 +101,15 @@
                 <data android:pathPattern=".*\\..*\\..*\\..*\\..*\\..*\\.mxenc" />
                 <data android:pathPattern=".*\\..*\\..*\\..*\\..*\\..*\\..*\\.mxenc" />
                 <data android:pathPattern=".*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.mxenc" />
+                <!-- mxzip support -->
+                <data android:pathPattern=".*\\.mxzip" />
+                <data android:pathPattern=".*\\..*\\.mxzip" />
+                <data android:pathPattern=".*\\..*\\..*\\.mxzip" />
+                <data android:pathPattern=".*\\..*\\..*\\..*\\.mxzip" />
+                <data android:pathPattern=".*\\..*\\..*\\..*\\..*\\.mxzip" />
+                <data android:pathPattern=".*\\..*\\..*\\..*\\..*\\..*\\.mxzip" />
+                <data android:pathPattern=".*\\..*\\..*\\..*\\..*\\..*\\..*\\.mxzip" />
+                <data android:pathPattern=".*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.mxzip" />
             </intent-filter>
 
             <!-- Filter 4: Content scheme with application/octet-stream (fallback for generic providers) -->
@@ -101,6 +128,37 @@
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="content" />
                 <data android:mimeType="application/mxenc" />
+            </intent-filter>
+
+            <!-- Support for application/zip and application/x-zip-compressed for .mxzip -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="content" />
+                <data android:scheme="file" />
+                <data android:mimeType="application/zip" />
+                <data android:mimeType="application/x-zip-compressed" />
+                <!-- pathPattern is optional here but can help filter if generic zip -->
+                <!-- We want to handle ALL zips? Probably not, just mxzip ideally, 
+                     but android intent matching for mimeType usually ignores extension 
+                     unless we specify it. But if we specify extension AND mimeType, it matches intersection.
+                     However, QQ often shares as application/zip. 
+                     If we register for application/zip, we will appear in "Open With" for ALL zips.
+                     This might be acceptable or annoying. 
+                     Let's try to restrict it with pathPattern if possible, but pathPattern often doesn't work with content:// URIs that don't end in .mxzip
+                     
+                     For now, let's just add application/mxzip if custom mime type is used, 
+                     and rely on pathPattern in the previous filters for generic mime types.
+                     
+                     Wait, if QQ sends .mxzip with application/zip, the previous filter (Filter 3) has mimeType="*/*" so it should catch it if the filename ends in .mxzip.
+                     
+                     If QQ sends content://.../file without extension but with mimeType application/zip, we can't really know it's ours.
+                     So we rely on extension being present in the content URI path or the intent data.
+                     
+                     Let's just add a specific filter for application/mxzip just in case we define it later.
+                -->
+                <data android:mimeType="application/mxzip" />
             </intent-filter>
 
             <!-- Support receiving shared files (SEND/SEND_MULTIPLE) -->

@@ -104,18 +104,37 @@ class _CoverEditorScreenState extends State<CoverEditorScreen> {
     }
   }
 
+  void _reset() {
+    _controller.value = Matrix4.identity();
+  }
+
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('裁剪封面'), actions: [
-        IconButton(onPressed: _isProcessing ? null : _confirm, icon: const Icon(Icons.check))
-      ]),
+      backgroundColor: Colors.black,
+      appBar: AppBar(
+        title: const Text('裁剪封面', style: TextStyle(color: Colors.white)),
+        backgroundColor: Colors.black,
+        iconTheme: const IconThemeData(color: Colors.white),
+        actions: [
+          IconButton(
+            onPressed: _reset,
+            icon: const Icon(Icons.refresh),
+            tooltip: '重置',
+          ),
+          IconButton(
+            onPressed: _isProcessing ? null : _confirm,
+            icon: const Icon(Icons.check),
+            tooltip: '完成',
+          ),
+        ],
+      ),
       body: Stack(
         children: [
+          // 1. Image Layer
           Center(
             child: AspectRatio(
-              aspectRatio: 3/4,
+              aspectRatio: 3 / 4,
               child: Container(
                 key: _cropKey,
                 color: Colors.black,
@@ -123,41 +142,129 @@ class _CoverEditorScreenState extends State<CoverEditorScreen> {
                   transformationController: _controller,
                   minScale: 0.5,
                   maxScale: 5.0,
+                  boundaryMargin: const EdgeInsets.all(double.infinity),
                   child: Image.file(widget.sourceFile, fit: BoxFit.contain),
                 ),
               ),
             ),
           ),
+          
+          // 2. Overlay Layer (Dimmed background with crop hole)
           IgnorePointer(
-            child: Center(
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  final viewW = constraints.maxWidth;
-                  final cropW = viewW * 0.8;
-                  final cropH = cropW * 4 / 3;
-                  return Container(
-                    width: cropW,
-                    height: cropH,
-                    decoration: BoxDecoration(
-                      border: Border.all(color: theme.colorScheme.primary, width: 2),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                return Center(
+                  child: AspectRatio(
+                    aspectRatio: 3 / 4,
+                    child: LayoutBuilder(
+                      builder: (ctx, c2) {
+                        final w = c2.maxWidth;
+                        final cropW = w * 0.8;
+                        final cropH = cropW * 4 / 3;
+                        
+                        return Stack(
+                          children: [
+                            // Dimmed overlay
+                            ColorFiltered(
+                              colorFilter: const ColorFilter.mode(
+                                Colors.black54,
+                                BlendMode.srcOut,
+                              ),
+                              child: Stack(
+                                children: [
+                                  Container(
+                                    decoration: const BoxDecoration(
+                                      color: Colors.black,
+                                      backgroundBlendMode: BlendMode.dstOut,
+                                    ),
+                                  ),
+                                  Center(
+                                    child: Container(
+                                      width: cropW,
+                                      height: cropH,
+                                      decoration: const BoxDecoration(
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            
+                            // Crop Border & Grid
+                            Center(
+                              child: SizedBox(
+                                width: cropW,
+                                height: cropH,
+                                child: CustomPaint(
+                                  painter: _GridPainter(),
+                                ),
+                              ),
+                            ),
+                          ],
+                        );
+                      },
                     ),
-                  );
-                },
+                  ),
+                );
+              },
+            ),
+          ),
+          
+          // 3. Hint Text
+          const Positioned(
+            bottom: 30,
+            left: 0,
+            right: 0,
+            child: Center(
+              child: Text(
+                '拖动并缩放以调整封面区域',
+                style: TextStyle(
+                  color: Colors.white,
+                  shadows: [Shadow(blurRadius: 2, color: Colors.black)],
+                ),
               ),
             ),
           ),
+
           if (_isProcessing)
-            Align(
-              alignment: Alignment.bottomCenter,
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: LinearProgressIndicator(
-                  backgroundColor: theme.colorScheme.surfaceContainerHighest,
-                ),
+            Container(
+              color: Colors.black54,
+              child: const Center(
+                child: CircularProgressIndicator(color: Colors.white),
               ),
             ),
         ],
       ),
     );
   }
+}
+
+class _GridPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = Colors.white.withValues(alpha: 0.5)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1;
+
+    final w = size.width;
+    final h = size.height;
+
+    // Grid lines
+    canvas.drawLine(Offset(w / 3, 0), Offset(w / 3, h), paint);
+    canvas.drawLine(Offset(2 * w / 3, 0), Offset(2 * w / 3, h), paint);
+    canvas.drawLine(Offset(0, h / 3), Offset(w, h / 3), paint);
+    canvas.drawLine(Offset(0, 2 * h / 3), Offset(w, 2 * h / 3), paint);
+
+    // Border
+    final borderPaint = Paint()
+      ..color = Colors.white
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2;
+    canvas.drawRect(Rect.fromLTWH(0, 0, w, h), borderPaint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

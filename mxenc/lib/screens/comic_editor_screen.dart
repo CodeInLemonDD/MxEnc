@@ -12,6 +12,7 @@ import '../utils/user_service.dart';
 import '../utils/auth_service.dart';
 import '../utils/keyboard_utils.dart';
 import 'cover_editor_screen.dart';
+import '../utils/storage_service.dart';
 
 class ComicEditorScreen extends StatefulWidget {
   final RustBridge? rustBridge;
@@ -25,7 +26,6 @@ class _ComicEditorScreenState extends State<ComicEditorScreen> {
   final List<Map<String, dynamic>> _chapters = [];
   final TextEditingController _titleController = TextEditingController();
   double _exportProgress = 0.0;
-  String _exportLabel = '';
 
   @override
   void dispose() {
@@ -43,52 +43,92 @@ class _ComicEditorScreenState extends State<ComicEditorScreen> {
   void _manageChapters() {
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setSheet) {
-            return Padding(
-              padding: const EdgeInsets.all(12.0),
+            return Container(
+              padding: EdgeInsets.only(
+                left: 16,
+                right: 16,
+                top: 16,
+                bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+              ),
+              height: MediaQuery.of(context).size.height * 0.7,
               child: Column(
-                mainAxisSize: MainAxisSize.min,
                 children: [
                   const Text(
                     '章节管理',
-                    style: TextStyle(fontWeight: FontWeight.bold),
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                   ),
-                  const SizedBox(height: 8),
-                  for (int i = 0; i < _chapters.length; i++)
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextFormField(
-                            initialValue: (_chapters[i]['title'] ?? '')
-                                .toString(),
-                            onChanged: (v) {
-                              setState(() {
-                                _chapters[i]['title'] = v;
-                              });
-                              setSheet(() {});
-                            },
+                  const SizedBox(height: 16),
+                  Expanded(
+                    child: ListView.separated(
+                      itemCount: _chapters.length,
+                      separatorBuilder: (context, index) => const Divider(height: 1),
+                      itemBuilder: (context, i) {
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 8.0),
+                          child: Row(
+                            children: [
+                              Text(
+                                '${i + 1}.',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.grey,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: TextFormField(
+                                  initialValue: (_chapters[i]['title'] ?? '')
+                                      .toString(),
+                                  decoration: const InputDecoration(
+                                    border: OutlineInputBorder(),
+                                    contentPadding: EdgeInsets.symmetric(
+                                      horizontal: 12,
+                                      vertical: 8,
+                                    ),
+                                    isDense: true,
+                                  ),
+                                  onChanged: (v) {
+                                    setState(() {
+                                      _chapters[i]['title'] = v;
+                                    });
+                                    // setSheet(() {}); // No need to rebuild sheet for text change
+                                  },
+                                ),
+                              ),
+                              IconButton(
+                                onPressed: () {
+                                  setSheet(() {
+                                    _chapters.removeAt(i);
+                                  });
+                                  setState(() {});
+                                },
+                                icon: const Icon(Icons.delete_outline),
+                                color: Theme.of(context).colorScheme.error,
+                              ),
+                            ],
                           ),
-                        ),
-                        IconButton(
-                          onPressed: () {
-                            setSheet(() {
-                              _chapters.removeAt(i);
-                            });
-                            setState(() {});
-                          },
-                          icon: const Icon(Icons.delete),
-                        ),
-                      ],
+                        );
+                      },
                     ),
-                  const SizedBox(height: 8),
-                  FilledButton(
-                    onPressed: () {
-                      _addChapter();
-                      setSheet(() {});
-                    },
-                    child: const Text('添加章节'),
+                  ),
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    width: double.infinity,
+                    child: FilledButton.icon(
+                      onPressed: () {
+                        _addChapter();
+                        setSheet(() {});
+                      },
+                      icon: const Icon(Icons.add),
+                      label: const Text('添加章节'),
+                      style: FilledButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                      ),
+                    ),
                   ),
                 ],
               ),
@@ -302,7 +342,6 @@ class _ComicEditorScreenState extends State<ComicEditorScreen> {
     if (password.isEmpty) return;
     final bridge = widget.rustBridge ?? await RustBridge.init();
     _exportProgress = 0.7;
-    _exportLabel = '加密中';
     setState(() {});
     final encrypted = await bridge.encryptFileWithMetadata(
       plaintext: payload,
@@ -312,7 +351,6 @@ class _ComicEditorScreenState extends State<ComicEditorScreen> {
       metadata: null,
     );
     _exportProgress = 0.9;
-    _exportLabel = '保存文件';
     setState(() {});
 
     String finalPath = savePath;
@@ -371,13 +409,61 @@ class _ComicEditorScreenState extends State<ComicEditorScreen> {
 
     if (mounted) {
       _exportProgress = 1.0;
-      _exportLabel = '完成';
       setState(() {});
+      
+      // 自动添加到书架
+      try {
+        final authorNickname = await UserService().getNickname() ?? '未知作者';
+        final authorAvatarPath = await UserService().getAvatarPath() ?? '';
+        final authorSignature = await UserService().getSignature() ?? '';
+        final authorDeviceId = await AuthService().getDeviceId();
+        
+        // 生成封面路径（如果选择了封面）
+        String coverPath = 'assets/placeholder.png';
+        if (tmpCoverBytes != null) {
+           final id = StorageService.newId();
+           // 简单加水印
+           String masked = '';
+           if (authorDeviceId.isNotEmpty) {
+             masked = authorDeviceId.length > 8
+                 ? '${authorDeviceId.substring(0, 4)}****${authorDeviceId.substring(authorDeviceId.length - 4)}'
+                 : authorDeviceId;
+           }
+           coverPath = await StorageService.storeCoverBytes(
+             id,
+             tmpCoverBytes!,
+             watermarkText: masked,
+           );
+        }
+
+        final shelfItem = {
+          'id': StorageService.newId(),
+          'title': title,
+          'author': authorNickname,
+          'coverPath': coverPath,
+          'filePath': finalPath,
+          'isNovel': false,
+          'isComic': true,
+          'importTime': DateTime.now().toIso8601String(),
+          'creationTime': DateTime.now().toIso8601String(),
+          'authorDeviceId': authorDeviceId,
+          'authorSignature': authorSignature,
+          'authorAvatarPath': authorAvatarPath,
+          'tags': tags,
+          'workId': '$title|$authorDeviceId', // Generate consistent workId
+        };
+        
+        await StorageService.saveShelfItem(shelfItem, password: password);
+      } catch (e) {
+        debugPrint('Auto add to bookshelf failed: $e');
+      }
+
+      if (!mounted) return;
       showDialog(
         context: context,
         builder: (context) => AlertDialog(
           title: const Text('导出成功'),
-          content: Text('已导出至:\n$finalPath'),
+          content: Text('已导出至:\n$finalPath\n\n同时已自动添加到您的书架。'),
           actions: [
             TextButton(
               onPressed: () {
@@ -416,142 +502,260 @@ class _ComicEditorScreenState extends State<ComicEditorScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('漫画编辑器'),
-        actions: [
-          IconButton(
-            onPressed: _addChapter,
-            icon: const Icon(Icons.add),
-            tooltip: '新建章节',
-          ),
-          IconButton(
-            onPressed: _manageChapters,
-            icon: const Icon(Icons.list),
-            tooltip: '管理章节',
-          ),
-          IconButton(
-            onPressed: _exportEncrypted,
-            icon: const Icon(Icons.lock),
-            tooltip: '导出加密',
-          ),
-        ],
-      ),
-      body: Stack(
-        children: [
-          Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            child: Offstage(
-              offstage: !(_exportProgress > 0 && _exportProgress < 1.0),
-              child: Column(
-                children: [
-                  LinearProgressIndicator(value: _exportProgress),
-                  Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: Text(_exportLabel),
-                  ),
-                ],
+    return GestureDetector(
+      onTap: () => KeyboardUtils.hide(context),
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('漫画编辑器'),
+          actions: [
+            IconButton(
+              onPressed: _manageChapters,
+              icon: const Icon(Icons.format_list_bulleted),
+              tooltip: '章节管理',
+            ),
+            IconButton(
+              onPressed: _exportEncrypted,
+              icon: const Icon(Icons.save_alt),
+              tooltip: '保存导出',
+            ),
+          ],
+        ),
+        body: Stack(
+          children: [
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              child: Offstage(
+                offstage: !(_exportProgress > 0 && _exportProgress < 1.0),
+                child: LinearProgressIndicator(value: _exportProgress),
               ),
             ),
-          ),
-          ListView.builder(
-            itemCount: _chapters.length,
-            itemBuilder: (context, index) {
-              final ch = _chapters[index];
-              final images = (ch['images'] as List<String>);
-              return Card(
-                key: ValueKey(ch['id']),
-                margin: const EdgeInsets.all(12),
-                child: Padding(
-                  padding: const EdgeInsets.all(12),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: TextFormField(
-                              initialValue: ch['title'],
-                              decoration: const InputDecoration(
-                                labelText: '章节标题',
-                              ),
-                              onChanged: (v) => ch['title'] = v,
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          FilledButton.icon(
-                            onPressed: () => _importImages(index),
-                            icon: const Icon(Icons.image),
-                            label: const Text('导入图片'),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: [
-                          IconButton(
-                            icon: const Icon(
-                              Icons.add_circle_outline,
-                              size: 20,
-                            ),
-                            tooltip: '在开头插入图片',
-                            onPressed: () async {
-                              final res = await FilePicker.platform.pickFiles(
-                                type: FileType.image,
-                              );
-                              if (res != null &&
-                                  res.files.single.path != null) {
-                                setState(() {
-                                  images.insert(0, res.files.single.path!);
-                                });
-                              }
-                            },
-                          ),
-                          for (int i = 0; i < images.length; i++) ...[
-                            InputChip(
-                              label: Text(images[i].split('/').last),
-                              onDeleted: () {
-                                setState(() {
-                                  images.removeAt(i);
-                                });
-                              },
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.add, size: 18),
-                              tooltip: '在此后插入图片',
-                              onPressed: () async {
-                                final res = await FilePicker.platform.pickFiles(
-                                  type: FileType.image,
-                                );
-                                if (res != null &&
-                                    res.files.single.path != null) {
-                                  setState(() {
-                                    images.insert(
-                                      i + 1,
-                                      res.files.single.path!,
-                                    );
-                                  });
-                                }
-                              },
-                            ),
-                          ],
-                        ],
-                      ),
-                    ],
-                  ),
+            if (_chapters.isEmpty)
+              Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(
+                      Icons.menu_book,
+                      size: 64,
+                      color: Colors.grey,
+                    ),
+                    const SizedBox(height: 16),
+                    const Text(
+                      '暂无章节',
+                      style: TextStyle(color: Colors.grey, fontSize: 16),
+                    ),
+                    const SizedBox(height: 24),
+                    FilledButton.icon(
+                      onPressed: _addChapter,
+                      icon: const Icon(Icons.add),
+                      label: const Text('创建第一章'),
+                    ),
+                  ],
                 ),
-              );
-            },
-          ),
-        ],
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _addChapter,
-        child: const Icon(Icons.add),
+              )
+            else
+              ListView.builder(
+                padding: EdgeInsets.only(
+                  bottom: MediaQuery.of(context).viewInsets.bottom + 80,
+                  top: 8,
+                  left: 12,
+                  right: 12,
+                ),
+                itemCount: _chapters.length,
+                itemBuilder: (context, index) {
+                  final ch = _chapters[index];
+                  final images = (ch['images'] as List<String>);
+                  return Card(
+                    key: ValueKey(ch['id']),
+                    elevation: 2,
+                    margin: const EdgeInsets.only(bottom: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // 章节头部
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Theme.of(context)
+                                .colorScheme
+                                .surfaceContainerHighest
+                                .withValues(alpha: 0.3),
+                            borderRadius: const BorderRadius.vertical(
+                              top: Radius.circular(12),
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.bookmark,
+                                size: 20,
+                                color: Theme.of(context).colorScheme.primary,
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: TextFormField(
+                                  initialValue: ch['title'],
+                                  decoration: const InputDecoration(
+                                    isDense: true,
+                                    border: InputBorder.none,
+                                    hintText: '输入章节标题',
+                                  ),
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 16,
+                                  ),
+                                  onChanged: (v) => ch['title'] = v,
+                                ),
+                              ),
+                              IconButton(
+                                onPressed: () => _importImages(index),
+                                icon: const Icon(Icons.add_photo_alternate),
+                                tooltip: '批量导入',
+                                style: IconButton.styleFrom(
+                                  foregroundColor: Theme.of(context)
+                                      .colorScheme
+                                      .primary,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        // 图片列表
+                        Padding(
+                          padding: const EdgeInsets.all(12),
+                          child: images.isEmpty
+                              ? Container(
+                                  height: 100,
+                                  width: double.infinity,
+                                  decoration: BoxDecoration(
+                                    border: Border.all(
+                                      color: Colors.grey.withValues(alpha: 0.3),
+                                      style: BorderStyle.solid,
+                                    ),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Center(
+                                    child: TextButton.icon(
+                                      onPressed: () => _importImages(index),
+                                      icon: const Icon(Icons.add),
+                                      label: const Text('添加图片'),
+                                    ),
+                                  ),
+                                )
+                              : ReorderableListView(
+                                  shrinkWrap: true,
+                                  physics: const NeverScrollableScrollPhysics(),
+                                  onReorder: (oldIndex, newIndex) {
+                                    setState(() {
+                                      if (oldIndex < newIndex) {
+                                        newIndex -= 1;
+                                      }
+                                      final item = images.removeAt(oldIndex);
+                                      images.insert(newIndex, item);
+                                    });
+                                  },
+                                  children: [
+                                    for (int i = 0; i < images.length; i++)
+                                      ListTile(
+                                        key: ValueKey('${ch['id']}_$i'),
+                                        contentPadding: EdgeInsets.zero,
+                                        leading: ClipRRect(
+                                          borderRadius: BorderRadius.circular(4),
+                                          child: Image.file(
+                                            File(images[i]),
+                                            width: 40,
+                                            height: 40,
+                                            fit: BoxFit.cover,
+                                            errorBuilder: (context, error, stackTrace) =>
+                                                Container(
+                                              width: 40,
+                                              height: 40,
+                                              color: Colors.grey[200],
+                                              child: const Icon(
+                                                Icons.broken_image,
+                                                size: 20,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                        title: Text(
+                                          path.basename(images[i]),
+                                          style: const TextStyle(fontSize: 13),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                        trailing: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            IconButton(
+                                              icon: const Icon(
+                                                Icons.add_circle_outline,
+                                                size: 20,
+                                              ),
+                                              tooltip: '在此后插入',
+                                              onPressed: () async {
+                                                final res = await FilePicker
+                                                    .platform
+                                                    .pickFiles(
+                                                      type: FileType.image,
+                                                    );
+                                                if (res != null &&
+                                                    res.files.single.path !=
+                                                        null) {
+                                                  setState(() {
+                                                    images.insert(
+                                                      i + 1,
+                                                      res.files.single.path!,
+                                                    );
+                                                  });
+                                                }
+                                              },
+                                            ),
+                                            IconButton(
+                                              icon: const Icon(
+                                                Icons.close,
+                                                size: 20,
+                                              ),
+                                              color: Colors.grey,
+                                              onPressed: () {
+                                                setState(() {
+                                                  images.removeAt(i);
+                                                });
+                                              },
+                                            ),
+                                            const Icon(
+                                              Icons.drag_handle,
+                                              color: Colors.grey,
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            // 底部FAB
+            Positioned(
+              bottom: 24,
+              right: 24,
+              child: FloatingActionButton.extended(
+                onPressed: _addChapter,
+                icon: const Icon(Icons.add),
+                label: const Text('新章节'),
+                elevation: 4,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

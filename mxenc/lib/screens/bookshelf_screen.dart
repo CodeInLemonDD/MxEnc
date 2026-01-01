@@ -1,14 +1,18 @@
+import 'package:file_picker/file_picker.dart';
+import '../utils/mxenc_dart.dart';
 import 'package:flutter/material.dart';
+import 'dart:async';
 import 'dart:io';
 import '../../rust_bridge.dart';
-import 'novel_detail_screen.dart';
-import 'image_preview_screen.dart';
-import 'viewer_screen.dart';
-import '../models/novel.dart';
+// import 'novel_detail_screen.dart';
+// import 'image_preview_screen.dart';
+// import 'viewer_screen.dart';
+// import '../models/novel.dart';
 import '../utils/storage_service.dart';
 import 'package:flutter/foundation.dart';
 import 'comic_detail_screen.dart';
 import 'rich_detail_screen.dart';
+import 'series_detail_screen.dart';
 import '../widgets/loading_dialog.dart';
 // import '../utils/progress.dart';
 // import 'dart:typed_data';
@@ -29,6 +33,7 @@ class BookshelfItem {
   final bool? isComic;
   final bool? isRichNovel;
   final List<String> tags;
+  final bool isSeries; // 是否为文件夹系列
 
   BookshelfItem({
     required this.id,
@@ -45,11 +50,12 @@ class BookshelfItem {
     this.isComic,
     this.isRichNovel,
     this.tags = const [],
+    this.isSeries = false,
   });
 }
 
 // 筛选类型枚举
-enum FilterType { all, novels, images }
+enum FilterType { all, novels, images, series }
 
 // 排序类型枚举
 enum SortType {
@@ -79,12 +85,26 @@ class _BookshelfScreenState extends State<BookshelfScreen> {
   bool _isSearching = false;
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
+  bool _isLoading = true;
+  
+  StreamSubscription? _shelfSubscription;
 
   @override
   void initState() {
     super.initState();
     // 加载书架数据
     _loadBookshelfItems();
+    // 监听书架变更
+    _shelfSubscription = StorageService.onShelfChanged.listen((_) {
+      _loadBookshelfItems();
+    });
+  }
+  
+  @override
+  void dispose() {
+    _shelfSubscription?.cancel();
+    _searchController.dispose();
+    super.dispose();
   }
 
   // 加载书架数据
@@ -109,6 +129,7 @@ class _BookshelfScreenState extends State<BookshelfScreen> {
             authorDeviceId: e['authorDeviceId'],
             isComic: e['isComic'] == true,
             isRichNovel: e['isRichNovel'] == true,
+            isSeries: e['isSeries'] == true,
             tags:
                 (e['tags'] as List?)?.map((e) => e.toString()).toList() ?? [],
           ),
@@ -117,6 +138,7 @@ class _BookshelfScreenState extends State<BookshelfScreen> {
     if (mounted) {
       setState(() {
         _items = items;
+        _isLoading = false;
         _applyFiltersAndSort();
       });
     }
@@ -144,10 +166,15 @@ class _BookshelfScreenState extends State<BookshelfScreen> {
     // 应用筛选
     switch (_currentFilter) {
       case FilterType.novels:
-        filtered = filtered.where((item) => item.isNovel).toList();
+        // 包含旧版小说和新版富文本小说
+        filtered = filtered.where((item) => (item.isNovel || item.isRichNovel == true) && !item.isSeries).toList();
         break;
       case FilterType.images:
-        filtered = filtered.where((item) => !item.isNovel).toList();
+        // 排除旧版小说和富文本小说
+        filtered = filtered.where((item) => !item.isNovel && item.isRichNovel != true && !item.isSeries).toList();
+        break;
+      case FilterType.series:
+        filtered = filtered.where((item) => item.isSeries).toList();
         break;
       default:
         // 全部显示
@@ -200,27 +227,125 @@ class _BookshelfScreenState extends State<BookshelfScreen> {
 
   // 处理项目点击
   Future<void> _onItemTap(BookshelfItem item) async {
-    if (item.isComic == true || item.isRichNovel == true) {
-      await _openEncryptedContainerDirect(item);
-      return;
-    }
-    if (item.isNovel) {
-      _openNovelDetailWithDecrypt(item);
-    } else {
+    if (item.isSeries) {
+      // 导航到系列详情页
       await Navigator.push(
         context,
-        MaterialPageRoute(builder: (context) => ImagePreviewScreen(item: item)),
+        MaterialPageRoute(
+          builder: (context) => SeriesDetailScreen(
+            item: item,
+            rustBridge: widget.rustBridge,
+          ),
+        ),
       );
       _loadBookshelfItems();
+      return;
+    }
+
+    if (item.isNovel) {
+      // 尝试自动修复：如果是 RichNovel 被误标为 Novel，尝试解密并打开
+      // 先尝试解密
+      final result = await _decryptWithRetry(item);
+      if (result != null) {
+        final (decrypted, password) = result;
+        try {
+          // 尝试解析为 RichNovel
+          final packed = await compute(unpackRichEntry, decrypted);
+          if (packed['manifest'] != null) {
+             // 确实是 RichNovel，修复元数据
+             final updatedItem = {
+               'id': item.id,
+               'title': item.title,
+               'author': item.author,
+               'coverPath': item.coverPath,
+               'filePath': item.filePath,
+               'isNovel': false,
+               'isRichNovel': true,
+               'importTime': item.importTime.toIso8601String(),
+               'creationTime': item.creationTime?.toIso8601String(),
+               'authorSignature': item.authorSignature,
+               'authorAvatarPath': item.authorAvatarPath,
+               'authorDeviceId': item.authorDeviceId,
+               'tags': item.tags,
+             };
+             
+             // 保存修复后的元数据
+             await StorageService.saveShelfItem(updatedItem, password: password);
+             
+             // 刷新列表（可选，因为马上要跳走了）
+             _loadBookshelfItems();
+             
+             // 打开详情页
+             if (!mounted) return;
+             final manifest = packed['manifest'] as Map<String, dynamic>;
+             final start = packed['start'] as int;
+             await Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => RichDetailScreen(
+                    manifest: manifest,
+                    payload: decrypted,
+                    start: start,
+                    sourcePath: item.filePath,
+                    password: password,
+                    fromShelf: true,
+                    itemId: item.id,
+                  ),
+                ),
+             );
+             return;
+          }
+        } catch (_) {
+          // 解析失败，不是 RichNovel，继续报错
+        }
+      }
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('该格式已弃用，无法打开')),
+        );
+      }
+      return;
+    } else {
+      await _openEncryptedContainerDirect(item);
     }
   }
 
-  Future<void> _openNovelDetailWithDecrypt(BookshelfItem item) async {
-    try {
-      final pwd = await StorageService.getItemPassword(item.filePath) ?? '';
-      String password = pwd;
-      if (password.isEmpty) {
-        if (!mounted) return;
+  Future<(Uint8List, String)?> _decryptWithRetry(BookshelfItem item) async {
+    String password = await StorageService.getItemPassword(item.filePath) ?? '';
+    bool isFirstAttempt = true;
+
+    while (true) {
+      final controller = LoadingController(0);
+      if (!mounted) return null;
+      showLoadingDialog(context, controller: controller, label: '解密中');
+      controller.set(0.05);
+
+      try {
+        final stream = widget.rustBridge.decryptFileByPathWithProgress(
+          inputPath: item.filePath,
+          password: password,
+        );
+        Uint8List? decrypted;
+        await for (final ev in stream) {
+          controller.set(ev.percent);
+          if (ev.phase == ProgressPhase.done && ev.data != null) {
+            decrypted = ev.data!;
+          }
+        }
+
+        if (mounted && Navigator.canPop(context)) Navigator.pop(context);
+
+        if (decrypted != null) {
+          return (decrypted, password);
+        } else {
+          throw Exception('解密失败：无数据');
+        }
+      } catch (e) {
+        if (mounted && Navigator.canPop(context)) Navigator.pop(context);
+
+        if (!mounted) return null;
+
         final input = await showDialog<String>(
           context: context,
           barrierDismissible: false,
@@ -228,10 +353,31 @@ class _BookshelfScreenState extends State<BookshelfScreen> {
             final ctrl = TextEditingController();
             return AlertDialog(
               title: const Text('输入密码'),
-              content: TextField(
-                controller: ctrl,
-                obscureText: true,
-                decoration: const InputDecoration(labelText: '密码'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (!isFirstAttempt || password.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 8.0),
+                      child: Text(
+                        '解密失败，请检查密码',
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.error,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                  TextField(
+                    controller: ctrl,
+                    obscureText: true,
+                    autofocus: true,
+                    decoration: const InputDecoration(
+                      labelText: '密码',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                ],
               ),
               actions: [
                 TextButton(
@@ -246,219 +392,363 @@ class _BookshelfScreenState extends State<BookshelfScreen> {
             );
           },
         );
-        if (input == null || input.isEmpty) return;
-        password = input;
-      }
-      // final fileBytes = await File(item.filePath).readAsBytes();
-      final controller = LoadingController(0);
-      if (!mounted) return;
-      showLoadingDialog(context, controller: controller, label: '解密中');
-      controller.set(0.05);
-      final stream = widget.rustBridge.decryptFileByPathWithProgress(
-        inputPath: item.filePath,
-        password: password,
-      );
-      Uint8List? decrypted;
-      await for (final ev in stream) {
-        controller.set(ev.percent);
-        if (ev.phase == ProgressPhase.done && ev.data != null) {
-          decrypted = ev.data!;
-        }
-      }
-      if (decrypted == null) {
-        if (mounted) {
-          if (Navigator.canPop(context)) Navigator.pop(context);
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(const SnackBar(content: Text('解密失败：无数据')));
-        }
-        return;
-      }
-      
-      // 解密成功，保存密码
-      await StorageService.saveItemPassword(item.filePath, password);
 
-      NovelData? novel;
-      try {
-        final obj = await compute(decodeNovelFull, decrypted);
-        novel = NovelData.fromJson(obj);
-      } catch (_) {}
-      if (!mounted) return;
-      if (Navigator.canPop(context)) Navigator.pop(context);
-      await Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) =>
-              NovelDetailScreen(item: item, novel: novel, fromShelf: true),
-        ),
-      );
-      _loadBookshelfItems();
-    } catch (e) {
-      if (mounted) {
-        if (Navigator.canPop(context)) Navigator.pop(context);
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('解密失败: $e')));
+        if (input == null) return null;
+        password = input;
+        isFirstAttempt = false;
       }
     }
   }
 
   Future<void> _openEncryptedContainerDirect(BookshelfItem item) async {
-    try {
-      final pwd = await StorageService.getItemPassword(item.filePath) ?? '';
-      String password = pwd;
-      if (password.isEmpty) {
-        if (!mounted) return;
-        final input = await showDialog<String>(
-          context: context,
-          barrierDismissible: false,
-          builder: (context) {
-            final ctrl = TextEditingController();
-            return AlertDialog(
-              title: const Text('输入密码'),
-              content: TextField(
-                controller: ctrl,
-                obscureText: true,
-                decoration: const InputDecoration(labelText: '密码'),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text('取消'),
-                ),
-                TextButton(
-                  onPressed: () => Navigator.pop(context, ctrl.text),
-                  child: const Text('确定'),
-                ),
-              ],
-            );
-          },
+    final result = await _decryptWithRetry(item);
+    if (result == null) return;
+    final (decrypted, password) = result;
+
+    // 解密成功，保存密码
+    await StorageService.saveItemPassword(item.filePath, password);
+
+    if (item.isComic == true) {
+      final Uint8List data = decrypted;
+      final packed = await compute(unpackComicEntry, data);
+      final manifest = packed['manifest'] as Map<String, dynamic>;
+      final start = packed['start'] as int;
+      if (mounted) {
+        await Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ComicDetailScreen(
+              manifest: manifest,
+              payload: data,
+              start: start,
+              sourcePath: item.filePath,
+              password: password,
+              fromShelf: true,
+              itemId: item.id,
+            ),
+          ),
         );
-        if (input == null || input.isEmpty) return;
-        password = input;
+        _loadBookshelfItems();
       }
+      return;
+    }
 
-      // final fileBytes = await File(item.filePath).readAsBytes();
-      final controller = LoadingController(0);
-      if (!mounted) return;
-      showLoadingDialog(context, controller: controller, label: '解密中');
-      controller.set(0.05);
-      final stream = widget.rustBridge.decryptFileByPathWithProgress(
-        inputPath: item.filePath,
-        password: password,
-      );
-      Uint8List? decrypted;
-      await for (final ev in stream) {
-        controller.set(ev.percent);
-        if (ev.phase == ProgressPhase.done && ev.data != null) {
-          decrypted = ev.data!;
-        }
-      }
-      if (decrypted == null) {
-        if (mounted) {
-          if (Navigator.canPop(context)) Navigator.pop(context);
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(const SnackBar(content: Text('解密失败：无数据')));
-        }
-        return;
-      }
-
-      // 解密成功，保存密码
-      await StorageService.saveItemPassword(item.filePath, password);
-
-      if (item.isComic == true) {
-        final Uint8List data = decrypted;
-        final packed = await compute(unpackComicEntry, data);
-        final manifest = packed['manifest'] as Map<String, dynamic>;
-        final start = packed['start'] as int;
-        if (mounted) {
-          if (Navigator.canPop(context)) Navigator.pop(context);
-          await Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => ComicDetailScreen(
-                manifest: manifest,
-                payload: data,
-                start: start,
-                sourcePath: item.filePath,
-                password: password,
-                fromShelf: true,
-              ),
-            ),
-          );
-          _loadBookshelfItems();
-        }
-        return;
-      }
-
-      if (item.isRichNovel == true) {
-        final Uint8List data = decrypted;
-        final packed = await compute(unpackRichEntry, data);
-        final manifest = packed['manifest'] as Map<String, dynamic>;
-        final start = packed['start'] as int;
-        if (mounted) {
-          if (Navigator.canPop(context)) Navigator.pop(context);
-          await Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => RichDetailScreen(
-                manifest: manifest,
-                payload: data,
-                start: start,
-                sourcePath: item.filePath,
-                password: password,
-                fromShelf: true,
-              ),
-            ),
-          );
-          _loadBookshelfItems();
-        }
-        return;
-      }
-
+    if (item.isRichNovel == true) {
+      final Uint8List data = decrypted;
+      final packed = await compute(unpackRichEntry, data);
+      final manifest = packed['manifest'] as Map<String, dynamic>;
+      final start = packed['start'] as int;
       if (mounted) {
-        if (Navigator.canPop(context)) Navigator.pop(context);
-        ScaffoldMessenger.of(
+        await Navigator.push(
           context,
-        ).showSnackBar(const SnackBar(content: Text('无法识别的内容类型')));
+          MaterialPageRoute(
+            builder: (context) => RichDetailScreen(
+              manifest: manifest,
+              payload: data,
+              start: start,
+              sourcePath: item.filePath,
+              password: password,
+              fromShelf: true,
+              itemId: item.id,
+            ),
+          ),
+        );
+        _loadBookshelfItems();
       }
-    } catch (e) {
-      if (mounted) {
-        if (Navigator.canPop(context)) Navigator.pop(context);
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('解密失败: $e')));
-      }
+      return;
+    }
+
+    if (mounted) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('无法识别的内容类型')));
     }
   }
 
-  // 长按删除条目
+  // 长按删除条目或移动到系列
   void _onItemLongPress(BookshelfItem item) async {
-    final confirmed = await showDialog<bool>(
+    final theme = Theme.of(context);
+    final action = await showModalBottomSheet<String>(
+      context: context,
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (!item.isSeries) ...[
+              ListTile(
+                leading: const Icon(Icons.drive_file_move_outline),
+                title: const Text('移动到文件夹'),
+                onTap: () => Navigator.pop(context, 'move'),
+              ),
+              ListTile(
+                leading: const Icon(Icons.file_copy_outlined),
+                title: const Text('复制到文件夹'),
+                onTap: () => Navigator.pop(context, 'copy'),
+              ),
+            ],
+            ListTile(
+              leading: Icon(Icons.delete_outline, color: theme.colorScheme.error),
+              title: Text(
+                '删除',
+                style: TextStyle(color: theme.colorScheme.error),
+              ),
+              onTap: () => Navigator.pop(context, 'delete'),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (action == 'delete') {
+      if (!mounted) return;
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('删除条目'),
+          content: Text('确定删除 "${item.title}" 吗？此操作不可恢复。'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('取消'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('删除'),
+            ),
+          ],
+        ),
+      );
+      if (confirmed == true) {
+        await StorageService.removeShelfItem(item.id);
+        _loadBookshelfItems();
+        if (mounted) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('已删除')));
+        }
+      }
+    } else if (action == 'move') {
+      // 移动逻辑
+      await _showMoveToFolderDialog([item], isCopy: false);
+    } else if (action == 'copy') {
+      // 复制逻辑
+      await _showMoveToFolderDialog([item], isCopy: true);
+    }
+  }
+
+  Future<void> _showMoveToFolderDialog(List<BookshelfItem> items, {required bool isCopy}) async {
+    // 筛选出所有文件夹（系列）
+    final seriesItems = _items.where((e) => e.isSeries).toList();
+    
+    if (seriesItems.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('没有可用的文件夹，请先创建一个')),
+        );
+      }
+      return;
+    }
+
+    await showModalBottomSheet(
+      context: context,
+      builder: (sheetCtx) {
+        return Column(
+          children: [
+            const Padding(
+              padding: EdgeInsets.all(16.0),
+              child: Text('选择目标文件夹', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            ),
+            Expanded(
+              child: ListView.builder(
+                itemCount: seriesItems.length,
+                itemBuilder: (ctx, index) {
+                  final s = seriesItems[index];
+                  return ListTile(
+                    leading: const Icon(Icons.folder),
+                    title: Text(s.title),
+                    onTap: () async {
+                      Navigator.pop(sheetCtx);
+                      try {
+                        for (final item in items) {
+                          if (isCopy) {
+                            await StorageService.copyItemToSeries(item.id, s.id);
+                          } else {
+                            await StorageService.moveItemToSeries(item.id, s.id);
+                          }
+                        }
+                        _loadBookshelfItems();
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                isCopy
+                                    ? '已复制到 "${s.title}"'
+                                    : '已移动到 "${s.title}"',
+                              ),
+                            ),
+                          );
+                        }
+                      } catch (e) {
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('${isCopy ? '复制' : '移动'}失败: $e')),
+                          );
+                        }
+                      }
+                    },
+                  );
+                },
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // 创建新文件夹
+  Future<void> _createNewFolder() async {
+    final controller = TextEditingController();
+    final name = await showDialog<String>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('删除条目'),
-        content: const Text('确定删除该内容吗？此操作不可恢复。'),
+        title: const Text('新建文件夹'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          decoration: const InputDecoration(
+            labelText: '文件夹名称',
+            border: OutlineInputBorder(),
+          ),
+        ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context, false),
+            onPressed: () => Navigator.pop(context),
             child: const Text('取消'),
           ),
           TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('删除'),
+            onPressed: () => Navigator.pop(context, controller.text),
+            child: const Text('创建'),
           ),
         ],
       ),
     );
-    if (confirmed == true) {
-      await StorageService.removeShelfItem(item.id);
+
+    if (name != null && name.trim().isNotEmpty) {
+      try {
+        await StorageService.createSeries(name.trim());
+        _loadBookshelfItems();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('文件夹已创建')),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('创建失败: $e')),
+          );
+        }
+      }
+    }
+  }
+
+  Future<void> _importSeries() async {
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['mxzip'],
+    );
+    if (result == null || result.files.isEmpty) return;
+    
+    final path = result.files.single.path;
+    if (path == null) return;
+
+    final controller = LoadingController(0);
+    if (!mounted) return;
+    showLoadingDialog(context, controller: controller, label: '正在导入...');
+    
+    try {
+      await StorageService.importSeriesFromZip(path);
+      if (mounted) Navigator.pop(context);
       _loadBookshelfItems();
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('已删除')));
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('导入成功')));
+      }
+    } on SeriesImportException catch (e) {
+      if (mounted) Navigator.pop(context); // Close loading
+      
+      if (e.type == 'password_required' || e.type == 'invalid_password') {
+        // Prompt for password
+        String? password;
+        bool isFirst = e.type == 'password_required';
+        while (true) {
+          if (!mounted) return;
+          final input = await showDialog<String>(
+            context: context,
+            builder: (context) {
+              final ctrl = TextEditingController();
+              return AlertDialog(
+                title: const Text('输入系列密码'),
+                content: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (!isFirst) 
+                      Text('密码错误，请重试', style: TextStyle(color: Theme.of(context).colorScheme.error)),
+                    TextField(
+                      controller: ctrl,
+                      obscureText: true,
+                      autofocus: true,
+                      decoration: const InputDecoration(labelText: '密码'),
+                    ),
+                  ],
+                ),
+                actions: [
+                  TextButton(onPressed: () => Navigator.pop(context), child: const Text('取消')),
+                  TextButton(onPressed: () => Navigator.pop(context, ctrl.text), child: const Text('确定')),
+                ],
+              );
+            },
+          );
+          
+          if (input == null) return; // Cancelled
+          password = input;
+          
+          // Retry import
+          if (!mounted) return;
+          showLoadingDialog(context, controller: controller, label: '正在导入...');
+          try {
+            await StorageService.importSeriesFromZip(path, password: password);
+            if (mounted) Navigator.pop(context);
+            _loadBookshelfItems();
+             if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('导入成功')));
+             }
+            return;
+          } on SeriesImportException catch (retryE) {
+            if (mounted) Navigator.pop(context);
+            if (retryE.type == 'invalid_password') {
+              isFirst = false;
+              continue;
+            } else {
+               // Other error
+               if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('导入失败: $retryE')));
+               }
+               return;
+            }
+          } catch (otherE) {
+             if (mounted) Navigator.pop(context);
+             if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('导入失败: $otherE')));
+             }
+             return;
+          }
+        }
+      }
+    } catch (e) {
+      if (mounted) Navigator.pop(context);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('导入失败: $e')));
       }
     }
   }
@@ -569,6 +859,37 @@ class _BookshelfScreenState extends State<BookshelfScreen> {
               });
             },
           ),
+          PopupMenuButton<String>(
+            onSelected: (v) {
+              if (v == 'new_folder') {
+                _createNewFolder();
+              } else if (v == 'import_series') {
+                _importSeries();
+              }
+            },
+            itemBuilder: (context) => [
+              const PopupMenuItem(
+                value: 'new_folder',
+                child: Row(
+                  children: [
+                    Icon(Icons.create_new_folder_outlined),
+                    SizedBox(width: 8),
+                    Text('新建文件夹'),
+                  ],
+                ),
+              ),
+              const PopupMenuItem(
+                value: 'import_series',
+                child: Row(
+                  children: [
+                    Icon(Icons.folder_zip_outlined),
+                    SizedBox(width: 8),
+                    Text('导入系列 (.mxzip)'),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ],
       ),
       body: Column(
@@ -577,26 +898,73 @@ class _BookshelfScreenState extends State<BookshelfScreen> {
           _buildFilterSortBar(theme),
           // 内容区域
           Expanded(
-            child: displayItems.isEmpty
-                ? _buildEmptyState(theme)
-                : _buildBooksGrid(displayItems, theme),
+            child: _isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : displayItems.isEmpty
+                    ? _buildEmptyState(theme)
+                    : _buildBooksGrid(displayItems, theme),
           ),
         ],
       ),
-      floatingActionButton: _multiSelect && _selectedIds.isNotEmpty
-          ? FloatingActionButton(
-              onPressed: () async {
-                for (final id in _selectedIds) {
-                  await StorageService.removeShelfItem(id);
-                }
-                _loadBookshelfItems();
-                setState(() {
-                  _multiSelect = false;
-                  _selectedIds.clear();
-                });
-              },
-              tooltip: '删除选中',
-              child: const Icon(Icons.delete),
+      floatingActionButton: null,
+      bottomNavigationBar: _multiSelect && _selectedIds.isNotEmpty
+          ? BottomAppBar(
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.drive_file_move_outline),
+                    tooltip: '移动到文件夹',
+                    onPressed: () {
+                      final items = _items.where((e) => _selectedIds.contains(e.id)).toList();
+                      _showMoveToFolderDialog(items, isCopy: false);
+                    },
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.file_copy_outlined),
+                    tooltip: '复制到文件夹',
+                    onPressed: () {
+                      final items = _items.where((e) => _selectedIds.contains(e.id)).toList();
+                      _showMoveToFolderDialog(items, isCopy: true);
+                    },
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.delete_outline),
+                    color: theme.colorScheme.error,
+                    tooltip: '删除选中',
+                    onPressed: () async {
+                      final confirmed = await showDialog<bool>(
+                        context: context,
+                        builder: (context) => AlertDialog(
+                          title: const Text('删除选中'),
+                          content: Text('确定删除选中的 ${_selectedIds.length} 个项目吗？此操作不可恢复。'),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.pop(context, false),
+                              child: const Text('取消'),
+                            ),
+                            TextButton(
+                              onPressed: () => Navigator.pop(context, true),
+                              child: const Text('删除'),
+                            ),
+                          ],
+                        ),
+                      );
+                      
+                      if (confirmed == true) {
+                        for (final id in _selectedIds) {
+                          await StorageService.removeShelfItem(id);
+                        }
+                        _loadBookshelfItems();
+                        setState(() {
+                          _multiSelect = false;
+                          _selectedIds.clear();
+                        });
+                      }
+                    },
+                  ),
+                ],
+              ),
             )
           : null,
     );
@@ -628,6 +996,8 @@ class _BookshelfScreenState extends State<BookshelfScreen> {
                 _buildFilterChip('小说', FilterType.novels, theme),
                 const SizedBox(width: 8),
                 _buildFilterChip('图片', FilterType.images, theme),
+                const SizedBox(width: 8),
+                _buildFilterChip('系列', FilterType.series, theme),
               ],
             ),
           ),
@@ -781,7 +1151,18 @@ class _BookshelfScreenState extends State<BookshelfScreen> {
                     ),
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(12),
-                      child: item.coverPath.startsWith('assets/')
+                      child: item.isSeries
+                          ? Container(
+                              color: theme.colorScheme.tertiaryContainer,
+                              child: Center(
+                                child: Icon(
+                                  Icons.folder,
+                                  size: 64,
+                                  color: theme.colorScheme.onTertiaryContainer,
+                                ),
+                              ),
+                            )
+                          : item.coverPath.startsWith('assets/')
                           ? Container(
                               color: theme.colorScheme.surfaceContainerHighest,
                               child: Center(
@@ -858,19 +1239,25 @@ class _BookshelfScreenState extends State<BookshelfScreen> {
                         vertical: 4,
                       ),
                       decoration: BoxDecoration(
-                        color: item.isNovel
-                            ? theme.colorScheme.primary
-                            : theme.colorScheme.secondary,
+                        color: item.isSeries
+                            ? theme.colorScheme.tertiary
+                            : (item.isNovel
+                                ? theme.colorScheme.primary
+                                : theme.colorScheme.secondary),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Text(
-                        item.isNovel ? '小说' : '图片',
+                        item.isSeries
+                            ? '系列'
+                            : (item.isNovel ? '小说' : '图片'),
                         style: TextStyle(
                           fontSize: 10,
                           fontWeight: FontWeight.w600,
-                          color: item.isNovel
-                              ? theme.colorScheme.onPrimary
-                              : theme.colorScheme.onSecondary,
+                          color: item.isSeries
+                              ? theme.colorScheme.onTertiary
+                              : (item.isNovel
+                                  ? theme.colorScheme.onPrimary
+                                  : theme.colorScheme.onSecondary),
                         ),
                       ),
                     ),

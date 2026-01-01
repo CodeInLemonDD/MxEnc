@@ -25,12 +25,14 @@ class NovelDetailScreen extends StatefulWidget {
   final BookshelfItem item;
   final NovelData? novel;
   final bool fromShelf;
+  final String? password;
 
   const NovelDetailScreen({
     super.key,
     required this.item,
     this.novel,
     this.fromShelf = false,
+    this.password,
   });
 
   @override
@@ -108,6 +110,7 @@ class _NovelDetailScreenState extends State<NovelDetailScreen> {
           novelTitle: widget.item.title,
           author: widget.item.author,
           sourceFilePath: widget.item.filePath,
+          itemId: widget.item.id,
         ),
       ),
     );
@@ -557,7 +560,7 @@ class _NovelDetailScreenState extends State<NovelDetailScreen> {
         'tags': _tags,
         'authorDeviceId': ((widget.novel?.authorDeviceId ?? '')).toString(),
       };
-      await StorageService.saveShelfItem(item);
+      await StorageService.saveShelfItem(item, password: widget.password);
       if (mounted) {
         setState(() {
           _isSaved = true;

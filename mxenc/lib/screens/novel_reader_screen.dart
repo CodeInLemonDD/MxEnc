@@ -12,6 +12,7 @@ class NovelReaderScreen extends StatefulWidget {
   final String author; // 作者
   final String? sourceFilePath;
   final Uint8List? coverBytes;
+  final String? itemId;
 
   const NovelReaderScreen({
     super.key,
@@ -21,6 +22,7 @@ class NovelReaderScreen extends StatefulWidget {
     required this.author,
     this.sourceFilePath,
     this.coverBytes,
+    this.itemId, String? password,
   });
 
   @override
@@ -43,6 +45,32 @@ class _NovelReaderScreenState extends State<NovelReaderScreen> {
     super.initState();
     // 启用防截图功能
     _enableSecureMode();
+    _restoreProgress();
+  }
+
+  Future<void> _restoreProgress() async {
+    if (widget.itemId == null) return;
+    try {
+      final items = await StorageService.loadShelf();
+      final item = items.firstWhere((e) => e['id'] == widget.itemId, orElse: () => {});
+      if (item.isNotEmpty && item['readProgress'] != null) {
+        final p = item['readProgress'];
+        if (p['chapterId'] == widget.chapter.id) {
+          final prog = (p['progress'] as num?)?.toDouble() ?? 0.0;
+          if (mounted) {
+            setState(() {
+              _progress = prog;
+            });
+            // 延迟滚动以确保布局完成
+            Future.delayed(const Duration(milliseconds: 100), () {
+              if (mounted) _scrollToProgress(prog);
+            });
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('Restore progress failed: $e');
+    }
   }
 
   // 滚动控制器
@@ -50,6 +78,15 @@ class _NovelReaderScreenState extends State<NovelReaderScreen> {
 
   @override
   void dispose() {
+    // 保存阅读进度
+    if (widget.itemId != null) {
+      StorageService.updateReadProgress(widget.itemId!, {
+        'offset': _scrollController.hasClients ? _scrollController.offset : 0.0,
+        'progress': _progress,
+        'chapterId': widget.chapter.id,
+      });
+    }
+
     // 释放资源
     _scrollController.dispose();
     // 禁用防截图功能（如果需要）

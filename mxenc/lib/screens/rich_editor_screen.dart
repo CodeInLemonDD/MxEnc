@@ -6,12 +6,14 @@ import 'package:path/path.dart' as path;
 import 'package:path_provider/path_provider.dart';
 import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
+
 import 'cover_editor_screen.dart';
 import '../rust_bridge.dart';
 import '../utils/mxenc_dart.dart';
 import '../utils/user_service.dart';
 import '../utils/auth_service.dart';
 import '../utils/keyboard_utils.dart';
+import '../utils/storage_service.dart';
 
 class RichEditorScreen extends StatefulWidget {
   final RustBridge? rustBridge;
@@ -479,11 +481,60 @@ class _RichEditorScreenState extends State<RichEditorScreen> {
       _exportProgress = 1.0;
       _exportLabel = '完成';
       setState(() {});
+      
+      // 自动添加到书架
+      try {
+        final authorNickname = await UserService().getNickname() ?? '未知作者';
+        final authorAvatarPath = await UserService().getAvatarPath() ?? '';
+        final authorSignature = await UserService().getSignature() ?? '';
+        final authorDeviceId = await AuthService().getDeviceId();
+        
+        // 生成封面路径（如果选择了封面）
+        String coverPath = 'assets/placeholder.png';
+        if (tmpCoverBytes != null) {
+           final id = StorageService.newId();
+           // 简单加水印
+           String masked = '';
+           if (authorDeviceId.isNotEmpty) {
+             masked = authorDeviceId.length > 8
+                 ? '${authorDeviceId.substring(0, 4)}****${authorDeviceId.substring(authorDeviceId.length - 4)}'
+                 : authorDeviceId;
+           }
+           coverPath = await StorageService.storeCoverBytes(
+             id,
+             tmpCoverBytes!,
+             watermarkText: masked,
+           );
+        }
+
+        final shelfItem = {
+          'id': StorageService.newId(),
+          'title': title,
+          'author': authorNickname,
+          'coverPath': coverPath,
+          'filePath': finalPath,
+          'isNovel': false,
+          'isRichNovel': true,
+          'importTime': DateTime.now().toIso8601String(),
+          'creationTime': DateTime.now().toIso8601String(),
+          'authorDeviceId': authorDeviceId,
+          'authorSignature': authorSignature,
+          'authorAvatarPath': authorAvatarPath,
+          'tags': tags,
+          'workId': '$title|$authorDeviceId',
+        };
+        
+        await StorageService.saveShelfItem(shelfItem, password: password);
+      } catch (e) {
+        debugPrint('Auto add to bookshelf failed: $e');
+      }
+
+      if (!mounted) return;
       showDialog(
         context: context,
         builder: (context) => AlertDialog(
           title: const Text('导出成功'),
-          content: Text('已导出至:\n$finalPath'),
+          content: Text('已导出至:\n$finalPath\n\n同时已自动添加到您的书架。'),
           actions: [
             TextButton(
               onPressed: () {
@@ -694,7 +745,7 @@ class _RichEditorScreenState extends State<RichEditorScreen> {
                     fit: BoxFit.cover,
                     width: double.infinity,
                     height: 200,
-                    errorBuilder: (_, __, ___) => Container(
+                    errorBuilder: (context, error, stackTrace) => Container(
                       height: 150,
                       color: Colors.grey[200],
                       alignment: Alignment.center,

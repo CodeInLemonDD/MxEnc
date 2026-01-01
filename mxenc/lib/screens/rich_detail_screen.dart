@@ -11,6 +11,7 @@ class RichDetailScreen extends StatefulWidget {
   final String sourcePath;
   final String? password;
   final bool fromShelf;
+  final String? itemId;
 
   const RichDetailScreen({
     super.key,
@@ -20,6 +21,7 @@ class RichDetailScreen extends StatefulWidget {
     required this.sourcePath,
     this.password,
     this.fromShelf = false,
+    this.itemId,
   });
 
   @override
@@ -63,7 +65,7 @@ class _RichDetailScreenState extends State<RichDetailScreen> {
               width: width,
               height: width * 1.4,
               fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => Container(
+              errorBuilder: (context, error, stackTrace) => Container(
                 width: width,
                 height: width * 1.4,
                 color: Colors.grey[300],
@@ -239,6 +241,7 @@ class _RichDetailScreenState extends State<RichDetailScreen> {
                       sourcePath: widget.sourcePath,
                       password: widget.password,
                       initialChapterIndex: idx,
+                      itemId: widget.itemId,
                     ),
                   ),
                 );
@@ -273,7 +276,7 @@ class _RichDetailScreenState extends State<RichDetailScreen> {
                       'author': author,
                       'coverPath': coverPath,
                       'filePath': widget.sourcePath,
-                      'isNovel': true,
+                      'isNovel': false, // Set to false to distinguish from legacy novels
                       'isRichNovel': true,
                       'importTime': DateTime.now().toIso8601String(),
                       'creationTime': null,
@@ -283,7 +286,10 @@ class _RichDetailScreenState extends State<RichDetailScreen> {
                       'authorAvatarPath': avatarPath,
                       'tags': tags,
                     };
-                    await StorageService.saveShelfItem(item);
+                    await StorageService.saveShelfItem(
+                      item,
+                      password: widget.password,
+                    );
                     if (!context.mounted) return;
                     setState(() {
                       _isSaved = true;
