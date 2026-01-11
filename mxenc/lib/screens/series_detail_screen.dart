@@ -182,16 +182,23 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
   Future<void> _dispatchContent(Uint8List decrypted, String filename, String filePath, String password) async {
     if (!mounted) return;
 
-    final ext = path.extension(filename).toLowerCase();
-    
+    // Use header to check file type strictly
+    int fileType = 0;
+    try {
+      final header = await widget.rustBridge.parseMxencHeaderByPath(inputPath: filePath);
+      fileType = header.$2;
+    } catch (_) {
+      // Fallback or ignore
+    }
+
     // Helper to open Rich Novel
-    Future<bool> tryOpenRich() async {
+    Future<void> openRich() async {
       try {
         final packed = await compute(unpackRichEntry, decrypted);
         if (packed['manifest'] != null && packed['start'] != null) {
           final manifest = packed['manifest'] as Map<String, dynamic>;
           final start = packed['start'] as int;
-          if (!mounted) return true;
+          if (!mounted) return;
           Navigator.push(
             context,
             MaterialPageRoute(
@@ -201,24 +208,24 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
                 start: start,
                 sourcePath: filePath,
                 password: password,
-                fromShelf: true, // Hide add to shelf button
+                fromShelf: true,
               ),
             ),
           );
-          return true;
         }
-      } catch (_) {}
-      return false;
+      } catch (e) {
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('打开富文本失败: $e')));
+      }
     }
 
     // Helper to open Comic
-    Future<bool> tryOpenComic() async {
+    Future<void> openComic() async {
       try {
         final packed = await compute(unpackComicEntry, decrypted);
         if (packed['manifest'] != null && packed['start'] != null) {
           final manifest = packed['manifest'] as Map<String, dynamic>;
           final start = packed['start'] as int;
-          if (!mounted) return true;
+          if (!mounted) return;
           Navigator.push(
             context,
             MaterialPageRoute(
@@ -228,28 +235,53 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
                 start: start,
                 sourcePath: filePath,
                 password: password,
-                fromShelf: true, // Hide add to shelf button
+                fromShelf: true,
               ),
             ),
           );
-          return true;
         }
-      } catch (_) {}
-      return false;
+      } catch (e) {
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('打开漫画失败: $e')));
+      }
     }
 
-    // Dispatch based on extension hint
-    if (ext == '.comic' || ext == '.mxenc') {
-       if (await tryOpenComic()) return;
-       if (await tryOpenRich()) return;
-    } else {
-       // Default order or try both
-       // Since user reported comic opened as rich, we prioritize comic if ambiguous?
-       // Or strictly check extension?
-       // Let's try Comic first if extension is not explicitly rich
-       if (await tryOpenComic()) return;
-       if (await tryOpenRich()) return;
+    // Dispatch based on File Type (defined in rust_bridge.dart)
+    // comic(3), richNovel(4)
+    if (fileType == 3) {
+      await openComic();
+      return;
+    } else if (fileType == 4) {
+      await openRich();
+      return;
     }
+
+    // Fallback based on extension if type is generic(0) or other
+    final ext = path.extension(filename).toLowerCase();
+    
+    // Attempt logic if fileType didn't match (e.g. old files might be 0)
+    if (ext == '.comic') {
+       // Force try comic
+       await openComic();
+       return;
+    }
+    
+    // Try detection if still unknown
+    try {
+      // Try Rich first as it has a specific manifest structure usually
+      final packedRich = await compute(unpackRichEntry, decrypted);
+      if (packedRich['manifest'] != null) {
+         await openRich();
+         return;
+      }
+    } catch (_) {}
+
+    try {
+      final packedComic = await compute(unpackComicEntry, decrypted);
+      if (packedComic['manifest'] != null) {
+        await openComic();
+        return;
+      }
+    } catch (_) {}
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -433,6 +465,64 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
          if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('更新封面失败: $e')));
          }
+      }
+    }
+  }
+
+  Future<void> _showItemOptions(SeriesVolume volume) async {
+    final theme = Theme.of(context);
+    final action = await showModalBottomSheet<String>(
+      context: context,
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.outbox_outlined),
+              title: const Text('移出到书架'),
+              onTap: () => Navigator.pop(context, 'move_out'),
+            ),
+            ListTile(
+              leading: Icon(Icons.delete_outline, color: theme.colorScheme.error),
+              title: Text(
+                '删除',
+                style: TextStyle(color: theme.colorScheme.error),
+              ),
+              onTap: () => Navigator.pop(context, 'delete'),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (action == 'delete') {
+      _deleteVolume(volume);
+    } else if (action == 'move_out') {
+      _moveVolumeOut(volume);
+    }
+  }
+
+  Future<void> _moveVolumeOut(SeriesVolume volume) async {
+    setState(() => _isLoading = true);
+    try {
+      await StorageService.moveVolumeOutOfSeries(widget.item.id, volume.id);
+      
+      setState(() {
+        _metadata!.volumes.removeWhere((v) => v.id == volume.id);
+        _isLoading = false;
+      });
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('已移出到书架')),
+        );
+      }
+    } catch (e) {
+      setState(() => _isLoading = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('移出失败: $e')),
+        );
       }
     }
   }
@@ -740,9 +830,9 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               IconButton(
-                                icon: const Icon(Icons.delete_outline, size: 20),
-                                onPressed: () => _deleteVolume(vol),
-                                color: theme.colorScheme.error.withValues(alpha: 0.7),
+                                icon: const Icon(Icons.more_vert, size: 20),
+                                onPressed: () => _showItemOptions(vol),
+                                color: theme.colorScheme.onSurfaceVariant,
                               ),
                               ReorderableDragStartListener(
                                 index: index,
@@ -754,7 +844,7 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
                             ],
                           ),
                           onTap: () => _openVolume(vol),
-                          onLongPress: () => _deleteVolume(vol),
+                          onLongPress: () => _showItemOptions(vol),
                         ),
                       );
                     },

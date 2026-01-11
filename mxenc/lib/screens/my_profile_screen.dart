@@ -20,7 +20,6 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
   // 用户信息
   String _deviceId = '';
   bool _isPremiumUser = false;
-  bool _isNightMode = false;
   bool _isAppLocked = false;
   String _currentTheme = '默认';
   String? _nickname;
@@ -51,7 +50,7 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
       _nickname = await _userService.getNickname();
       _avatarPath = await _userService.getAvatarPath();
       // 加载设置
-      _isNightMode = await _settingsService.getNightMode();
+      // _isNightMode = await _settingsService.getNightMode(); // Removed
       _isAppLocked = await _settingsService.getAppLock();
       _currentTheme = await _settingsService.getTheme();
       if (mounted) {
@@ -69,18 +68,14 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
 
   // 切换夜间模式
   void _toggleNightMode() async {
-    if (!mounted) return;
-    setState(() {
-      _isNightMode = !_isNightMode;
-    });
-    await _settingsService.setNightMode(_isNightMode);
-    try {
-      if (!mounted) return;
-      final tp = Provider.of<ThemeProvider>(context, listen: false);
-      await tp.setDarkMode(_isNightMode);
-    } catch (_) {}
+    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+    // Logic: If current brightness is dark, switch to light, else dark.
+    // This handles the "System" case where system is dark -> toggle to light.
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    await themeProvider.setDarkMode(!isDark);
+
     if (mounted) {
-      _showToast(_isNightMode ? '已切换至夜间模式' : '已切换至日间模式');
+      _showToast(!isDark ? '已切换至夜间模式' : '已切换至日间模式');
     }
   }
 
@@ -385,6 +380,7 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
                           style: theme.textTheme.bodyMedium?.copyWith(
                             fontWeight: FontWeight.w500,
                           ),
+                          overflow: TextOverflow.ellipsis, // Added overflow
                         ),
                       ],
                     ),
@@ -516,9 +512,10 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
           ),
           const Divider(height: 1, indent: 72),
           _buildToggleSettingItem(
-            icon: Icons.nightlight_round,
+            icon: Icons.dark_mode_outlined,
             title: '夜间模式',
-            value: _isNightMode,
+            value:
+                false, // Value is ignored/calculated in _buildToggleSettingItem now
             onToggle: _toggleNightMode,
           ),
           const Divider(height: 1, indent: 72),
@@ -584,6 +581,14 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
     required VoidCallback onToggle,
   }) {
     final theme = Theme.of(context);
+
+    // For Night Mode, ignore the passed 'value' and check actual Theme brightness
+    // This is a bit hacky but ensures the switch always reflects reality
+    bool actualValue = value;
+    if (title == '夜间模式') {
+      actualValue = theme.brightness == Brightness.dark;
+    }
+
     return ListTile(
       leading: Container(
         width: 40,
@@ -600,7 +605,7 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
         ),
       ),
       title: Text(title),
-      trailing: Switch(value: value, onChanged: (_) => onToggle()),
+      trailing: Switch(value: actualValue, onChanged: (_) => onToggle()),
       onTap: onToggle,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
     );
