@@ -8,6 +8,7 @@ import '../utils/user_service.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'dart:io';
+import '../utils/tts_service.dart';
 
 class MyProfileScreen extends StatefulWidget {
   const MyProfileScreen({super.key});
@@ -32,6 +33,10 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
   @override
   void initState() {
     super.initState();
+    final tts = TtsService();
+    tts.setErrorHandler((msg) {
+      if (mounted) _showErrorDialog(msg);
+    });
     // 加载用户信息
     _loadUserInfo();
   }
@@ -199,6 +204,65 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
     scaffold.showSnackBar(
       SnackBar(content: Text(message), duration: const Duration(seconds: 1)),
     );
+  }
+
+  // 显示错误弹窗
+  void _showErrorDialog(String message) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.error_outline, color: Colors.red),
+            SizedBox(width: 8),
+            Text('TTS 调试信息'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              '系统 TTS 引擎返回了以下信息：',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Text(
+                message,
+                style: const TextStyle(fontFamily: 'monospace'),
+              ),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              '排查建议：\n1. 检查手机设置中是否安装并启用了 TTS 引擎。\n2. 确认当前系统语言是否支持 zh-CN。\n3. 某些模拟器不支持原生 TTS。',
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('了解'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // 测试 TTS
+  void _testTts() async {
+    final tts = TtsService();
+    _showToast('正在尝试播放测试语音...');
+    try {
+      await tts.speak('这是一条测试语音，看到这段文字说明正在尝试调用系统文字转语音引擎。欢迎使用猫鸮加密。');
+    } catch (e) {
+      _showToast('播放失败: $e');
+    }
   }
 
   @override
@@ -524,6 +588,13 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
             title: '应用锁',
             value: _isAppLocked,
             onToggle: _toggleAppLock,
+          ),
+          const Divider(height: 1, indent: 72),
+          _buildFeatureItem(
+            icon: Icons.record_voice_over_outlined,
+            title: 'TTS 语音测试',
+            subtitle: '测试系统文字转语音是否正常',
+            onTap: _testTts,
           ),
         ],
       ),
