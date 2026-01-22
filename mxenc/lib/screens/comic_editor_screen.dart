@@ -65,7 +65,8 @@ class _ComicEditorScreenState extends State<ComicEditorScreen> {
                   Expanded(
                     child: ListView.separated(
                       itemCount: _chapters.length,
-                      separatorBuilder: (context, index) => const Divider(height: 1),
+                      separatorBuilder: (context, index) =>
+                          const Divider(height: 1),
                       itemBuilder: (context, i) {
                         return Padding(
                           padding: const EdgeInsets.symmetric(vertical: 8.0),
@@ -238,26 +239,52 @@ class _ComicEditorScreenState extends State<ComicEditorScreen> {
 
     if (!confirmExport) return;
     // 封面路径仅用于对话框展示，裁剪后的字节用于容器封面
-    final images = <Uint8List>[];
     final imageIdMap = <String, int>{};
-    for (final ch in _chapters) {
-      final list = (ch['images'] as List<String>);
-      for (final p in list) {
-        if (!imageIdMap.containsKey(p)) {
+    final images = <Uint8List>[];
+    final chapters = <Map<String, dynamic>>[];
+
+    for (var ch in _chapters) {
+      final chImages = <Map<String, dynamic>>[];
+      for (var p in (ch['images'] as List<String>)) {
+        int id;
+        if (imageIdMap.containsKey(p)) {
+          id = imageIdMap[p]!;
+        } else {
           try {
-            final bytes = await File(p).readAsBytes();
-            imageIdMap[p] = images.length;
+            final f = File(p);
+            if (!await f.exists()) {
+              throw Exception('文件不存在: ${path.basename(p)}');
+            }
+            final bytes = await f.readAsBytes();
+            id = images.length;
+            imageIdMap[p] = id;
             images.add(bytes);
-          } catch (_) {}
+          } catch (e) {
+            if (mounted) {
+              if (Navigator.canPop(context)) {
+                Navigator.pop(context); // Close any potential info dialog
+              }
+              showDialog(
+                context: context,
+                builder: (context) => AlertDialog(
+                  title: const Text('导出失败'),
+                  content: Text('读取图片失败: $e\n\n请检查图片文件是否已被移动或删除。'),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text('确定'),
+                    ),
+                  ],
+                ),
+              );
+            }
+            return;
+          }
         }
+        chImages.add({'id': id, 'name': path.basename(p)});
       }
+      chapters.add({'id': ch['id'], 'title': ch['title'], 'images': chImages});
     }
-    final chapters = _chapters.map((ch) {
-      final arr = (ch['images'] as List<String>)
-          .map((p) => {'id': imageIdMap[p] ?? 0, 'name': path.basename(p)})
-          .toList();
-      return {'id': ch['id'], 'title': ch['title'], 'images': arr};
-    }).toList();
     final manifest = {
       'title': title,
       'chapters': chapters,
@@ -410,39 +437,39 @@ class _ComicEditorScreenState extends State<ComicEditorScreen> {
     if (mounted) {
       _exportProgress = 1.0;
       setState(() {});
-      
+
       // 自动添加到书架
       try {
         final authorNickname = await UserService().getNickname() ?? '未知作者';
         final authorAvatarPath = await UserService().getAvatarPath() ?? '';
         final authorSignature = await UserService().getSignature() ?? '';
         final authorDeviceId = await AuthService().getDeviceId();
-        
+
+        final itemId = StorageService.newId();
         // 生成封面路径（如果选择了封面）
         String coverPath = 'assets/placeholder.png';
         if (tmpCoverBytes != null) {
-           final id = StorageService.newId();
-           // 简单加水印
-           String masked = '';
-           if (authorDeviceId.isNotEmpty) {
-             masked = authorDeviceId.length > 8
-                 ? '${authorDeviceId.substring(0, 4)}****${authorDeviceId.substring(authorDeviceId.length - 4)}'
-                 : authorDeviceId;
-           }
-           coverPath = await StorageService.storeCoverBytes(
-             id,
-             tmpCoverBytes!,
-             watermarkText: masked,
-           );
+          // 简单加水印
+          String masked = '';
+          if (authorDeviceId.isNotEmpty) {
+            masked = authorDeviceId.length > 8
+                ? '${authorDeviceId.substring(0, 4)}****${authorDeviceId.substring(authorDeviceId.length - 4)}'
+                : authorDeviceId;
+          }
+          coverPath = await StorageService.storeCoverBytes(
+            itemId,
+            tmpCoverBytes!,
+            watermarkText: masked,
+          );
         }
 
         final shelfItem = {
-          'id': StorageService.newId(),
+          'id': itemId,
           'title': title,
           'author': authorNickname,
           'coverPath': coverPath,
           'filePath': finalPath,
-          'isNovel': false,
+          'isNovel': false, // 对于书架 UI，漫画和富文本小说是独立类型
           'isComic': true,
           'importTime': DateTime.now().toIso8601String(),
           'creationTime': DateTime.now().toIso8601String(),
@@ -450,9 +477,9 @@ class _ComicEditorScreenState extends State<ComicEditorScreen> {
           'authorSignature': authorSignature,
           'authorAvatarPath': authorAvatarPath,
           'tags': tags,
-          'workId': '$title|$authorDeviceId', // Generate consistent workId
+          'workId': '$title|$authorDeviceId',
         };
-        
+
         await StorageService.saveShelfItem(shelfItem, password: password);
       } catch (e) {
         debugPrint('Auto add to bookshelf failed: $e');
@@ -536,11 +563,7 @@ class _ComicEditorScreenState extends State<ComicEditorScreen> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(
-                      Icons.menu_book,
-                      size: 64,
-                      color: Colors.grey,
-                    ),
+                    const Icon(Icons.menu_book, size: 64, color: Colors.grey),
                     const SizedBox(height: 16),
                     const Text(
                       '暂无章节',
@@ -617,9 +640,9 @@ class _ComicEditorScreenState extends State<ComicEditorScreen> {
                                 icon: const Icon(Icons.add_photo_alternate),
                                 tooltip: '批量导入',
                                 style: IconButton.styleFrom(
-                                  foregroundColor: Theme.of(context)
-                                      .colorScheme
-                                      .primary,
+                                  foregroundColor: Theme.of(
+                                    context,
+                                  ).colorScheme.primary,
                                 ),
                               ),
                             ],
@@ -665,22 +688,25 @@ class _ComicEditorScreenState extends State<ComicEditorScreen> {
                                         key: ValueKey('${ch['id']}_$i'),
                                         contentPadding: EdgeInsets.zero,
                                         leading: ClipRRect(
-                                          borderRadius: BorderRadius.circular(4),
+                                          borderRadius: BorderRadius.circular(
+                                            4,
+                                          ),
                                           child: Image.file(
                                             File(images[i]),
                                             width: 40,
                                             height: 40,
                                             fit: BoxFit.cover,
-                                            errorBuilder: (context, error, stackTrace) =>
-                                                Container(
-                                              width: 40,
-                                              height: 40,
-                                              color: Colors.grey[200],
-                                              child: const Icon(
-                                                Icons.broken_image,
-                                                size: 20,
-                                              ),
-                                            ),
+                                            errorBuilder:
+                                                (context, error, stackTrace) =>
+                                                    Container(
+                                                      width: 40,
+                                                      height: 40,
+                                                      color: Colors.grey[200],
+                                                      child: const Icon(
+                                                        Icons.broken_image,
+                                                        size: 20,
+                                                      ),
+                                                    ),
                                           ),
                                         ),
                                         title: Text(

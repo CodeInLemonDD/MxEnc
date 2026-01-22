@@ -127,8 +127,13 @@ class _RichEditorScreenState extends State<RichEditorScreen> {
                                       // 如果删除了所有章节，重置当前索引为 -1
                                       // 外部会处理索引越界，但这里需要确保状态一致
                                       // 实际上，我们应该避免无章节状态，所以这里可以自动添加一个新章节
-                                      final id = DateTime.now().microsecondsSinceEpoch.toString();
-                                      _chapters.add({'id': id, 'title': '未命名章节'});
+                                      final id = DateTime.now()
+                                          .microsecondsSinceEpoch
+                                          .toString();
+                                      _chapters.add({
+                                        'id': id,
+                                        'title': '未命名章节',
+                                      });
                                     }
                                   });
                                   setState(() {
@@ -136,11 +141,14 @@ class _RichEditorScreenState extends State<RichEditorScreen> {
                                       (b) => b['chapterId'] == removedId,
                                     );
                                     // 修正当前章节索引
-                                    if (_currentChapterIndex >= _chapters.length) {
-                                      _currentChapterIndex = _chapters.length - 1;
+                                    if (_currentChapterIndex >=
+                                        _chapters.length) {
+                                      _currentChapterIndex =
+                                          _chapters.length - 1;
                                     }
-                                    if (_currentChapterIndex < 0 && _chapters.isNotEmpty) {
-                                        _currentChapterIndex = 0;
+                                    if (_currentChapterIndex < 0 &&
+                                        _chapters.isNotEmpty) {
+                                      _currentChapterIndex = 0;
                                     }
                                   });
                                 },
@@ -269,7 +277,7 @@ class _RichEditorScreenState extends State<RichEditorScreen> {
     );
 
     if (!confirmExport) return;
-    
+
     // 数据清洗：确保所有 Block 都有 chapterId
     if (_chapters.isEmpty) {
       _addChapter(initial: true);
@@ -292,10 +300,33 @@ class _RichEditorScreenState extends State<RichEditorScreen> {
         final p = (b['path']?.toString() ?? '');
         if (p.isNotEmpty && !imageIdMap.containsKey(p)) {
           try {
-            final bytes = await File(p).readAsBytes();
+            final f = File(p);
+            if (!await f.exists()) {
+              throw Exception('文件不存在: ${path.basename(p)}');
+            }
+            final bytes = await f.readAsBytes();
             imageIdMap[p] = images.length;
             images.add(bytes);
-          } catch (_) {}
+          } catch (e) {
+            if (mounted) {
+              // Close 作品信息 dialog if open
+              // Navigator.pop(context) might have already been called or need to be called
+              showDialog(
+                context: context,
+                builder: (context) => AlertDialog(
+                  title: const Text('导出失败'),
+                  content: Text('读取图片失败: $e\n\n请检查图片文件是否已被移动或删除。'),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text('确定'),
+                    ),
+                  ],
+                ),
+              );
+            }
+            return;
+          }
         }
       }
     }
@@ -320,10 +351,14 @@ class _RichEditorScreenState extends State<RichEditorScreen> {
     }).toList();
 
     // 强制清洗 chapters 中的 ID 为字符串
-    final cleanChapters = _chapters.map((c) => {
-      'id': (c['id'] ?? '').toString(),
-      'title': (c['title'] ?? '章节').toString(),
-    }).toList();
+    final cleanChapters = _chapters
+        .map(
+          (c) => {
+            'id': (c['id'] ?? '').toString(),
+            'title': (c['title'] ?? '章节').toString(),
+          },
+        )
+        .toList();
 
     final manifest = {
       'title': title,
@@ -481,34 +516,34 @@ class _RichEditorScreenState extends State<RichEditorScreen> {
       _exportProgress = 1.0;
       _exportLabel = '完成';
       setState(() {});
-      
+
       // 自动添加到书架
       try {
         final authorNickname = await UserService().getNickname() ?? '未知作者';
         final authorAvatarPath = await UserService().getAvatarPath() ?? '';
         final authorSignature = await UserService().getSignature() ?? '';
         final authorDeviceId = await AuthService().getDeviceId();
-        
+
+        final itemId = StorageService.newId();
         // 生成封面路径（如果选择了封面）
         String coverPath = 'assets/placeholder.png';
         if (tmpCoverBytes != null) {
-           final id = StorageService.newId();
-           // 简单加水印
-           String masked = '';
-           if (authorDeviceId.isNotEmpty) {
-             masked = authorDeviceId.length > 8
-                 ? '${authorDeviceId.substring(0, 4)}****${authorDeviceId.substring(authorDeviceId.length - 4)}'
-                 : authorDeviceId;
-           }
-           coverPath = await StorageService.storeCoverBytes(
-             id,
-             tmpCoverBytes!,
-             watermarkText: masked,
-           );
+          // 简单加水印
+          String masked = '';
+          if (authorDeviceId.isNotEmpty) {
+            masked = authorDeviceId.length > 8
+                ? '${authorDeviceId.substring(0, 4)}****${authorDeviceId.substring(authorDeviceId.length - 4)}'
+                : authorDeviceId;
+          }
+          coverPath = await StorageService.storeCoverBytes(
+            itemId,
+            tmpCoverBytes!,
+            watermarkText: masked,
+          );
         }
 
         final shelfItem = {
-          'id': StorageService.newId(),
+          'id': itemId,
           'title': title,
           'author': authorNickname,
           'coverPath': coverPath,
@@ -523,7 +558,7 @@ class _RichEditorScreenState extends State<RichEditorScreen> {
           'tags': tags,
           'workId': '$title|$authorDeviceId',
         };
-        
+
         await StorageService.saveShelfItem(shelfItem, password: password);
       } catch (e) {
         debugPrint('Auto add to bookshelf failed: $e');
@@ -560,9 +595,10 @@ class _RichEditorScreenState extends State<RichEditorScreen> {
     final currentBlocks = _chapters.isEmpty || _currentChapterIndex < 0
         ? <Map<String, dynamic>>[]
         : _blocks
-            .where((b) =>
-                b['chapterId'] == _chapters[_currentChapterIndex]['id'])
-            .toList();
+              .where(
+                (b) => b['chapterId'] == _chapters[_currentChapterIndex]['id'],
+              )
+              .toList();
 
     return GestureDetector(
       onTap: () => KeyboardUtils.hide(context),
@@ -571,7 +607,7 @@ class _RichEditorScreenState extends State<RichEditorScreen> {
           title: const Text('富文本编辑器'),
           actions: [
             IconButton(
-              onPressed: _manageChapters, 
+              onPressed: _manageChapters,
               icon: const Icon(Icons.format_list_bulleted),
               tooltip: '章节管理',
             ),
@@ -587,26 +623,39 @@ class _RichEditorScreenState extends State<RichEditorScreen> {
             // 导出进度条
             if (_exportProgress > 0 && _exportProgress < 1.0)
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
                 child: Column(
                   children: [
                     LinearProgressIndicator(value: _exportProgress),
                     const SizedBox(height: 4),
-                    Text(_exportLabel, style: Theme.of(context).textTheme.bodySmall),
+                    Text(
+                      _exportLabel,
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
                   ],
                 ),
               ),
-            
+
             // 主要内容列表
             Expanded(
-              child: _chapters.isEmpty 
+              child: _chapters.isEmpty
                   ? Center(
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          const Icon(Icons.library_books, size: 64, color: Colors.grey),
+                          const Icon(
+                            Icons.library_books,
+                            size: 64,
+                            color: Colors.grey,
+                          ),
                           const SizedBox(height: 16),
-                          const Text('暂无章节', style: TextStyle(color: Colors.grey)),
+                          const Text(
+                            '暂无章节',
+                            style: TextStyle(color: Colors.grey),
+                          ),
                           const SizedBox(height: 16),
                           FilledButton(
                             onPressed: () => _addChapter(initial: true),
@@ -621,7 +670,9 @@ class _RichEditorScreenState extends State<RichEditorScreen> {
                       itemBuilder: (context, index) {
                         final block = currentBlocks[index];
                         // 确保每个 Block 都有 ID，如果没有（旧数据），临时生成一个
-                        final keyId = block['id'] ??= DateTime.now().microsecondsSinceEpoch.toString() + index.toString();
+                        final keyId = block['id'] ??=
+                            DateTime.now().microsecondsSinceEpoch.toString() +
+                            index.toString();
                         return _buildBlockItem(block, keyId);
                       },
                     ),
@@ -659,13 +710,17 @@ class _RichEditorScreenState extends State<RichEditorScreen> {
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12),
                 decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: DropdownButtonHideUnderline(
                   child: DropdownButton<int>(
                     isExpanded: true,
-                    value: _currentChapterIndex >= 0 ? _currentChapterIndex : null,
+                    value: _currentChapterIndex >= 0
+                        ? _currentChapterIndex
+                        : null,
                     hint: const Text('选择章节'),
                     items: List.generate(_chapters.length, (index) {
                       return DropdownMenuItem(
@@ -739,7 +794,9 @@ class _RichEditorScreenState extends State<RichEditorScreen> {
             Stack(
               children: [
                 ClipRRect(
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(12),
+                  ),
                   child: Image.file(
                     File(block['path'] ?? ''),
                     fit: BoxFit.cover,
@@ -757,7 +814,10 @@ class _RichEditorScreenState extends State<RichEditorScreen> {
                   bottom: 8,
                   left: 8,
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: Colors.black54,
                       borderRadius: BorderRadius.circular(4),
@@ -770,30 +830,40 @@ class _RichEditorScreenState extends State<RichEditorScreen> {
                 ),
               ],
             ),
-            
+
           // 底部操作栏（更紧凑）
           Container(
             decoration: BoxDecoration(
-              border: Border(top: BorderSide(color: Theme.of(context).dividerColor.withValues(alpha: 0.1))),
-              color: Theme.of(context).colorScheme.surfaceContainerLow.withValues(alpha: 0.3),
+              border: Border(
+                top: BorderSide(
+                  color: Theme.of(context).dividerColor.withValues(alpha: 0.1),
+                ),
+              ),
+              color: Theme.of(
+                context,
+              ).colorScheme.surfaceContainerLow.withValues(alpha: 0.3),
             ),
             padding: const EdgeInsets.symmetric(horizontal: 8),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
                 _buildActionButton(
-                  icon: Icons.vertical_align_top, 
-                  label: '插文', 
-                  onTap: () => _insertBlock(block, 'text', before: true)
+                  icon: Icons.vertical_align_top,
+                  label: '插文',
+                  onTap: () => _insertBlock(block, 'text', before: true),
                 ),
                 _buildActionButton(
-                  icon: Icons.add_photo_alternate_outlined, 
-                  label: '插图', 
-                  onTap: () => _insertBlock(block, 'image', before: true)
+                  icon: Icons.add_photo_alternate_outlined,
+                  label: '插图',
+                  onTap: () => _insertBlock(block, 'image', before: true),
                 ),
                 const Spacer(),
                 IconButton(
-                  icon: const Icon(Icons.delete_outline, size: 20, color: Colors.red),
+                  icon: const Icon(
+                    Icons.delete_outline,
+                    size: 20,
+                    color: Colors.red,
+                  ),
                   onPressed: () => _deleteBlock(block),
                   tooltip: '删除',
                 ),
@@ -805,7 +875,11 @@ class _RichEditorScreenState extends State<RichEditorScreen> {
     );
   }
 
-  Widget _buildActionButton({required IconData icon, required String label, required VoidCallback onTap}) {
+  Widget _buildActionButton({
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+  }) {
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(4),
@@ -815,7 +889,13 @@ class _RichEditorScreenState extends State<RichEditorScreen> {
           children: [
             Icon(icon, size: 16, color: Theme.of(context).colorScheme.primary),
             const SizedBox(width: 4),
-            Text(label, style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.primary)),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 12,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+            ),
           ],
         ),
       ),
@@ -828,7 +908,11 @@ class _RichEditorScreenState extends State<RichEditorScreen> {
     });
   }
 
-  Future<void> _insertBlock(Map<String, dynamic> targetBlock, String type, {bool before = false}) async {
+  Future<void> _insertBlock(
+    Map<String, dynamic> targetBlock,
+    String type, {
+    bool before = false,
+  }) async {
     final index = _blocks.indexOf(targetBlock);
     if (index < 0) return;
 

@@ -55,7 +55,7 @@ class BookshelfItem {
 }
 
 // 筛选类型枚举
-enum FilterType { all, novels, images, series }
+enum FilterType { all, novels, richNovels, comics, images, series }
 
 // 排序类型枚举
 enum SortType {
@@ -80,13 +80,13 @@ class _BookshelfScreenState extends State<BookshelfScreen> {
   SortType _currentSort = SortType.importTimeDesc;
   bool _multiSelect = false;
   final Set<String> _selectedIds = {};
-  
+
   // 搜索相关
   bool _isSearching = false;
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
   bool _isLoading = true;
-  
+
   StreamSubscription? _shelfSubscription;
 
   @override
@@ -99,7 +99,7 @@ class _BookshelfScreenState extends State<BookshelfScreen> {
       _loadBookshelfItems();
     });
   }
-  
+
   @override
   void dispose() {
     _shelfSubscription?.cancel();
@@ -130,8 +130,7 @@ class _BookshelfScreenState extends State<BookshelfScreen> {
             isComic: e['isComic'] == true,
             isRichNovel: e['isRichNovel'] == true,
             isSeries: e['isSeries'] == true,
-            tags:
-                (e['tags'] as List?)?.map((e) => e.toString()).toList() ?? [],
+            tags: (e['tags'] as List?)?.map((e) => e.toString()).toList() ?? [],
           ),
         )
         .toList();
@@ -167,11 +166,21 @@ class _BookshelfScreenState extends State<BookshelfScreen> {
     switch (_currentFilter) {
       case FilterType.novels:
         // 包含旧版小说和新版富文本小说
-        filtered = filtered.where((item) => (item.isNovel || item.isRichNovel == true) && !item.isSeries).toList();
+        filtered = filtered
+            .where(
+              (item) =>
+                  (item.isNovel || item.isRichNovel == true) && !item.isSeries,
+            )
+            .toList();
         break;
       case FilterType.images:
         // 排除旧版小说和富文本小说
-        filtered = filtered.where((item) => !item.isNovel && item.isRichNovel != true && !item.isSeries).toList();
+        filtered = filtered
+            .where(
+              (item) =>
+                  !item.isNovel && item.isRichNovel != true && !item.isSeries,
+            )
+            .toList();
         break;
       case FilterType.series:
         filtered = filtered.where((item) => item.isSeries).toList();
@@ -232,19 +241,26 @@ class _BookshelfScreenState extends State<BookshelfScreen> {
       await Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (context) => SeriesDetailScreen(
-            item: item,
-            rustBridge: widget.rustBridge,
-          ),
+          builder: (context) =>
+              SeriesDetailScreen(item: item, rustBridge: widget.rustBridge),
         ),
       );
       _loadBookshelfItems();
       return;
     }
 
+    if (item.isComic == true) {
+      await _openEncryptedContainerDirect(item);
+      return;
+    }
+
+    if (item.isRichNovel == true) {
+      await _openEncryptedContainerDirect(item);
+      return;
+    }
+
     if (item.isNovel) {
       // 尝试自动修复：如果是 RichNovel 被误标为 Novel，尝试解密并打开
-      // 先尝试解密
       final result = await _decryptWithRetry(item);
       if (result != null) {
         final (decrypted, password) = result;
@@ -252,48 +268,48 @@ class _BookshelfScreenState extends State<BookshelfScreen> {
           // 尝试解析为 RichNovel
           final packed = await compute(unpackRichEntry, decrypted);
           if (packed['manifest'] != null) {
-             // 确实是 RichNovel，修复元数据
-             final updatedItem = {
-               'id': item.id,
-               'title': item.title,
-               'author': item.author,
-               'coverPath': item.coverPath,
-               'filePath': item.filePath,
-               'isNovel': false,
-               'isRichNovel': true,
-               'importTime': item.importTime.toIso8601String(),
-               'creationTime': item.creationTime?.toIso8601String(),
-               'authorSignature': item.authorSignature,
-               'authorAvatarPath': item.authorAvatarPath,
-               'authorDeviceId': item.authorDeviceId,
-               'tags': item.tags,
-             };
-             
-             // 保存修复后的元数据
-             await StorageService.saveShelfItem(updatedItem, password: password);
-             
-             // 刷新列表（可选，因为马上要跳走了）
-             _loadBookshelfItems();
-             
-             // 打开详情页
-             if (!mounted) return;
-             final manifest = packed['manifest'] as Map<String, dynamic>;
-             final start = packed['start'] as int;
-             await Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => RichDetailScreen(
-                    manifest: manifest,
-                    payload: decrypted,
-                    start: start,
-                    sourcePath: item.filePath,
-                    password: password,
-                    fromShelf: true,
-                    itemId: item.id,
-                  ),
+            // 确实是 RichNovel，修复元数据
+            final updatedItem = {
+              'id': item.id,
+              'title': item.title,
+              'author': item.author,
+              'coverPath': item.coverPath,
+              'filePath': item.filePath,
+              'isNovel': false,
+              'isRichNovel': true,
+              'importTime': item.importTime.toIso8601String(),
+              'creationTime': item.creationTime?.toIso8601String(),
+              'authorSignature': item.authorSignature,
+              'authorAvatarPath': item.authorAvatarPath,
+              'authorDeviceId': item.authorDeviceId,
+              'tags': item.tags,
+            };
+
+            // 保存修复后的元数据
+            await StorageService.saveShelfItem(updatedItem, password: password);
+
+            // 刷新列表（可选，因为马上要跳走了）
+            _loadBookshelfItems();
+
+            // 打开详情页
+            if (!mounted) return;
+            final manifest = packed['manifest'] as Map<String, dynamic>;
+            final start = packed['start'] as int;
+            await Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => RichDetailScreen(
+                  manifest: manifest,
+                  payload: decrypted,
+                  start: start,
+                  sourcePath: item.filePath,
+                  password: password,
+                  fromShelf: true,
+                  itemId: item.id,
                 ),
-             );
-             return;
+              ),
+            );
+            return;
           }
         } catch (_) {
           // 解析失败，不是 RichNovel，继续报错
@@ -301,9 +317,9 @@ class _BookshelfScreenState extends State<BookshelfScreen> {
       }
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('该格式已弃用，无法打开')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('该格式已弃用，无法打开')));
       }
       return;
     } else {
@@ -487,7 +503,10 @@ class _BookshelfScreenState extends State<BookshelfScreen> {
               ),
             ],
             ListTile(
-              leading: Icon(Icons.delete_outline, color: theme.colorScheme.error),
+              leading: Icon(
+                Icons.delete_outline,
+                color: theme.colorScheme.error,
+              ),
               title: Text(
                 '删除',
                 style: TextStyle(color: theme.colorScheme.error),
@@ -536,15 +555,18 @@ class _BookshelfScreenState extends State<BookshelfScreen> {
     }
   }
 
-  Future<void> _showMoveToFolderDialog(List<BookshelfItem> items, {required bool isCopy}) async {
+  Future<void> _showMoveToFolderDialog(
+    List<BookshelfItem> items, {
+    required bool isCopy,
+  }) async {
     // 筛选出所有文件夹（系列）
     final seriesItems = _items.where((e) => e.isSeries).toList();
-    
+
     if (seriesItems.isEmpty) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('没有可用的文件夹，请先创建一个')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('没有可用的文件夹，请先创建一个')));
       }
       return;
     }
@@ -556,7 +578,10 @@ class _BookshelfScreenState extends State<BookshelfScreen> {
           children: [
             const Padding(
               padding: EdgeInsets.all(16.0),
-              child: Text('选择目标文件夹', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              child: Text(
+                '选择目标文件夹',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
             ),
             Expanded(
               child: ListView.builder(
@@ -571,9 +596,15 @@ class _BookshelfScreenState extends State<BookshelfScreen> {
                       try {
                         for (final item in items) {
                           if (isCopy) {
-                            await StorageService.copyItemToSeries(item.id, s.id);
+                            await StorageService.copyItemToSeries(
+                              item.id,
+                              s.id,
+                            );
                           } else {
-                            await StorageService.moveItemToSeries(item.id, s.id);
+                            await StorageService.moveItemToSeries(
+                              item.id,
+                              s.id,
+                            );
                           }
                         }
                         _loadBookshelfItems();
@@ -591,7 +622,9 @@ class _BookshelfScreenState extends State<BookshelfScreen> {
                       } catch (e) {
                         if (mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('${isCopy ? '复制' : '移动'}失败: $e')),
+                            SnackBar(
+                              content: Text('${isCopy ? '复制' : '移动'}失败: $e'),
+                            ),
                           );
                         }
                       }
@@ -639,15 +672,15 @@ class _BookshelfScreenState extends State<BookshelfScreen> {
         await StorageService.createSeries(name.trim());
         _loadBookshelfItems();
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('文件夹已创建')),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('文件夹已创建')));
         }
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('创建失败: $e')),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('创建失败: $e')));
         }
       }
     }
@@ -659,24 +692,26 @@ class _BookshelfScreenState extends State<BookshelfScreen> {
       allowedExtensions: ['mxzip'],
     );
     if (result == null || result.files.isEmpty) return;
-    
+
     final path = result.files.single.path;
     if (path == null) return;
 
     final controller = LoadingController(0);
     if (!mounted) return;
     showLoadingDialog(context, controller: controller, label: '正在导入...');
-    
+
     try {
       await StorageService.importSeriesFromZip(path);
       if (mounted) Navigator.pop(context);
       _loadBookshelfItems();
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('导入成功')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('导入成功')));
       }
     } on SeriesImportException catch (e) {
       if (mounted) Navigator.pop(context); // Close loading
-      
+
       if (e.type == 'password_required' || e.type == 'invalid_password') {
         // Prompt for password
         String? password;
@@ -692,8 +727,13 @@ class _BookshelfScreenState extends State<BookshelfScreen> {
                 content: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    if (!isFirst) 
-                      Text('密码错误，请重试', style: TextStyle(color: Theme.of(context).colorScheme.error)),
+                    if (!isFirst)
+                      Text(
+                        '密码错误，请重试',
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.error,
+                        ),
+                      ),
                     TextField(
                       controller: ctrl,
                       obscureText: true,
@@ -703,16 +743,22 @@ class _BookshelfScreenState extends State<BookshelfScreen> {
                   ],
                 ),
                 actions: [
-                  TextButton(onPressed: () => Navigator.pop(context), child: const Text('取消')),
-                  TextButton(onPressed: () => Navigator.pop(context, ctrl.text), child: const Text('确定')),
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('取消'),
+                  ),
+                  TextButton(
+                    onPressed: () => Navigator.pop(context, ctrl.text),
+                    child: const Text('确定'),
+                  ),
                 ],
               );
             },
           );
-          
+
           if (input == null) return; // Cancelled
           password = input;
-          
+
           // Retry import
           if (!mounted) return;
           showLoadingDialog(context, controller: controller, label: '正在导入...');
@@ -720,9 +766,11 @@ class _BookshelfScreenState extends State<BookshelfScreen> {
             await StorageService.importSeriesFromZip(path, password: password);
             if (mounted) Navigator.pop(context);
             _loadBookshelfItems();
-             if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('导入成功')));
-             }
+            if (mounted) {
+              ScaffoldMessenger.of(
+                context,
+              ).showSnackBar(const SnackBar(content: Text('导入成功')));
+            }
             return;
           } on SeriesImportException catch (retryE) {
             if (mounted) Navigator.pop(context);
@@ -730,25 +778,31 @@ class _BookshelfScreenState extends State<BookshelfScreen> {
               isFirst = false;
               continue;
             } else {
-               // Other error
-               if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('导入失败: $retryE')));
-               }
-               return;
+              // Other error
+              if (mounted) {
+                ScaffoldMessenger.of(
+                  context,
+                ).showSnackBar(SnackBar(content: Text('导入失败: $retryE')));
+              }
+              return;
             }
           } catch (otherE) {
-             if (mounted) Navigator.pop(context);
-             if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('导入失败: $otherE')));
-             }
-             return;
+            if (mounted) Navigator.pop(context);
+            if (mounted) {
+              ScaffoldMessenger.of(
+                context,
+              ).showSnackBar(SnackBar(content: Text('导入失败: $otherE')));
+            }
+            return;
           }
         }
       }
     } catch (e) {
       if (mounted) Navigator.pop(context);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('导入失败: $e')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('导入失败: $e')));
       }
     }
   }
@@ -775,10 +829,30 @@ class _BookshelfScreenState extends State<BookshelfScreen> {
     // 根据当前筛选条件过滤项目
     switch (_currentFilter) {
       case FilterType.novels:
-        displayItems = displayItems.where((item) => item.isNovel).toList();
+        displayItems = displayItems
+            .where((item) => item.isNovel && !item.isSeries)
+            .toList();
+        break;
+      case FilterType.richNovels:
+        displayItems = displayItems
+            .where((item) => item.isRichNovel == true && !item.isSeries)
+            .toList();
+        break;
+      case FilterType.comics:
+        displayItems = displayItems
+            .where((item) => item.isComic == true && !item.isSeries)
+            .toList();
         break;
       case FilterType.images:
-        displayItems = displayItems.where((item) => !item.isNovel).toList();
+        displayItems = displayItems
+            .where(
+              (item) =>
+                  !item.isNovel &&
+                  item.isRichNovel != true &&
+                  item.isComic != true &&
+                  !item.isSeries,
+            )
+            .toList();
         break;
       case FilterType.series:
         displayItems = displayItems.where((item) => item.isSeries).toList();
@@ -904,8 +978,8 @@ class _BookshelfScreenState extends State<BookshelfScreen> {
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator())
                 : displayItems.isEmpty
-                    ? _buildEmptyState(theme)
-                    : _buildBooksGrid(displayItems, theme),
+                ? _buildEmptyState(theme)
+                : _buildBooksGrid(displayItems, theme),
           ),
         ],
       ),
@@ -919,7 +993,9 @@ class _BookshelfScreenState extends State<BookshelfScreen> {
                     icon: const Icon(Icons.drive_file_move_outline),
                     tooltip: '移动到文件夹',
                     onPressed: () {
-                      final items = _items.where((e) => _selectedIds.contains(e.id)).toList();
+                      final items = _items
+                          .where((e) => _selectedIds.contains(e.id))
+                          .toList();
                       _showMoveToFolderDialog(items, isCopy: false);
                     },
                   ),
@@ -927,7 +1003,9 @@ class _BookshelfScreenState extends State<BookshelfScreen> {
                     icon: const Icon(Icons.file_copy_outlined),
                     tooltip: '复制到文件夹',
                     onPressed: () {
-                      final items = _items.where((e) => _selectedIds.contains(e.id)).toList();
+                      final items = _items
+                          .where((e) => _selectedIds.contains(e.id))
+                          .toList();
                       _showMoveToFolderDialog(items, isCopy: true);
                     },
                   ),
@@ -940,7 +1018,9 @@ class _BookshelfScreenState extends State<BookshelfScreen> {
                         context: context,
                         builder: (context) => AlertDialog(
                           title: const Text('删除选中'),
-                          content: Text('确定删除选中的 ${_selectedIds.length} 个项目吗？此操作不可恢复。'),
+                          content: Text(
+                            '确定删除选中的 ${_selectedIds.length} 个项目吗？此操作不可恢复。',
+                          ),
                           actions: [
                             TextButton(
                               onPressed: () => Navigator.pop(context, false),
@@ -953,7 +1033,7 @@ class _BookshelfScreenState extends State<BookshelfScreen> {
                           ],
                         ),
                       );
-                      
+
                       if (confirmed == true) {
                         for (final id in _selectedIds) {
                           await StorageService.removeShelfItem(id);
@@ -996,11 +1076,15 @@ class _BookshelfScreenState extends State<BookshelfScreen> {
               children: [
                 _buildFilterChip('全部', FilterType.all, theme),
                 const SizedBox(width: 8),
-                _buildFilterChip('小说', FilterType.novels, theme),
+                _buildFilterChip('小说 (旧)', FilterType.novels, theme),
+                const SizedBox(width: 8),
+                _buildFilterChip('富文本', FilterType.richNovels, theme),
+                const SizedBox(width: 8),
+                _buildFilterChip('漫画', FilterType.comics, theme),
                 const SizedBox(width: 8),
                 _buildFilterChip('图片', FilterType.images, theme),
                 const SizedBox(width: 8),
-                _buildFilterChip('系列', FilterType.series, theme),
+                _buildFilterChip('文件夹', FilterType.series, theme),
               ],
             ),
           ),
@@ -1170,7 +1254,12 @@ class _BookshelfScreenState extends State<BookshelfScreen> {
                               color: theme.colorScheme.surfaceContainerHighest,
                               child: Center(
                                 child: Icon(
-                                  item.isNovel ? Icons.menu_book : Icons.image,
+                                  item.isComic == true
+                                      ? Icons.collections_bookmark
+                                      : (item.isRichNovel == true ||
+                                                item.isNovel
+                                            ? Icons.menu_book
+                                            : Icons.image),
                                   size: 48,
                                   color: theme.colorScheme.onSurface.withValues(
                                     alpha: 0.3,
@@ -1188,9 +1277,12 @@ class _BookshelfScreenState extends State<BookshelfScreen> {
                                     errorBuilder: (context, error, stackTrace) {
                                       return Center(
                                         child: Icon(
-                                          item.isNovel
-                                              ? Icons.menu_book
-                                              : Icons.image,
+                                          item.isComic == true
+                                              ? Icons.collections_bookmark
+                                              : (item.isRichNovel == true ||
+                                                        item.isNovel
+                                                    ? Icons.menu_book
+                                                    : Icons.image),
                                           size: 48,
                                           color: theme.colorScheme.onSurface
                                               .withValues(alpha: 0.3),
@@ -1208,9 +1300,12 @@ class _BookshelfScreenState extends State<BookshelfScreen> {
                                     errorBuilder: (context, error, stackTrace) {
                                       return Center(
                                         child: Icon(
-                                          item.isNovel
-                                              ? Icons.menu_book
-                                              : Icons.image,
+                                          item.isComic == true
+                                              ? Icons.collections_bookmark
+                                              : (item.isRichNovel == true ||
+                                                        item.isNovel
+                                                    ? Icons.menu_book
+                                                    : Icons.image),
                                           size: 48,
                                           color: theme.colorScheme.onSurface
                                               .withValues(alpha: 0.3),
@@ -1222,7 +1317,12 @@ class _BookshelfScreenState extends State<BookshelfScreen> {
                               } catch (_) {}
                               return Center(
                                 child: Icon(
-                                  item.isNovel ? Icons.menu_book : Icons.image,
+                                  item.isComic == true
+                                      ? Icons.collections_bookmark
+                                      : (item.isRichNovel == true ||
+                                                item.isNovel
+                                            ? Icons.menu_book
+                                            : Icons.image),
                                   size: 48,
                                   color: theme.colorScheme.onSurface.withValues(
                                     alpha: 0.3,
@@ -1244,23 +1344,29 @@ class _BookshelfScreenState extends State<BookshelfScreen> {
                       decoration: BoxDecoration(
                         color: item.isSeries
                             ? theme.colorScheme.tertiary
-                            : (item.isNovel
-                                ? theme.colorScheme.primary
-                                : theme.colorScheme.secondary),
+                            : (item.isComic == true
+                                  ? theme.colorScheme.secondary
+                                  : (item.isRichNovel == true || item.isNovel
+                                        ? theme.colorScheme.primary
+                                        : theme.colorScheme.outline)),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Text(
                         item.isSeries
                             ? '系列'
-                            : (item.isNovel ? '小说' : '图片'),
+                            : (item.isComic == true
+                                  ? '漫画'
+                                  : (item.isRichNovel == true || item.isNovel
+                                        ? '小说'
+                                        : '图片')),
                         style: TextStyle(
                           fontSize: 10,
                           fontWeight: FontWeight.w600,
                           color: item.isSeries
                               ? theme.colorScheme.onTertiary
-                              : (item.isNovel
-                                  ? theme.colorScheme.onPrimary
-                                  : theme.colorScheme.onSecondary),
+                              : (item.isRichNovel == true || item.isNovel
+                                    ? theme.colorScheme.onPrimary
+                                    : theme.colorScheme.onSecondary),
                         ),
                       ),
                     ),

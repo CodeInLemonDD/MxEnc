@@ -98,8 +98,9 @@ class TtsService {
       debugPrint("TTS Speak call successful");
     } else {
       debugPrint("TTS Speak call failed (result: $result)");
-      if (_onError != null)
+      if (_onError != null) {
         _onError!("播放指令执行失败 (Result Code: $result)。请确认 TTS 引擎是否正在运行。");
+      }
     }
   }
 

@@ -67,7 +67,7 @@ class _RichReaderScreenState extends State<RichReaderScreen> {
         });
       }
     });
-    _restoreProgress();
+    _restoreProgress(requestedChapter: widget.initialChapterIndex);
     // Use completion handler to drive the loop securely.
     _ttsService.setCompletionHandler(() async {
       // When one segment finishes, we ensure the queue stays populated.
@@ -236,7 +236,7 @@ class _RichReaderScreenState extends State<RichReaderScreen> {
     });
   }
 
-  Future<void> _restoreProgress() async {
+  Future<void> _restoreProgress({int? requestedChapter}) async {
     if (widget.itemId == null) return;
     try {
       final items = await StorageService.loadShelf();
@@ -249,7 +249,11 @@ class _RichReaderScreenState extends State<RichReaderScreen> {
         final chIdx = (p['chapterIndex'] as int?) ?? 0;
         final offset = (p['offset'] as num?)?.toDouble() ?? 0.0;
 
-        if (mounted) {
+        // Only restore if no specific chapter was requested OR it matches the requested one
+        bool shouldRestore =
+            requestedChapter == null || requestedChapter == chIdx;
+
+        if (shouldRestore && mounted) {
           if (chIdx != _chapterIndex) {
             setState(() {
               _chapterIndex = chIdx;
@@ -459,7 +463,7 @@ class _RichReaderScreenState extends State<RichReaderScreen> {
                     ),
                     color: Theme.of(
                       context,
-                    ).colorScheme.surface.withOpacity(0.9),
+                    ).colorScheme.surface.withValues(alpha: 0.9),
                     child: Row(
                       children: [
                         IconButton(
@@ -500,7 +504,7 @@ class _RichReaderScreenState extends State<RichReaderScreen> {
                     ),
                     color: Theme.of(
                       context,
-                    ).colorScheme.surface.withOpacity(0.9),
+                    ).colorScheme.surface.withValues(alpha: 0.9),
                     child: Row(
                       children: [
                         IconButton(

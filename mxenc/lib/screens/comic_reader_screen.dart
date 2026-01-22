@@ -10,11 +10,7 @@ import '../utils/dynamic_watermark.dart';
 import '../utils/platform_secure.dart';
 import '../utils/storage_service.dart';
 
-enum ComicReaderMode {
-  vertical,
-  leftToRight,
-  rightToLeft,
-}
+enum ComicReaderMode { vertical, leftToRight, rightToLeft }
 
 class ComicReaderScreen extends StatefulWidget {
   final Map<String, dynamic> manifest;
@@ -24,7 +20,7 @@ class ComicReaderScreen extends StatefulWidget {
   final String? password;
   final int initialChapterIndex;
   final String? itemId;
-  
+
   const ComicReaderScreen({
     super.key,
     required this.manifest,
@@ -45,29 +41,31 @@ class _ComicReaderScreenState extends State<ComicReaderScreen>
   bool _overlayVisible = false;
   int _currentIndex = 0; // Current image index within the current chapter
   int _chapterIndex = 0; // Current chapter index
-  
+
   // Controllers
   final ItemScrollController _itemScrollController = ItemScrollController();
-  final ItemPositionsListener _itemPositionsListener = ItemPositionsListener.create();
+  final ItemPositionsListener _itemPositionsListener =
+      ItemPositionsListener.create();
   late PageController _horizontalController;
-  final TransformationController _transformationController = TransformationController();
-  
+  final TransformationController _transformationController =
+      TransformationController();
+
   ComicReaderMode _readerMode = ComicReaderMode.vertical;
-  
+
   // To handle physics conflict between Zoom and Scroll
   ScrollPhysics _verticalPhysics = const AlwaysScrollableScrollPhysics();
 
   // Cache settings
   int? _devicePixelWidth;
   bool _isHighRes = false;
-  
+
   // Image Bytes Cache to prevent flickering
   final Map<int, Uint8List> _imageCache = {};
 
   List<Map<String, dynamic>> get _chapters =>
       (widget.manifest['chapters'] as List<dynamic>? ?? [])
           .cast<Map<String, dynamic>>();
-  
+
   List<Map<String, dynamic>> get _idx =>
       (widget.manifest['imagesIndex'] as List<dynamic>? ?? [])
           .cast<Map<String, dynamic>>();
@@ -86,60 +84,70 @@ class _ComicReaderScreenState extends State<ComicReaderScreen>
     super.initState();
     PlatformSecure.enableSecureScreen();
     _initData();
-    
+
     // Initialize double tap animation controller
-    _doubleTapAnimationController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 200),
-    )..addListener(() {
-      _transformationController.value = _doubleTapAnimation!.value;
-    });
+    _doubleTapAnimationController =
+        AnimationController(
+          vsync: this,
+          duration: const Duration(milliseconds: 200),
+        )..addListener(() {
+          _transformationController.value = _doubleTapAnimation!.value;
+        });
 
     // Memory Optimization: Increase cache size for reader session
     PaintingBinding.instance.imageCache.maximumSizeBytes = 300 * 1024 * 1024;
-    
+
     // Initialize horizontal controller
     _horizontalController = PageController(initialPage: _currentIndex);
-    
+
     // Listen to vertical scroll positions to update index and preload
     _itemPositionsListener.itemPositions.addListener(_updateIndexFromScroll);
-    
+
     // Listen to transformation changes to toggle scroll physics
     _transformationController.addListener(_onTransformationChange);
-    
+
     // Immersive mode removed to prevent flickering
     // SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
-    
-    _restoreProgress();
+
+    _restoreProgress(requestedChapter: widget.initialChapterIndex);
   }
 
-  Future<void> _restoreProgress() async {
+  Future<void> _restoreProgress({int? requestedChapter}) async {
     if (widget.itemId == null) return;
     try {
       final items = await StorageService.loadShelf();
-      final item = items.firstWhere((e) => e['id'] == widget.itemId, orElse: () => {});
+      final item = items.firstWhere(
+        (e) => e['id'] == widget.itemId,
+        orElse: () => {},
+      );
       if (item.isNotEmpty && item['readProgress'] != null) {
         final p = item['readProgress'];
         final chIdx = (p['chapterIndex'] as int?) ?? 0;
         final imgIdx = (p['imageIndex'] as int?) ?? 0;
-        
-        if (chIdx != _chapterIndex || imgIdx != _currentIndex) {
+
+        // Only restore if no specific chapter was requested OR it matches the requested one
+        bool shouldRestore =
+            requestedChapter == null || requestedChapter == chIdx;
+
+        if (shouldRestore &&
+            (chIdx != _chapterIndex || imgIdx != _currentIndex)) {
           if (mounted) {
-             _onChapterChanged(chIdx);
-             // Wait for chapter change to settle?
-             // Actually _onChapterChanged resets _currentIndex to 0.
-             // We need to set it to imgIdx after.
-             setState(() {
-               _currentIndex = imgIdx;
-             });
-             
-             WidgetsBinding.instance.addPostFrameCallback((_) {
-                if (_readerMode == ComicReaderMode.vertical) {
-                   _itemScrollController.jumpTo(index: imgIdx);
-                } else {
-                   _horizontalController.jumpToPage(imgIdx);
+            _onChapterChanged(chIdx);
+            setState(() {
+              _currentIndex = imgIdx;
+            });
+
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (_readerMode == ComicReaderMode.vertical) {
+                if (_itemScrollController.isAttached) {
+                  _itemScrollController.jumpTo(index: imgIdx);
                 }
-             });
+              } else {
+                if (_horizontalController.hasClients) {
+                  _horizontalController.jumpToPage(imgIdx);
+                }
+              }
+            });
           }
         }
       }
@@ -154,12 +162,16 @@ class _ComicReaderScreenState extends State<ComicReaderScreen>
     // Calculate device pixel width for downsampling
     if (_devicePixelWidth == null) {
       final mediaQuery = MediaQuery.of(context);
-      _devicePixelWidth = (mediaQuery.size.width * mediaQuery.devicePixelRatio).toInt();
+      _devicePixelWidth = (mediaQuery.size.width * mediaQuery.devicePixelRatio)
+          .toInt();
     }
   }
 
   void _initData() {
-    _chapterIndex = widget.initialChapterIndex.clamp(0, (_chapters.length - 1).clamp(0, 9999));
+    _chapterIndex = widget.initialChapterIndex.clamp(
+      0,
+      (_chapters.length - 1).clamp(0, 9999),
+    );
     _currentIndex = 0;
   }
 
@@ -179,20 +191,20 @@ class _ComicReaderScreenState extends State<ComicReaderScreen>
     _transformationController.removeListener(_onTransformationChange);
     _transformationController.dispose();
     PlatformSecure.disableSecureScreen();
-    
+
     // Clear local cache
     _imageCache.clear();
-    
+
     // CRITICAL: Manually clear image cache to release memory for other screens (e.g. Bookshelf covers)
     PaintingBinding.instance.imageCache.clear();
     PaintingBinding.instance.imageCache.clearLiveImages();
-    
+
     super.dispose();
   }
-  
+
   void _onTransformationChange() {
     final scale = _transformationController.value.getMaxScaleOnAxis();
-    
+
     // 1. Handle Scroll Physics
     // If zoomed in (scale > 1.0), disable list scrolling so InteractiveViewer handles panning
     if (scale > 1.05) {
@@ -225,24 +237,28 @@ class _ComicReaderScreenState extends State<ComicReaderScreen>
 
   void _updateIndexFromScroll() {
     if (_readerMode != ComicReaderMode.vertical) return;
-    
+
     final positions = _itemPositionsListener.itemPositions.value;
     if (positions.isNotEmpty) {
-      final visibleItems = positions.where((p) => p.itemTrailingEdge > 0 && p.itemLeadingEdge < 1).toList();
-      
+      final visibleItems = positions
+          .where((p) => p.itemTrailingEdge > 0 && p.itemLeadingEdge < 1)
+          .toList();
+
       if (visibleItems.isNotEmpty) {
-        visibleItems.sort((a, b) => a.itemLeadingEdge.compareTo(b.itemLeadingEdge));
+        visibleItems.sort(
+          (a, b) => a.itemLeadingEdge.compareTo(b.itemLeadingEdge),
+        );
         final firstVisible = visibleItems.first;
         int targetIndex = firstVisible.index;
-        
+
         if (_currentIndex != targetIndex) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
-             if (mounted) {
-               setState(() {
-                 _currentIndex = targetIndex;
-               });
-               _precacheImages(targetIndex);
-             }
+            if (mounted) {
+              setState(() {
+                _currentIndex = targetIndex;
+              });
+              _precacheImages(targetIndex);
+            }
           });
         }
       }
@@ -265,16 +281,13 @@ class _ComicReaderScreenState extends State<ComicReaderScreen>
     final bytes = _getImageBytes(imgRef);
     if (bytes != null && _devicePixelWidth != null) {
       // Use cacheWidth to prevent OOM
-      precacheImage(
-        ExtendedMemoryImageProvider(bytes), 
-        context
-      );
+      precacheImage(ExtendedMemoryImageProvider(bytes), context);
     }
   }
 
   void _onChapterChanged(int index) {
     if (index < 0 || index >= _chapters.length) return;
-    
+
     setState(() {
       _chapterIndex = index;
       _currentIndex = 0;
@@ -295,7 +308,7 @@ class _ComicReaderScreenState extends State<ComicReaderScreen>
     final imageId = (imgRef is Map && imgRef.containsKey('id'))
         ? imgRef['id'] as int
         : (imgRef is int ? imgRef : -1);
-    
+
     if (imageId >= 0 && imageId < _idx.length) {
       // Return cached bytes if available
       if (_imageCache.containsKey(imageId)) {
@@ -309,7 +322,7 @@ class _ComicReaderScreenState extends State<ComicReaderScreen>
         widget.payload.offsetInBytes + off,
         len,
       );
-      
+
       // Cache the bytes
       _imageCache[imageId] = bytes;
       return bytes;
@@ -322,7 +335,7 @@ class _ComicReaderScreenState extends State<ComicReaderScreen>
 
     final double scale = _transformationController.value.getMaxScaleOnAxis();
     final Matrix4 endMatrix;
-    
+
     if (scale > 1.0) {
       // Zoom out to 1.0
       endMatrix = Matrix4.identity();
@@ -330,28 +343,45 @@ class _ComicReaderScreenState extends State<ComicReaderScreen>
       // Zoom in to 2.5x at the tapped position
       final double targetScale = 2.5;
       final Offset tapPosition = details.localPosition;
-      
+
       // Calculate translation to keep the tap position focused
       // We want the point under the finger to remain under the finger after zoom
       // P_screen = P_world * scale + translate
       // We want P_screen to be same, but scale changes from 1.0 to 2.5
       // So translate must change.
-      
+
       final double x = -tapPosition.dx * (targetScale - 1);
       final double y = -tapPosition.dy * (targetScale - 1);
-      
+
       endMatrix = Matrix4(
-        targetScale, 0, 0, 0,
-        0, targetScale, 0, 0,
-        0, 0, 1, 0,
-        x, y, 0, 1,
+        targetScale,
+        0,
+        0,
+        0,
+        0,
+        targetScale,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        x,
+        y,
+        0,
+        1,
       );
     }
 
-    _doubleTapAnimation = Matrix4Tween(
-      begin: _transformationController.value,
-      end: endMatrix,
-    ).animate(CurveTween(curve: Curves.easeInOut).animate(_doubleTapAnimationController));
+    _doubleTapAnimation =
+        Matrix4Tween(
+          begin: _transformationController.value,
+          end: endMatrix,
+        ).animate(
+          CurveTween(
+            curve: Curves.easeInOut,
+          ).animate(_doubleTapAnimationController),
+        );
 
     _doubleTapAnimationController.forward(from: 0);
   }
@@ -362,23 +392,25 @@ class _ComicReaderScreenState extends State<ComicReaderScreen>
     final title = (widget.manifest['title']?.toString() ?? '漫画');
     final chapters = _chapters;
     final currentImages = _currentChapterImages;
-    
+
     return Scaffold(
       backgroundColor: Colors.black,
       body: Stack(
         children: [
           // Reader Layer
           GestureDetector(
-            onDoubleTapDown: _readerMode == ComicReaderMode.vertical ? _handleDoubleTap : null,
+            onDoubleTapDown: _readerMode == ComicReaderMode.vertical
+                ? _handleDoubleTap
+                : null,
             onTap: () => setState(() => _overlayVisible = !_overlayVisible),
             child: _buildReaderBody(currentImages),
           ),
-          
+
           // Watermark Layer
           Positioned.fill(
             child: IgnorePointer(child: const StaticWatermark(opacity: 0.1)),
           ),
-          
+
           // Overlay Layer (Top Bar)
           if (_overlayVisible)
             Positioned(
@@ -387,8 +419,13 @@ class _ComicReaderScreenState extends State<ComicReaderScreen>
               right: 0,
               child: SafeArea(
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.9),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.surface.withValues(alpha: 0.9),
                   child: Row(
                     children: [
                       IconButton(
@@ -407,7 +444,7 @@ class _ComicReaderScreenState extends State<ComicReaderScreen>
                 ),
               ),
             ),
-            
+
           // Overlay Layer (Bottom Bar)
           if (_overlayVisible)
             Positioned(
@@ -416,8 +453,13 @@ class _ComicReaderScreenState extends State<ComicReaderScreen>
               right: 0,
               child: SafeArea(
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.9),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.surface.withValues(alpha: 0.9),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -436,12 +478,17 @@ class _ComicReaderScreenState extends State<ComicReaderScreen>
                                 if (v) {
                                   setState(() {
                                     _readerMode = ComicReaderMode.vertical;
-                                    _transformationController.value = Matrix4.identity();
+                                    _transformationController.value =
+                                        Matrix4.identity();
                                   });
                                   // Sync position to vertical reader
-                                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                                  WidgetsBinding.instance.addPostFrameCallback((
+                                    _,
+                                  ) {
                                     if (_itemScrollController.isAttached) {
-                                      _itemScrollController.jumpTo(index: _currentIndex);
+                                      _itemScrollController.jumpTo(
+                                        index: _currentIndex,
+                                      );
                                     }
                                   });
                                 }
@@ -450,14 +497,22 @@ class _ComicReaderScreenState extends State<ComicReaderScreen>
                             const SizedBox(width: 8),
                             ChoiceChip(
                               label: const Text('从左向右'),
-                              selected: _readerMode == ComicReaderMode.leftToRight,
+                              selected:
+                                  _readerMode == ComicReaderMode.leftToRight,
                               onSelected: (v) {
                                 if (v) {
-                                  setState(() => _readerMode = ComicReaderMode.leftToRight);
+                                  setState(
+                                    () => _readerMode =
+                                        ComicReaderMode.leftToRight,
+                                  );
                                   // Sync position to horizontal reader
-                                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                                  WidgetsBinding.instance.addPostFrameCallback((
+                                    _,
+                                  ) {
                                     if (_horizontalController.hasClients) {
-                                      _horizontalController.jumpToPage(_currentIndex);
+                                      _horizontalController.jumpToPage(
+                                        _currentIndex,
+                                      );
                                     }
                                   });
                                 }
@@ -466,14 +521,22 @@ class _ComicReaderScreenState extends State<ComicReaderScreen>
                             const SizedBox(width: 8),
                             ChoiceChip(
                               label: const Text('从右向左'),
-                              selected: _readerMode == ComicReaderMode.rightToLeft,
+                              selected:
+                                  _readerMode == ComicReaderMode.rightToLeft,
                               onSelected: (v) {
                                 if (v) {
-                                  setState(() => _readerMode = ComicReaderMode.rightToLeft);
+                                  setState(
+                                    () => _readerMode =
+                                        ComicReaderMode.rightToLeft,
+                                  );
                                   // Sync position to horizontal reader
-                                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                                  WidgetsBinding.instance.addPostFrameCallback((
+                                    _,
+                                  ) {
                                     if (_horizontalController.hasClients) {
-                                      _horizontalController.jumpToPage(_currentIndex);
+                                      _horizontalController.jumpToPage(
+                                        _currentIndex,
+                                      );
                                     }
                                   });
                                 }
@@ -483,7 +546,7 @@ class _ComicReaderScreenState extends State<ComicReaderScreen>
                         ),
                       ),
                       const SizedBox(height: 8),
-                      
+
                       // Progress Slider
                       Row(
                         children: [
@@ -492,11 +555,16 @@ class _ComicReaderScreenState extends State<ComicReaderScreen>
                             child: Slider(
                               value: _currentIndex.toDouble(),
                               min: 0,
-                              max: (currentImages.length - 1).toDouble().clamp(0, double.infinity),
+                              max: (currentImages.length - 1).toDouble().clamp(
+                                0,
+                                double.infinity,
+                              ),
                               onChanged: (v) {
                                 final targetIndex = v.toInt();
                                 if (_readerMode == ComicReaderMode.vertical) {
-                                  _itemScrollController.jumpTo(index: targetIndex);
+                                  _itemScrollController.jumpTo(
+                                    index: targetIndex,
+                                  );
                                 } else {
                                   _horizontalController.jumpToPage(targetIndex);
                                 }
@@ -506,13 +574,14 @@ class _ComicReaderScreenState extends State<ComicReaderScreen>
                           ),
                         ],
                       ),
-                      
+
                       // Chapter Controls
                       Row(
                         children: [
                           IconButton(
                             onPressed: () {
-                              final isDark = themeProvider.mode == ThemeMode.dark;
+                              final isDark =
+                                  themeProvider.mode == ThemeMode.dark;
                               themeProvider.setDarkMode(!isDark);
                             },
                             icon: const Icon(Icons.nightlight_round),
@@ -540,7 +609,12 @@ class _ComicReaderScreenState extends State<ComicReaderScreen>
                           IconButton(
                             onPressed: () {
                               if (chapters.isNotEmpty) {
-                                _onChapterChanged((_chapterIndex - 1).clamp(0, chapters.length - 1));
+                                _onChapterChanged(
+                                  (_chapterIndex - 1).clamp(
+                                    0,
+                                    chapters.length - 1,
+                                  ),
+                                );
                               }
                             },
                             icon: const Icon(Icons.skip_previous),
@@ -548,7 +622,12 @@ class _ComicReaderScreenState extends State<ComicReaderScreen>
                           IconButton(
                             onPressed: () {
                               if (chapters.isNotEmpty) {
-                                _onChapterChanged((_chapterIndex + 1).clamp(0, chapters.length - 1));
+                                _onChapterChanged(
+                                  (_chapterIndex + 1).clamp(
+                                    0,
+                                    chapters.length - 1,
+                                  ),
+                                );
                               }
                             },
                             icon: const Icon(Icons.skip_next),
@@ -567,9 +646,11 @@ class _ComicReaderScreenState extends State<ComicReaderScreen>
 
   Widget _buildReaderBody(List<dynamic> currentImages) {
     if (currentImages.isEmpty) {
-      return const Center(child: Text('本章无图片', style: TextStyle(color: Colors.white)));
+      return const Center(
+        child: Text('本章无图片', style: TextStyle(color: Colors.white)),
+      );
     }
-    
+
     if (_readerMode == ComicReaderMode.vertical) {
       return _buildVerticalReader(currentImages);
     } else {
@@ -583,13 +664,16 @@ class _ComicReaderScreenState extends State<ComicReaderScreen>
       maxScale: 4.0,
       minScale: 1.0,
       child: ScrollablePositionedList.builder(
+        key: PageStorageKey(
+          'comic_reader_v_${widget.sourcePath}_$_chapterIndex',
+        ),
         itemCount: currentImages.length,
         itemScrollController: _itemScrollController,
         itemPositionsListener: _itemPositionsListener,
         physics: _verticalPhysics,
         padding: EdgeInsets.zero,
         // Performance Optimization: Reduce preloading extent to save memory
-        minCacheExtent: 600, 
+        minCacheExtent: 600,
         itemBuilder: (context, index) {
           return _buildSeamlessImage(currentImages[index]);
         },
@@ -615,8 +699,8 @@ class _ComicReaderScreenState extends State<ComicReaderScreen>
       loadStateChanged: (state) {
         if (state.extendedImageLoadState == LoadState.loading) {
           return const SizedBox(
-            height: 600, 
-            child: Center(child: CircularProgressIndicator(strokeWidth: 2))
+            height: 600,
+            child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
           );
         }
         return null;
@@ -626,6 +710,7 @@ class _ComicReaderScreenState extends State<ComicReaderScreen>
 
   Widget _buildHorizontalReader(List<dynamic> currentImages) {
     return PhotoViewGallery.builder(
+      key: PageStorageKey('comic_reader_h_${widget.sourcePath}_$_chapterIndex'),
       scrollPhysics: const BouncingScrollPhysics(),
       builder: (BuildContext context, int index) {
         final imgRef = currentImages[index];
@@ -633,14 +718,14 @@ class _ComicReaderScreenState extends State<ComicReaderScreen>
         return PhotoViewGalleryPageOptions(
           imageProvider: bytes != null
               // Horizontal mode: Load full resolution for better zoom quality
-              ? ExtendedMemoryImageProvider(bytes) 
+              ? ExtendedMemoryImageProvider(bytes)
               : const AssetImage('assets/placeholder.png') as ImageProvider,
           initialScale: PhotoViewComputedScale.contained,
           minScale: PhotoViewComputedScale.contained,
           maxScale: PhotoViewComputedScale.covered * 2.5,
           heroAttributes: PhotoViewHeroAttributes(tag: index),
           // Higher quality for zoom
-          filterQuality: FilterQuality.medium, 
+          filterQuality: FilterQuality.medium,
         );
       },
       itemCount: currentImages.length,
