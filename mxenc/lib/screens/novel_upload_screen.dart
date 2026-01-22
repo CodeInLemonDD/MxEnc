@@ -123,6 +123,7 @@ class _NovelUploadScreenState extends State<NovelUploadScreen> {
       _autosaveTimer?.cancel();
       _autosaveTimer = Timer(const Duration(seconds: 2), _autosaveNow);
     }
+
     _titleController.addListener(schedule);
     _authorController.addListener(schedule);
     _descriptionController.addListener(schedule);
@@ -176,7 +177,10 @@ class _NovelUploadScreenState extends State<NovelUploadScreen> {
       );
       if (cropped != null) {
         final tmp = await getTemporaryDirectory();
-        final path = p.join(tmp.path, 'cover_${DateTime.now().microsecondsSinceEpoch}.jpg');
+        final path = p.join(
+          tmp.path,
+          'cover_${DateTime.now().microsecondsSinceEpoch}.jpg',
+        );
         final f = File(path);
         await f.writeAsBytes(cropped);
         setState(() {
@@ -272,8 +276,8 @@ class _NovelUploadScreenState extends State<NovelUploadScreen> {
             child: const Text('取消'),
           ),
           TextButton(
-          onPressed: () {
-            if (titleController.text.trim().isEmpty) {
+            onPressed: () {
+              if (titleController.text.trim().isEmpty) {
                 ScaffoldMessenger.of(
                   context,
                 ).showSnackBar(const SnackBar(content: Text('章节标题不能为空')));
@@ -315,8 +319,13 @@ class _NovelUploadScreenState extends State<NovelUploadScreen> {
       final complete = await UserService().isProfileComplete();
       if (!complete) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('请先完善资料')));
-          await Navigator.push(context, MaterialPageRoute(builder: (_) => const OobeScreen()));
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('请先完善资料')));
+          await Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const OobeScreen()),
+          );
         }
         return;
       }
@@ -381,7 +390,11 @@ class _NovelUploadScreenState extends State<NovelUploadScreen> {
       baseJson['authorNickname'] = await us.getNickname() ?? '';
       baseJson['authorSignature'] = await us.getSignature() ?? '';
       baseJson['authorAvatarPath'] = await us.getAvatarPath() ?? '';
-      try { baseJson['authorDeviceId'] = await _authService.getDeviceId(); } catch (_) { baseJson['authorDeviceId'] = ''; }
+      try {
+        baseJson['authorDeviceId'] = await _authService.getDeviceId();
+      } catch (_) {
+        baseJson['authorDeviceId'] = '';
+      }
       final novelBytes = utf8.encode(jsonEncode(baseJson));
 
       // 准备小说元数据：用于预览的封面字节（若有）
@@ -402,12 +415,17 @@ class _NovelUploadScreenState extends State<NovelUploadScreen> {
       // 保存加密文件
       final filename = '${_novel.title}.novel.mxenc';
       String? initialSavePath;
-      
+
       if (Platform.isAndroid) {
-        final dir = await FilePicker.platform.getDirectoryPath(dialogTitle: '选择保存位置');
+        final dir = await FilePicker.platform.getDirectoryPath(
+          dialogTitle: '选择保存位置',
+        );
         if (dir != null && dir.isNotEmpty) {
           initialSavePath = path.join(dir, filename);
         }
+      } else if (Platform.isIOS) {
+        final dir = await getApplicationDocumentsDirectory();
+        initialSavePath = path.join(dir.path, filename);
       } else {
         final desktopPath = path.join(
           Platform.isWindows
@@ -416,7 +434,9 @@ class _NovelUploadScreenState extends State<NovelUploadScreen> {
           'Desktop',
           filename,
         );
-        initialSavePath = File(desktopPath).parent.existsSync() ? desktopPath : filename;
+        initialSavePath = File(desktopPath).parent.existsSync()
+            ? desktopPath
+            : filename;
       }
 
       String finalPath = initialSavePath ?? '';
@@ -424,13 +444,13 @@ class _NovelUploadScreenState extends State<NovelUploadScreen> {
 
       // Attempt 1: Selected path (if any)
       if (initialSavePath != null) {
-         try {
-            await File(initialSavePath).writeAsBytes(encryptedBytes);
-            finalPath = initialSavePath;
-            saved = true;
-         } catch (e) {
-            debugPrint('Initial save failed: $e');
-         }
+        try {
+          await File(initialSavePath).writeAsBytes(encryptedBytes);
+          finalPath = initialSavePath;
+          saved = true;
+        } catch (e) {
+          debugPrint('Initial save failed: $e');
+        }
       }
 
       // Attempt 2: Downloads (Android)
@@ -438,10 +458,10 @@ class _NovelUploadScreenState extends State<NovelUploadScreen> {
         try {
           final downloadsDir = Directory('/storage/emulated/0/Download');
           if (await downloadsDir.exists()) {
-             final fallbackPath = path.join(downloadsDir.path, filename);
-             await File(fallbackPath).writeAsBytes(encryptedBytes);
-             finalPath = fallbackPath;
-             saved = true;
+            final fallbackPath = path.join(downloadsDir.path, filename);
+            await File(fallbackPath).writeAsBytes(encryptedBytes);
+            finalPath = fallbackPath;
+            saved = true;
           }
         } catch (_) {}
       }
@@ -449,29 +469,29 @@ class _NovelUploadScreenState extends State<NovelUploadScreen> {
       // Attempt 3: External Storage
       if (!saved) {
         try {
-           final extDir = await getExternalStorageDirectory();
-           if (extDir != null) {
-             final fallbackPath = path.join(extDir.path, filename);
-             await File(fallbackPath).writeAsBytes(encryptedBytes);
-             finalPath = fallbackPath;
-             saved = true;
-           }
+          final extDir = await getExternalStorageDirectory();
+          if (extDir != null) {
+            final fallbackPath = path.join(extDir.path, filename);
+            await File(fallbackPath).writeAsBytes(encryptedBytes);
+            finalPath = fallbackPath;
+            saved = true;
+          }
         } catch (_) {}
       }
 
       // Attempt 4: Temporary
       if (!saved) {
         try {
-           final tempDir = await getTemporaryDirectory();
-           final fallbackPath = path.join(tempDir.path, filename);
-           await File(fallbackPath).writeAsBytes(encryptedBytes);
-           finalPath = fallbackPath;
-           saved = true;
+          final tempDir = await getTemporaryDirectory();
+          final fallbackPath = path.join(tempDir.path, filename);
+          await File(fallbackPath).writeAsBytes(encryptedBytes);
+          finalPath = fallbackPath;
+          saved = true;
         } catch (_) {}
       }
 
       if (!saved) {
-         throw Exception('无法保存文件，请检查权限');
+        throw Exception('无法保存文件，请检查权限');
       }
 
       if (mounted) {
@@ -911,7 +931,9 @@ class _NovelUploadScreenState extends State<NovelUploadScreen> {
                   Padding(
                     padding: const EdgeInsets.only(top: 12),
                     child: LinearProgressIndicator(
-                      backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+                      backgroundColor: Theme.of(
+                        context,
+                      ).colorScheme.surfaceContainerHighest,
                     ),
                   ),
 

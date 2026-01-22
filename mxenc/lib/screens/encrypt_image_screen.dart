@@ -162,23 +162,36 @@ class _EncryptImageScreenState extends State<EncryptImageScreen> {
       });
       loading.set(_progress);
       if (Platform.isAndroid) {
-        final dir = await FilePicker.platform.getDirectoryPath(dialogTitle: '选择保存位置');
+        final dir = await FilePicker.platform.getDirectoryPath(
+          dialogTitle: '选择保存位置',
+        );
         if (dir != null && dir.isNotEmpty) {
           savePath = path.join(dir, outName);
         } else {
           try {
-            final downloads = await getExternalStorageDirectories(type: StorageDirectory.downloads);
+            final downloads = await getExternalStorageDirectories(
+              type: StorageDirectory.downloads,
+            );
             if (downloads != null && downloads.isNotEmpty) {
               savePath = path.join(downloads.first.path, outName);
             } else {
               final ext = await getExternalStorageDirectory();
-              savePath = path.join((ext?.path ?? (await getTemporaryDirectory()).path), outName);
+              savePath = path.join(
+                (ext?.path ?? (await getTemporaryDirectory()).path),
+                outName,
+              );
             }
           } catch (_) {
             final ext = await getExternalStorageDirectory();
-            savePath = path.join((ext?.path ?? (await getTemporaryDirectory()).path), outName);
+            savePath = path.join(
+              (ext?.path ?? (await getTemporaryDirectory()).path),
+              outName,
+            );
           }
         }
+      } else if (Platform.isIOS) {
+        final dir = await getApplicationDocumentsDirectory();
+        savePath = path.join(dir.path, outName);
       } else {
         savePath = '${_selectedImage!.path}.mxenc';
       }
@@ -260,7 +273,10 @@ class _EncryptImageScreenState extends State<EncryptImageScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const Text('选择图片并设置密码', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                const Text(
+                  '选择图片并设置密码',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
                 const SizedBox(height: 16),
                 ElevatedButton.icon(
                   onPressed: _isEncrypting ? null : _pickImage,
@@ -271,18 +287,30 @@ class _EncryptImageScreenState extends State<EncryptImageScreen> {
                 if (_selectedImage != null)
                   ClipRRect(
                     borderRadius: BorderRadius.circular(12),
-                    child: Image.file(_selectedImage!, height: 200, fit: BoxFit.cover),
+                    child: Image.file(
+                      _selectedImage!,
+                      height: 200,
+                      fit: BoxFit.cover,
+                    ),
                   ),
                 const SizedBox(height: 16),
                 TextField(
                   controller: _passwordController,
                   decoration: InputDecoration(
                     labelText: '设置密码',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
                     suffixIcon: IconButton(
-                      icon: Icon(_obscurePassword ? Icons.visibility : Icons.visibility_off),
+                      icon: Icon(
+                        _obscurePassword
+                            ? Icons.visibility
+                            : Icons.visibility_off,
+                      ),
                       onPressed: () {
-                        setState(() { _obscurePassword = !_obscurePassword; });
+                        setState(() {
+                          _obscurePassword = !_obscurePassword;
+                        });
                       },
                     ),
                   ),
@@ -296,11 +324,19 @@ class _EncryptImageScreenState extends State<EncryptImageScreen> {
                   controller: _confirmPasswordController,
                   decoration: InputDecoration(
                     labelText: '确认密码',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
                     suffixIcon: IconButton(
-                      icon: Icon(_obscureConfirmPassword ? Icons.visibility : Icons.visibility_off),
+                      icon: Icon(
+                        _obscureConfirmPassword
+                            ? Icons.visibility
+                            : Icons.visibility_off,
+                      ),
                       onPressed: () {
-                        setState(() { _obscureConfirmPassword = !_obscureConfirmPassword; });
+                        setState(() {
+                          _obscureConfirmPassword = !_obscureConfirmPassword;
+                        });
                       },
                     ),
                   ),
@@ -318,13 +354,18 @@ class _EncryptImageScreenState extends State<EncryptImageScreen> {
                   Padding(
                     padding: const EdgeInsets.only(top: 12),
                     child: LinearProgressIndicator(
-                      backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+                      backgroundColor: Theme.of(
+                        context,
+                      ).colorScheme.surfaceContainerHighest,
                     ),
                   ),
                 if (_errorMessage != null)
                   Padding(
                     padding: const EdgeInsets.only(top: 12),
-                    child: Text(_errorMessage!, style: const TextStyle(color: Colors.red)),
+                    child: Text(
+                      _errorMessage!,
+                      style: const TextStyle(color: Colors.red),
+                    ),
                   ),
               ],
             ),

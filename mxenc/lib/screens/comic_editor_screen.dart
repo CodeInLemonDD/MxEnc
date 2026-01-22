@@ -325,6 +325,9 @@ class _ComicEditorScreenState extends State<ComicEditorScreen> {
       );
       if (dir == null || dir.isEmpty) return;
       savePath = path.join(dir, '$title.mxenc');
+    } else if (Platform.isIOS) {
+      final dir = await getApplicationDocumentsDirectory();
+      savePath = path.join(dir.path, '$title.mxenc');
     } else {
       savePath = await FilePicker.platform.saveFile(
         dialogTitle: '保存加密漫画',

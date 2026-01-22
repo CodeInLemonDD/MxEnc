@@ -114,7 +114,7 @@ class _EncryptScreenState extends State<EncryptScreen> {
       final originalFilename = path.basename(_selectedFile!.path);
       String encryptedFilePath;
       final outName = '$originalFilename.mxenc';
-      
+
       if (Platform.isAndroid) {
         final dir = await FilePicker.platform.getDirectoryPath(
           dialogTitle: '选择保存位置',
@@ -143,6 +143,9 @@ class _EncryptScreenState extends State<EncryptScreen> {
             );
           }
         }
+      } else if (Platform.isIOS) {
+        final dir = await getApplicationDocumentsDirectory();
+        encryptedFilePath = path.join(dir.path, outName);
       } else {
         encryptedFilePath = '${_selectedFile!.path}.mxenc';
       }
