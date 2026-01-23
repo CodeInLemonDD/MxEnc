@@ -27,9 +27,33 @@ class _RichEditorScreenState extends State<RichEditorScreen> {
   final List<Map<String, dynamic>> _blocks = [];
   final TextEditingController _titleController = TextEditingController();
   final List<Map<String, dynamic>> _chapters = [];
+  final Map<String, TextEditingController> _controllers = {};
   int _currentChapterIndex = -1;
   double _exportProgress = 0.0;
   String _exportLabel = '';
+
+  TextEditingController _getController(Map<String, dynamic> block) {
+    final id = block['id']?.toString() ?? '';
+    if (!_controllers.containsKey(id)) {
+      final ctrl = TextEditingController(
+        text: block['content']?.toString() ?? '',
+      );
+      ctrl.addListener(() {
+        block['content'] = ctrl.text;
+      });
+      _controllers[id] = ctrl;
+    }
+    return _controllers[id]!;
+  }
+
+  @override
+  void dispose() {
+    for (final ctrl in _controllers.values) {
+      ctrl.dispose();
+    }
+    _titleController.dispose();
+    super.dispose();
+  }
 
   @override
   void initState() {
@@ -669,6 +693,8 @@ class _RichEditorScreenState extends State<RichEditorScreen> {
                     )
                   : ListView.builder(
                       padding: const EdgeInsets.all(16),
+                      keyboardDismissBehavior:
+                          ScrollViewKeyboardDismissBehavior.onDrag,
                       itemCount: currentBlocks.length,
                       itemBuilder: (context, index) {
                         final block = currentBlocks[index];
@@ -782,7 +808,7 @@ class _RichEditorScreenState extends State<RichEditorScreen> {
             Padding(
               padding: const EdgeInsets.all(12),
               child: TextFormField(
-                initialValue: block['content'],
+                controller: _getController(block),
                 maxLines: null,
                 minLines: 3,
                 decoration: const InputDecoration(
@@ -790,7 +816,6 @@ class _RichEditorScreenState extends State<RichEditorScreen> {
                   hintText: '在此输入内容...',
                   isDense: true,
                 ),
-                onChanged: (v) => block['content'] = v,
               ),
             )
           else
@@ -907,6 +932,11 @@ class _RichEditorScreenState extends State<RichEditorScreen> {
 
   void _deleteBlock(Map<String, dynamic> block) {
     setState(() {
+      final id = block['id']?.toString();
+      if (id != null) {
+        _controllers[id]?.dispose();
+        _controllers.remove(id);
+      }
       _blocks.remove(block);
     });
   }

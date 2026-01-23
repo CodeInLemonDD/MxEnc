@@ -195,18 +195,27 @@ class _RichReaderScreenState extends State<RichReaderScreen> {
 
   List<String> _splitText(String text) {
     if (text.isEmpty) return [];
-    // Split by common punctuation, keeping delimiters AND following quotes/brackets
-    // Logic:
-    // 1. Match any non-punctuation characters (sentence body)
-    // 2. Match the punctuation [,.\?;!，。？；！\n]
-    // 3. Match any following closing quotes or brackets ["”'’\s]* to keep them attached
-    final regExp = RegExp(r'[^,.\?;!，。？；！\n]+[,.\?;!，。？；！\n]*["”’\)\uff09]*');
-    final matches = regExp.allMatches(text);
-    if (matches.isEmpty) return [text];
-    return matches
-        .map((m) => m.group(0)!)
-        .where((s) => s.trim().isNotEmpty)
-        .toList();
+    // We need a lossless split for rendering, but chunks for TTS.
+    // The previous regex was swallowing characters (like leading newlines or multiple newlines).
+    // New logic: capture everything.
+    final result = <String>[];
+    // This regex matches:
+    // 1. A sentence: some non-punctuation/newline chars, followed by punctuation and optional trailing quotes.
+    // 2. OR: One or more newlines.
+    // 3. OR: Any other single character (fallback to ensure no loss).
+    final regExp = RegExp(
+      r'[^,.\?;!，。？；！\n]+[,.\?;!，。？；！\n]*["”’\)\uff09]*|[\n]+|.',
+    );
+
+    for (final match in regExp.allMatches(text)) {
+      result.add(match.group(0)!);
+    }
+
+    // For rendering, we MUST NOT filter out whitespace-only segments.
+    // However, for TTS, we might want to skip them.
+    // Since this function is used for both, we return everything.
+    // The reader's build method handles highlighting; an empty/whitespace span is fine.
+    return result;
   }
 
   void _toggleTts() {
