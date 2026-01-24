@@ -8,16 +8,18 @@ use std::path::Path;
 #[no_mangle]
 #[cfg(target_os = "ios")]
 pub extern "C" fn dummy_method_to_enforce_bundling() {
-    // 正确的 FRB 符号签名
+    // 正确的 FRB 符号签名和补全
     extern "C" {
-        fn frb_get_rust_content_hash() -> u64;  // ✅ 返回 u64
-        fn store_dart_post_cobject(ptr: *const std::ffi::c_void);  // ✅ 函数指针
+        fn frb_get_rust_content_hash() -> u64;
+        fn store_dart_post_cobject(ptr: *const std::ffi::c_void);
+        fn frb_init_frb_dart_api_dl(api_dl_data: *mut std::ffi::c_void) -> isize;
     }
     
     unsafe {
         // 使用 black_box 防止编译器优化掉这些引用
         std::hint::black_box(frb_get_rust_content_hash as usize);
         std::hint::black_box(store_dart_post_cobject as usize);
+        std::hint::black_box(frb_init_frb_dart_api_dl as usize);
     }
 }
 

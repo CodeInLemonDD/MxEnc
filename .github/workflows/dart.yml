@@ -42,12 +42,19 @@ jobs:
 
       - name: Verify symbols in Rust library
         run: |
-          echo "=== 验证 Rust 静态库符号 ==="
-          nm -g ios/libs/libmxenc_core.a | grep frb_get_rust_content_hash || echo "❌ frb_get_rust_content_hash NOT FOUND"
-          nm -g ios/libs/libmxenc_core.a | grep store_dart_post_cobject || echo "❌ store_dart_post_cobject NOT FOUND"
-          nm -g ios/libs/libmxenc_core.a | grep dummy_method_to_enforce_bundling || echo "❌ dummy_method_to_enforce_bundling NOT FOUND"
-          # 必须存在，否则提前终止
-          nm -g ios/libs/libmxenc_core.a | grep -q frb_get_rust_content_hash || exit 1
+          cd rust_core
+          echo "=== 查找所有 FRB 符号 ==="
+          nm -g target/aarch64-apple-ios/release/libmxenc_core.a | grep " T _frb" || true
+          
+          echo "=== 验证关键符号 ==="
+          for symbol in frb_get_rust_content_hash store_dart_post_cobject frb_init_frb_dart_api_dl dummy_method_to_enforce_bundling; do
+            if nm -g target/aarch64-apple-ios/release/libmxenc_core.a | grep -q "_${symbol}"; then
+              echo "✅ ${symbol}"
+            else
+              echo "❌ ${symbol} NOT FOUND"
+              exit 1
+            fi
+          done
 
       - name: Update Pods
         run: pod repo update
@@ -60,10 +67,18 @@ jobs:
 
       - name: Verify symbols in iOS binary
         run: |
-          echo "=== 验证最终 iOS 产物符号 ==="
-          nm -g build/ios/iphoneos/Runner.app/Runner | grep frb_get_rust_content_hash || echo "❌ frb_get_rust_content_hash NOT FOUND"
-          nm -g build/ios/iphoneos/Runner.app/Runner | grep store_dart_post_cobject || echo "❌ store_dart_post_cobject NOT FOUND"
-          nm -g build/ios/iphoneos/Runner.app/Runner | grep dummy_method_to_enforce_bundling || echo "❌ dummy_method_to_enforce_bundling NOT FOUND"
+          echo "=== 查找所有 FRB 符号 ==="
+          nm -g build/ios/iphoneos/Runner.app/Runner | grep " T _frb" || true
+          
+          echo "=== 验证关键符号 ==="
+          for symbol in frb_get_rust_content_hash store_dart_post_cobject frb_init_frb_dart_api_dl dummy_method_to_enforce_bundling; do
+            if nm -g build/ios/iphoneos/Runner.app/Runner | grep -q "_${symbol}"; then
+              echo "✅ ${symbol}"
+            else
+              echo "❌ ${symbol} NOT FOUND IN FINAL BINARY"
+              exit 1
+            fi
+          done
 
       - name: Prepare IPA
         run: |

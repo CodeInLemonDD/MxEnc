@@ -1,0 +1,6 @@
+_frb_get_rust_content_hash
+_store_dart_post_cobject
+_frb_init_frb_dart_api_dl
+_dummy_method_to_enforce_bundling
+_frb_dart_opaque_drop
+_frb_thread_spawner
