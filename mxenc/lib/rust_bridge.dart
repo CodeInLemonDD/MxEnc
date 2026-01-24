@@ -2,6 +2,7 @@ import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'bridge_generated/frb_generated.dart';
 import 'bridge_generated/lib.dart' as rust_lib;
+import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart'; // Correct import for ExternalLibrary
 export 'bridge_generated/lib.dart' show ProgressEvent, ProgressPhase;
 
 // 文件类型枚举 (保留以兼容现有UI代码)
@@ -80,7 +81,15 @@ abstract class RustBridge {
   static Future<RustBridge> init() async {
     try {
       debugPrint('Initializing Rust library...');
-      await RustLib.init();
+
+      ExternalLibrary? lib;
+      if (defaultTargetPlatform == TargetPlatform.iOS) {
+        // on iOS, we link statically, so we use the main executable
+        lib = ExternalLibrary.process(iKnowHowToUseIt: true);
+        debugPrint('Using DynamicLibrary.process() for iOS static linking');
+      }
+
+      await RustLib.init(externalLibrary: lib);
       debugPrint('Rust library initialized successfully');
       return _RustBridgeFrb();
     } catch (e, stack) {
