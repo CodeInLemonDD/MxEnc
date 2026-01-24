@@ -7,7 +7,15 @@ use std::path::Path;
 
 #[no_mangle]
 pub extern "C" fn dummy_method_to_enforce_bundling() -> i64 {
+    // Force linker to keep FRB symbols
+    unsafe {
+        let _ = frb_get_rust_content_hash();
+    }
     dummy_var ^ 4611686018427387903
+}
+
+extern "C" {
+    fn frb_get_rust_content_hash() -> i32;
 }
 
 static dummy_var: i64 = 0;
