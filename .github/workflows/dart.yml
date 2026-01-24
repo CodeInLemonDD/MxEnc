@@ -23,14 +23,6 @@ jobs:
       - name: Get dependencies
         run: flutter pub get
 
-      - name: Install FRB codegen
-        run: |
-          dart pub global activate flutter_rust_bridge_codegen 2.11.1
-          echo "$HOME/.pub-cache/bin" >> $GITHUB_PATH
-
-      - name: Generate FRB bindings
-        run: flutter_rust_bridge_codegen --config-file flutter_rust_bridge.yaml
-
       - name: Extract version from pubspec.yaml
         id: get_version
         run: |
@@ -42,6 +34,14 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: aarch64-apple-ios
+
+      - name: Install FRB codegen
+        run: |
+          cargo install flutter_rust_bridge_codegen --version 2.11.1
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+
+      - name: Generate FRB bindings
+        run: flutter_rust_bridge_codegen --config-file flutter_rust_bridge.yaml
 
       # - name: Build Rust core for iOS
       #   run: |
