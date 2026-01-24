@@ -62,39 +62,89 @@ jobs:
           cd rust_core
           
           MAX_ITERATIONS=5
+          SUCCESS=false
+          
           for i in $(seq 1 $MAX_ITERATIONS); do
             echo "=== 编译尝试 $i/$MAX_ITERATIONS ==="
+            echo "当前符号列表："
+            cat ios_exported_symbols.txt
+            echo ""
             
-            # 使用 --lib 编译并捕获输出
-            if cargo build --lib --release --target aarch64-apple-ios 2>&1 | tee /tmp/build.log; then
+            # 清理之前的构建
+            if [ $i -gt 1 ]; then
+              cargo clean
+            fi
+            
+            # 尝试编译并保存退出码
+            set +e  # 临时允许错误
+            cargo build --lib --release --target aarch64-apple-ios 2>&1 | tee /tmp/build_$i.log
+            BUILD_EXIT_CODE=${PIPESTATUS[0]}  # 获取 cargo 的退出码，不是 tee 的
+            set -e
+            
+            if [ $BUILD_EXIT_CODE -eq 0 ]; then
               echo "✅ Rust 编译成功！"
+              SUCCESS=true
               break
             fi
             
-            echo "⚠️ 编译失败，分析是否有缺失符号..."
-            # 从错误信息中提取 Undefined symbols
-            MISSING=$(grep "Undefined symbols" -A 100 /tmp/build.log | grep '  "_' | sed 's/.*"_/_/' | sed 's/".*//' | grep -v "referenced from" | sort -u)
+            echo "⚠️ 编译失败 (退出码: $BUILD_EXIT_CODE)，分析缺失符号..."
+            
+            # 从错误信息中提取所有 Undefined symbols
+            MISSING=$(grep -A 100 "Undefined symbols for architecture arm64:" /tmp/build_$i.log | \
+                      grep '  "_' | \
+                      sed 's/.*"_/_/' | \
+                      sed 's/".*//' | \
+                      grep -v "referenced from" | \
+                      grep -v "ld:" | \
+                      sort -u)
             
             if [ -z "$MISSING" ]; then
-              echo "❌ 编译失败但未发现明显的缺失符号，可能是其他代码错误"
-              cat /tmp/build.log
+              echo "❌ 编译失败但未发现符号缺失问题，可能是其他错误："
+              echo "=== 最后 50 行日志 ==="
+              tail -50 /tmp/build_$i.log
               exit 1
             fi
             
-            echo "发现缺失符号并自动补齐："
+            MISSING_COUNT=$(echo "$MISSING" | wc -l | tr -d ' ')
+            echo "发现 $MISSING_COUNT 个缺失符号："
             echo "$MISSING"
+            echo ""
             
             # 添加到符号列表
             echo "$MISSING" >> ios_exported_symbols.txt
             sort -u ios_exported_symbols.txt -o ios_exported_symbols.txt
             
-            echo "=== 当前 ios_exported_symbols.txt 状态 ==="
+            echo "=== 更新后的符号列表 ($(wc -l < ios_exported_symbols.txt | tr -d ' ') 个符号) ==="
             cat ios_exported_symbols.txt
+            echo ""
           done
           
-          # 拷贝最终产物到 ios 目录 (如果脚本没做)
+          if [ "$SUCCESS" = false ]; then
+            echo "❌ 经过 $MAX_ITERATIONS 次尝试仍未成功"
+            exit 1
+          fi
+          
+          # 验证生成的库文件
+          echo "=== 验证编译产物 ==="
+          if [ ! -f "target/aarch64-apple-ios/release/libmxenc_core.a" ]; then
+            echo "❌ 错误：libmxenc_core.a 文件不存在！"
+            ls -la target/aarch64-apple-ios/release/
+            exit 1
+          fi
+          
+          ls -lh target/aarch64-apple-ios/release/libmxenc_core.a
+          
+          echo "=== 符号验证 ==="
+          nm -g target/aarch64-apple-ios/release/libmxenc_core.a | grep " T _frb" | head -20 || echo "警告：未找到 frb 符号"
+          
+          # 拷贝到 iOS 目录
           mkdir -p ../ios/libs
           cp target/aarch64-apple-ios/release/libmxenc_core.a ../ios/libs/
+          echo "✅ 已拷贝 libmxenc_core.a 到 ios/libs/"
+          
+          echo ""
+          echo "=== 最终符号列表 ($(wc -l < ios_exported_symbols.txt | tr -d ' ') 个符号) ==="
+          cat ios_exported_symbols.txt
 
       - name: Update Pods
         run: pod repo update
