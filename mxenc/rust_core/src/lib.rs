@@ -5,6 +5,13 @@ mod crypto;
 use std::fs;
 use std::path::Path;
 
+#[no_mangle]
+pub extern "C" fn dummy_method_to_enforce_bundling() -> i64 {
+    dummy_var ^ 4611686018427387903
+}
+
+static dummy_var: i64 = 0;
+
 // 导出文件类型枚举以供Dart使用
 #[frb(sync)]
 pub fn get_file_type_generic() -> u8 { FileType::Generic as u8 }
