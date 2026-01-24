@@ -474,6 +474,14 @@ class _RichEditorScreenState extends State<RichEditorScreen> {
     );
     if (password.isEmpty) return;
     final bridge = widget.rustBridge ?? await RustBridge.init();
+    if (bridge == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('加密组件初始化失败，请重启应用')));
+      }
+      return;
+    }
     _exportProgress = 0.7;
     _exportLabel = '加密中';
     setState(() {});
