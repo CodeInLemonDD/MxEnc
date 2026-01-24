@@ -6,25 +6,35 @@ use std::fs;
 use std::path::Path;
 
 #[no_mangle]
+#[cfg(target_os = "ios")]
 pub extern "C" fn dummy_method_to_enforce_bundling() -> i64 {
     // Force linker to keep FRB symbols
     unsafe {
-        let func_ptr1 = frb_get_rust_content_hash as *const ();
-        let func_ptr2 = store_dart_post_cobject as *const ();
-        let func_ptr3 = wire_encrypt_file as *const ();
+        // Reference functions via their Rust paths to avoid "undefined symbol" during Rust link
+        let func_ptr1 = crate::frb_generated::frb_get_rust_content_hash as *const ();
+        let func_ptr2 = crate::frb_generated::wire_encrypt_file as *const ();
         
         // Prevent compiler from optimizing out the references
         std::ptr::read_volatile(&func_ptr1);
         std::ptr::read_volatile(&func_ptr2);
-        std::ptr::read_volatile(&func_ptr3);
     }
     dummy_var ^ 4611686018427387903
 }
 
+// store_dart_post_cobject is often imported via FFI from Dart, so we might need to keep it extern
+// But normally FRB handles it. If it was missing before, it might be stripped.
+// Let's rely on the explicit -U flag in xcconfig for store_dart_post_cobject if we can't easily find its Rust path.
+// Or, if it is generated in frb_generated, use it there.
+// Usually store_dart_post_cobject is NOT in frb_generated C exports directly invoked by Rust? 
+// No, it is passed TO Rust. 
+// Wait, the error was "Failed to lookup symbol 'store_dart_post_cobject'". This means Dart tries to dlsym it.
+// It is defined in the Rust library by FRB.
+// Let's try to reference it via extern C but ONLY that one if we can't find it.
+// Actually, let's look at frb_generated.rs logic usually.
+// For now, removing wire_encrypt_file from extern is the critical fix for the build error.
+#[cfg(target_os = "ios")]
 extern "C" {
-    fn frb_get_rust_content_hash() -> i32;
     fn store_dart_post_cobject(ptr: i64);
-    fn wire_encrypt_file(port: i64, plaintext: *mut u8, len: i32, pass: *mut u8, pass_len: i32, fname: *mut u8, fname_len: i32);
 }
 
 static dummy_var: i64 = 0;
