@@ -9,7 +9,9 @@ use std::path::Path;
 pub extern "C" fn dummy_method_to_enforce_bundling() -> i64 {
     // Force linker to keep FRB symbols
     unsafe {
-        let _ = frb_get_rust_content_hash();
+        let func_ptr = frb_get_rust_content_hash as *const ();
+        // Prevent compiler from optimizing out the reference
+        std::ptr::read_volatile(&func_ptr);
     }
     dummy_var ^ 4611686018427387903
 }

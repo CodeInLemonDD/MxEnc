@@ -191,9 +191,11 @@ class MyApp extends StatelessWidget {
                     width: double.infinity,
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: Colors.grey.shade200,
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.surfaceContainerHighest,
                       borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.grey.shade400),
+                      border: Border.all(color: Theme.of(context).dividerColor),
                     ),
                     child: SingleChildScrollView(
                       child: SelectableText(
