@@ -1,1 +1,1 @@
-OTHER_LDFLAGS = $(inherited) -Wl,-u,_frb_get_rust_content_hash -Wl,-u,_store_dart_post_cobject -Wl,-u,_dummy_method_to_enforce_bundling -Wl,-u,_frb_init_frb_dart_api_dl -Wl,-u,_frb_dart_opaque_new -Wl,-u,_frb_dart_opaque_drop
+OTHER_LDFLAGS = $(inherited) -Wl,-u,_frb_get_rust_content_hash -Wl,-u,_store_dart_post_cobject -Wl,-u,_dummy_method_to_enforce_bundling -Wl,-u,_frb_init_frb_dart_api_dl

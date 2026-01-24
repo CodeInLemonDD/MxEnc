@@ -9,24 +9,18 @@ use std::path::Path;
 #[no_mangle]
 #[cfg(target_os = "ios")]
 pub extern "C" fn dummy_method_to_enforce_bundling() {
-    // 正确的 FRB 符号签名和补全
+    // 正确的 FRB 符号签名 (仅保留实际存在的)
     extern "C" {
         fn frb_get_rust_content_hash() -> u64;
         fn store_dart_post_cobject(ptr: *const std::ffi::c_void);
         fn frb_init_frb_dart_api_dl(api_dl_data: *mut std::ffi::c_void) -> isize;
-        fn frb_dart_opaque_new(opaque: *const std::ffi::c_void) -> isize;
-        fn frb_dart_opaque_drop(opaque: isize);
-        fn frb_thread_spawner(func: *const std::ffi::c_void);
     }
     
     unsafe {
-        // 使用 black_box 防止编译器优化掉这些引用
+        // 使用 black_box 防止编译器优化掉这些引用，先转为指针再转为 usize 避免警告
         std::hint::black_box(frb_get_rust_content_hash as *const () as usize);
         std::hint::black_box(store_dart_post_cobject as *const () as usize);
         std::hint::black_box(frb_init_frb_dart_api_dl as *const () as usize);
-        std::hint::black_box(frb_dart_opaque_new as *const () as usize);
-        std::hint::black_box(frb_dart_opaque_drop as *const () as usize);
-        std::hint::black_box(frb_thread_spawner as *const () as usize);
     }
 }
 
