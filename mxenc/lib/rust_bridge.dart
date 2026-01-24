@@ -1,5 +1,4 @@
 import 'dart:ffi' as ffi;
-import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'bridge_generated/frb_generated.dart';
@@ -89,7 +88,7 @@ abstract class RustBridge {
     );
   }
 
-  static Future<RustBridge> init() async {
+  static Future<RustBridge?> init() async {
     try {
       _log('Initializing Rust library...');
 
@@ -125,8 +124,8 @@ abstract class RustBridge {
     } catch (e, stack) {
       _log('CRITICAL: Failed to initialize Rust library: $e');
       _log('Stack trace: $stack');
-      // Return a bridge that might fail on calls, but allows the app to start
-      return _RustBridgeFrb();
+      // Return null so the UI knows initialization failed
+      return null;
     }
   }
 }
