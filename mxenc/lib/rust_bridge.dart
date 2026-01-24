@@ -80,23 +80,51 @@ abstract class RustBridge {
 
   Future<String> generateDeviceFingerprint();
 
+  static final List<String> initLogs = [];
+
+  static void _log(String message) {
+    debugPrint(message);
+    initLogs.add(
+      '${DateTime.now().toIso8601String().substring(11, 19)}: $message',
+    );
+  }
+
   static Future<RustBridge> init() async {
     try {
-      debugPrint('Initializing Rust library...');
+      _log('Initializing Rust library...');
 
       ExternalLibrary? lib;
       if (defaultTargetPlatform == TargetPlatform.iOS) {
-        // on iOS, we link statically, so we use the main executable
-        lib = ExternalLibrary.process(iKnowHowToUseIt: true);
-        debugPrint('Using DynamicLibrary.process() for iOS static linking');
+        // iOS Static Linking Diagnostic Block
+        try {
+          _log('iOS: Attempting to open process handle...');
+          final dylib = ffi.DynamicLibrary.process();
+          _log('iOS: Process handle opened. Checking for symbols...');
+
+          const symbolTest = 'dummy_method_to_enforce_bundling';
+          if (dylib.providesSymbol(symbolTest)) {
+            _log('iOS: SUCCESS - Found symbol: $symbolTest');
+          } else {
+            _log(
+              'iOS: CRITICAL FAILURE - Symbol $symbolTest NOT FOUND in process!',
+            );
+            // If this dummy symbol is missing, the linker stripped it.
+          }
+
+          // Use this dylib for FRB
+          lib = ExternalLibrary.process(iKnowHowToUseIt: true);
+          _log('Using DynamicLibrary.process() for iOS static linking');
+        } catch (e) {
+          _log('iOS Diagnostic Error: $e');
+        }
       }
 
       await RustLib.init(externalLibrary: lib);
-      debugPrint('Rust library initialized successfully');
+      _log('Rust library initialized successfully');
       return _RustBridgeFrb();
     } catch (e, stack) {
-      debugPrint('CRITICAL: Failed to initialize Rust library: $e');
-      debugPrint('Stack trace: $stack');
+      _log('CRITICAL: Failed to initialize Rust library: $e');
+      _log('Stack trace: $stack');
       // Return a bridge that might fail on calls, but allows the app to start
       return _RustBridgeFrb();
     }

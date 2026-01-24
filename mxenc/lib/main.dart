@@ -40,15 +40,19 @@ void main() async {
   runApp(
     ChangeNotifierProvider(
       create: (_) => ThemeProvider()..load(),
-      child: MyApp(rustBridge: rustBridge),
+      child: MyApp(
+        rustBridge: rustBridge,
+        initLogs: rustBridge == null ? RustBridge.initLogs : null,
+      ),
     ),
   );
 }
 
 class MyApp extends StatelessWidget {
   final RustBridge? rustBridge;
+  final List<String>? initLogs;
 
-  const MyApp({super.key, this.rustBridge});
+  const MyApp({super.key, this.rustBridge, this.initLogs});
 
   @override
   Widget build(BuildContext context) {
@@ -133,27 +137,27 @@ class MyApp extends StatelessWidget {
       themeMode: themeProvider.mode,
       home: rustBridge != null
           ? MainPage(rustBridge: rustBridge!)
-          : _buildErrorPage(context),
+          : _buildErrorPage(context, initLogs),
       routes: {
         '/encrypt': (context) => rustBridge != null
             ? EncryptScreen(rustBridge: rustBridge!)
-            : _buildErrorPage(context),
+            : _buildErrorPage(context, initLogs),
         '/encrypt_entry': (context) => rustBridge != null
             ? EncryptEntryScreen(rustBridge: rustBridge!)
-            : _buildErrorPage(context),
+            : _buildErrorPage(context, initLogs),
         '/encrypt_image': (context) => rustBridge != null
             ? EncryptImageScreen(rustBridge: rustBridge!)
-            : _buildErrorPage(context),
+            : _buildErrorPage(context, initLogs),
         '/novel_upload': (context) => rustBridge != null
             ? NovelUploadScreen(rustBridge: rustBridge!)
-            : _buildErrorPage(context),
+            : _buildErrorPage(context, initLogs),
         '/decrypt': (context) => rustBridge != null
             ? ViewerScreen(rustBridge: rustBridge!)
-            : _buildErrorPage(context),
+            : _buildErrorPage(context, initLogs),
         '/permission': (context) => const PermissionScreen(),
         '/library': (context) => rustBridge != null
             ? BookshelfScreen(rustBridge: rustBridge!)
-            : _buildErrorPage(context),
+            : _buildErrorPage(context, initLogs),
         '/profile': (context) => const MyProfileScreen(),
         '/comic_editor': (context) => const ComicEditorScreen(),
         '/rich_editor': (context) => const RichEditorScreen(),
@@ -161,29 +165,57 @@ class MyApp extends StatelessWidget {
     );
   }
 
-  Widget _buildErrorPage(BuildContext context) {
+  Widget _buildErrorPage(BuildContext context, [List<String>? logs]) {
     return Scaffold(
       body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.error_outline, size: 64, color: Colors.red),
-            const SizedBox(height: 16),
-            const Text(
-              '应用核心组件加载失败',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            const Text('请尝试重启应用或重新安装'),
-            const SizedBox(height: 24),
-            ElevatedButton(
-              onPressed: () {
-                // Restart logic (simplistic)
-                SystemNavigator.pop();
-              },
-              child: const Text('退出应用'),
-            ),
-          ],
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.error_outline, size: 64, color: Colors.red),
+              const SizedBox(height: 16),
+              const Text(
+                '核心组件加载失败',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 8),
+              if (logs != null && logs.isNotEmpty) ...[
+                const Text(
+                  '诊断日志:',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 8),
+                Expanded(
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade200,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.grey.shade400),
+                    ),
+                    child: SingleChildScrollView(
+                      child: SelectableText(
+                        logs.join('\n'),
+                        style: const TextStyle(
+                          fontFamily: 'monospace',
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+              ] else
+                const Text('请尝试重启应用或重新安装'),
+              const SizedBox(height: 24),
+              ElevatedButton(
+                onPressed: () => SystemNavigator.pop(),
+                child: const Text('退出应用'),
+              ),
+            ],
+          ),
         ),
       ),
     );
