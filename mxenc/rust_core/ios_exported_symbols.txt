@@ -2,3 +2,4 @@ _frb_*
 _frbgen_*
 _dummy_method_to_enforce_bundling
 _wire_*
+_store_dart_post_cobject
