@@ -36,6 +36,10 @@ import UIKit
     }
 
     GeneratedPluginRegistrant.register(with: self)
+    
+    // Force the compiler to link the Rust library
+    _ = dummy_method_to_enforce_bundling()
+    
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
   }
 

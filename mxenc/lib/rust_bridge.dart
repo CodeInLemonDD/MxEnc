@@ -79,10 +79,13 @@ abstract class RustBridge {
 
   static Future<RustBridge> init() async {
     try {
+      debugPrint('Initializing Rust library...');
       await RustLib.init();
+      debugPrint('Rust library initialized successfully');
       return _RustBridgeFrb();
-    } catch (e) {
-      debugPrint('Failed to initialize Rust library: $e');
+    } catch (e, stack) {
+      debugPrint('CRITICAL: Failed to initialize Rust library: $e');
+      debugPrint('Stack trace: $stack');
       // Return a bridge that might fail on calls, but allows the app to start
       return _RustBridgeFrb();
     }

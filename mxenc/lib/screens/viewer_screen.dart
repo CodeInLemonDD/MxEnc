@@ -27,8 +27,8 @@ class ViewerScreen extends StatefulWidget {
   final String? importedName;
 
   const ViewerScreen({
-    super.key, 
-    required this.rustBridge, 
+    super.key,
+    required this.rustBridge,
     this.initialFile,
     this.importedName,
   });
@@ -146,7 +146,6 @@ class _ViewerScreenState extends State<ViewerScreen> {
           await _decryptFile();
         }
       } catch (_) {}
-
     } catch (e) {
       setState(() {
         _errorMessage = '无法解析文件: $e';
@@ -187,7 +186,8 @@ class _ViewerScreenState extends State<ViewerScreen> {
     loading.set(_progress);
 
     try {
-      final currentPassword = _passwordController.text; // Capture password at start of decryption
+      final currentPassword =
+          _passwordController.text; // Capture password at start of decryption
       final stream = widget.rustBridge.decryptFileByPathWithProgress(
         inputPath: _selectedFile!.path,
         password: currentPassword,
@@ -240,13 +240,13 @@ class _ViewerScreenState extends State<ViewerScreen> {
 
           // 根据文件类型处理内容
           if (_fileType == MxEncFileType.novel) {
-             if (mounted) {
-               setState(() {
-                 _isDecrypting = false;
-                 _errorMessage = '该格式已弃用';
-               });
-             }
-             return;
+            if (mounted) {
+              setState(() {
+                _isDecrypting = false;
+                _errorMessage = '该格式已弃用';
+              });
+            }
+            return;
           } else if (_fileType == MxEncFileType.comic) {
             try {
               final packed = await compute(unpackComicEntry, decryptedBytes);
@@ -338,33 +338,33 @@ class _ViewerScreenState extends State<ViewerScreen> {
       }
 
       if (_decryptedContent == null && _isDecrypting && _errorMessage == null) {
-         if (mounted) {
-           setState(() {
-             _isDecrypting = false;
-             _errorMessage = '解密失败，可能是密码错误';
-             _progress = 0.0;
-             _progressLabel = '';
-           });
-           KeyboardUtils.hide(context);
-           // Ensure dialog is closed on logic failure
-           if (dialogOpen && Navigator.canPop(context)) {
-             Navigator.of(context).pop();
-             dialogOpen = false;
-           }
-         }
+        if (mounted) {
+          setState(() {
+            _isDecrypting = false;
+            _errorMessage = '解密失败，可能是密码错误';
+            _progress = 0.0;
+            _progressLabel = '';
+          });
+          KeyboardUtils.hide(context);
+          // Ensure dialog is closed on logic failure
+          if (dialogOpen && Navigator.canPop(context)) {
+            Navigator.of(context).pop();
+            dialogOpen = false;
+          }
+        }
       }
     } catch (e) {
       if (mounted) {
         String errorMsg = '解密失败: $e';
         // 尝试检测是否为密码错误（根据 Rust 端可能的错误信息）
-        if (e.toString().contains('MAC check failed') || 
+        if (e.toString().contains('MAC check failed') ||
             e.toString().contains('Invalid password') ||
             e.toString().contains('CipherError') ||
             e.toString().contains('failed') // 放宽条件
-           ) {
+            ) {
           errorMsg = '解密失败，可能是密码错误';
         }
-        
+
         setState(() {
           _errorMessage = errorMsg;
           _isDecrypting = false;
@@ -412,7 +412,7 @@ class _ViewerScreenState extends State<ViewerScreen> {
       String authorAvatarPath = '';
 
       String coverPath = 'assets/placeholder.png';
-      
+
       if (_decryptedContent != null) {
         String masked = '';
         if (authorDeviceId.isNotEmpty) {
@@ -563,7 +563,9 @@ class _ViewerScreenState extends State<ViewerScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('已选择: ${widget.importedName ?? path.basename(_selectedFile!.path)}'),
+                  Text(
+                    '已选择: ${widget.importedName ?? path.basename(_selectedFile!.path)}',
+                  ),
                 ],
               ),
             ),
@@ -656,13 +658,15 @@ class _ViewerScreenState extends State<ViewerScreen> {
               margin: const EdgeInsets.only(top: 16),
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: Colors.red.shade50,
-                border: Border.all(color: Colors.red.shade300),
+                color: Theme.of(context).colorScheme.errorContainer,
+                border: Border.all(color: Theme.of(context).colorScheme.error),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Text(
                 _errorMessage!,
-                style: const TextStyle(color: Colors.red),
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onErrorContainer,
+                ),
               ),
             ),
         ],
@@ -759,5 +763,3 @@ class _ViewerScreenState extends State<ViewerScreen> {
     return base;
   }
 }
-
-
