@@ -35,10 +35,10 @@ jobs:
         with:
           targets: aarch64-apple-ios
 
-      - name: Build Rust core for iOS
-        run: |
-          chmod +x scripts/build_rust.sh
-          ./scripts/build_rust.sh
+      # - name: Build Rust core for iOS
+      #   run: |
+      #     chmod +x scripts/build_rust.sh
+      #     ./scripts/build_rust.sh
 
       - name: Setup and generate symbols
         run: |
