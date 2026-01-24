@@ -1,12 +1,19 @@
 import Flutter
 import UIKit
 
+// 声明 Rust 函数
+@_silgen_name("dummy_method_to_enforce_bundling")
+func dummyMethodToEnforceBundling()
+
 @main
 @objc class AppDelegate: FlutterAppDelegate {
   override func application(
     _ application: UIApplication,
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
   ) -> Bool {
+    // 调用以确保符号不被剥离
+    dummyMethodToEnforceBundling()
+    
     let controller: FlutterViewController = window?.rootViewController as! FlutterViewController
     let channel = FlutterMethodChannel(name: "com.maoxiao.mxenc/secure", binaryMessenger: controller.binaryMessenger)
     channel.setMethodCallHandler { [weak self] call, result in
@@ -36,9 +43,6 @@ import UIKit
     }
 
     GeneratedPluginRegistrant.register(with: self)
-    
-    // Force the compiler to link the Rust library
-    _ = dummy_method_to_enforce_bundling()
     
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
   }

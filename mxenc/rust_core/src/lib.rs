@@ -8,19 +8,18 @@ use std::path::Path;
 #[no_mangle]
 #[cfg(target_os = "ios")]
 pub extern "C" fn dummy_method_to_enforce_bundling() {
-    // Force linker to keep FRB symbols
+    // 正确的 FRB 符号签名
     extern "C" {
-        fn frb_get_rust_content_hash() -> i32;
-        fn store_dart_post_cobject(ptr: i64);
+        fn frb_get_rust_content_hash() -> u64;  // ✅ 返回 u64
+        fn store_dart_post_cobject(ptr: *const std::ffi::c_void);  // ✅ 函数指针
     }
+    
     unsafe {
-        // Use volatile read or black_box to prevent optimization
-        let _ = std::ptr::read_volatile(&(frb_get_rust_content_hash as *const ()));
-        let _ = std::ptr::read_volatile(&(store_dart_post_cobject as *const ()));
+        // 使用 black_box 防止编译器优化掉这些引用
+        std::hint::black_box(frb_get_rust_content_hash as usize);
+        std::hint::black_box(store_dart_post_cobject as usize);
     }
 }
-
-static dummy_var: i64 = 0;
 
 // 导出文件类型枚举以供Dart使用
 #[frb(sync)]
