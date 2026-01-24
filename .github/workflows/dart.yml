@@ -42,7 +42,7 @@ jobs:
 
       - name: Update Pods
         run: pod repo update
-        working-directory: ios
+        working-directory: mxenc/ios
 
       - name: Build iOS
         run: |
