@@ -1,4 +1,5 @@
 import 'dart:typed_data';
+import 'package:flutter/foundation.dart';
 import 'bridge_generated/frb_generated.dart';
 import 'bridge_generated/lib.dart' as rust_lib;
 export 'bridge_generated/lib.dart' show ProgressEvent, ProgressPhase;
@@ -63,20 +64,28 @@ abstract class RustBridge {
   Future<(String, int)> parseMxencHeaderExtended({
     required Uint8List mxencData,
   });
-  
+
   Future<(String, int)> parseMxencHeaderByPath({required String inputPath});
 
   Future<(String, int, Uint8List)> parseMxencFullHeader({
     required Uint8List mxencData,
   });
-  
-  Future<(String, int, Uint8List)> parseMxencFullHeaderByPath({required String inputPath});
+
+  Future<(String, int, Uint8List)> parseMxencFullHeaderByPath({
+    required String inputPath,
+  });
 
   Future<String> generateDeviceFingerprint();
 
   static Future<RustBridge> init() async {
-    await RustLib.init();
-    return _RustBridgeFrb();
+    try {
+      await RustLib.init();
+      return _RustBridgeFrb();
+    } catch (e) {
+      debugPrint('Failed to initialize Rust library: $e');
+      // Return a bridge that might fail on calls, but allows the app to start
+      return _RustBridgeFrb();
+    }
   }
 }
 
@@ -87,7 +96,11 @@ class _RustBridgeFrb implements RustBridge {
     required String password,
     required String originalFilename,
   }) {
-    return rust_lib.encryptFile(plaintext: plaintext, password: password, originalFilename: originalFilename);
+    return rust_lib.encryptFile(
+      plaintext: plaintext,
+      password: password,
+      originalFilename: originalFilename,
+    );
   }
 
   @override
@@ -106,7 +119,7 @@ class _RustBridgeFrb implements RustBridge {
       metadata: metadata,
     );
   }
-  
+
   @override
   Future<void> encryptFileByPath({
     required String inputPath,
@@ -117,12 +130,12 @@ class _RustBridgeFrb implements RustBridge {
     Uint8List? metadata,
   }) {
     return rust_lib.encryptFileByPath(
-        inputPath: inputPath, 
-        outputPath: outputPath, 
-        password: password,
-        originalFilename: originalFilename,
-        fileType: fileType,
-        metadata: metadata
+      inputPath: inputPath,
+      outputPath: outputPath,
+      password: password,
+      originalFilename: originalFilename,
+      fileType: fileType,
+      metadata: metadata,
     );
   }
 
@@ -139,7 +152,10 @@ class _RustBridgeFrb implements RustBridge {
     required String inputPath,
     required String password,
   }) {
-    return rust_lib.decryptFileByPathWithProgress(inputPath: inputPath, password: password);
+    return rust_lib.decryptFileByPathWithProgress(
+      inputPath: inputPath,
+      password: password,
+    );
   }
 
   @override
@@ -147,7 +163,10 @@ class _RustBridgeFrb implements RustBridge {
     required Uint8List mxencData,
     required String password,
   }) {
-    return rust_lib.decryptFileWithProgress(mxencData: mxencData, password: password);
+    return rust_lib.decryptFileWithProgress(
+      mxencData: mxencData,
+      password: password,
+    );
   }
 
   @override
@@ -161,7 +180,7 @@ class _RustBridgeFrb implements RustBridge {
   }) async {
     return rust_lib.parseMxencHeaderExtended(mxencData: mxencData);
   }
-  
+
   @override
   Future<(String, int)> parseMxencHeaderByPath({required String inputPath}) {
     return rust_lib.parseMxencHeaderByPath(inputPath: inputPath);
@@ -173,9 +192,11 @@ class _RustBridgeFrb implements RustBridge {
   }) async {
     return rust_lib.parseMxencFullHeader(mxencData: mxencData);
   }
-  
+
   @override
-  Future<(String, int, Uint8List)> parseMxencFullHeaderByPath({required String inputPath}) {
+  Future<(String, int, Uint8List)> parseMxencFullHeaderByPath({
+    required String inputPath,
+  }) {
     return rust_lib.parseMxencFullHeaderByPath(inputPath: inputPath);
   }
 

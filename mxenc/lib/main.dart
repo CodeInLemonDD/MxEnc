@@ -1,5 +1,6 @@
 import 'package:mxenc/widgets/loading_dialog.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'dart:io';
 import 'screens/comic_editor_screen.dart';
 import 'screens/rich_editor_screen.dart';
@@ -28,8 +29,13 @@ import 'package:flutter/services.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // 初始化Rust桥接
-  final rustBridge = await RustBridge.init();
+  // 初始化Rust桥接 (非阻塞)
+  RustBridge? rustBridge;
+  try {
+    rustBridge = await RustBridge.init().timeout(const Duration(seconds: 10));
+  } catch (e) {
+    debugPrint('RustBridge initialization timed out or failed: $e');
+  }
 
   runApp(
     ChangeNotifierProvider(
@@ -40,9 +46,9 @@ void main() async {
 }
 
 class MyApp extends StatelessWidget {
-  final RustBridge rustBridge;
+  final RustBridge? rustBridge;
 
-  const MyApp({super.key, required this.rustBridge});
+  const MyApp({super.key, this.rustBridge});
 
   @override
   Widget build(BuildContext context) {
@@ -116,21 +122,61 @@ class MyApp extends StatelessWidget {
         useMaterial3: true,
       ),
       themeMode: themeProvider.mode,
-      home: MainPage(rustBridge: rustBridge),
+      home: rustBridge != null
+          ? MainPage(rustBridge: rustBridge!)
+          : _buildErrorPage(context),
       routes: {
-        '/encrypt': (context) => EncryptScreen(rustBridge: rustBridge),
-        '/encrypt_entry': (context) =>
-            EncryptEntryScreen(rustBridge: rustBridge),
-        '/encrypt_image': (context) =>
-            EncryptImageScreen(rustBridge: rustBridge),
-        '/novel_upload': (context) => NovelUploadScreen(rustBridge: rustBridge),
-        '/decrypt': (context) => ViewerScreen(rustBridge: rustBridge),
+        '/encrypt': (context) => rustBridge != null
+            ? EncryptScreen(rustBridge: rustBridge!)
+            : _buildErrorPage(context),
+        '/encrypt_entry': (context) => rustBridge != null
+            ? EncryptEntryScreen(rustBridge: rustBridge!)
+            : _buildErrorPage(context),
+        '/encrypt_image': (context) => rustBridge != null
+            ? EncryptImageScreen(rustBridge: rustBridge!)
+            : _buildErrorPage(context),
+        '/novel_upload': (context) => rustBridge != null
+            ? NovelUploadScreen(rustBridge: rustBridge!)
+            : _buildErrorPage(context),
+        '/decrypt': (context) => rustBridge != null
+            ? ViewerScreen(rustBridge: rustBridge!)
+            : _buildErrorPage(context),
         '/permission': (context) => const PermissionScreen(),
-        '/library': (context) => BookshelfScreen(rustBridge: rustBridge),
+        '/library': (context) => rustBridge != null
+            ? BookshelfScreen(rustBridge: rustBridge!)
+            : _buildErrorPage(context),
         '/profile': (context) => const MyProfileScreen(),
         '/comic_editor': (context) => const ComicEditorScreen(),
         '/rich_editor': (context) => const RichEditorScreen(),
       },
+    );
+  }
+
+  Widget _buildErrorPage(BuildContext context) {
+    return Scaffold(
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.error_outline, size: 64, color: Colors.red),
+            const SizedBox(height: 16),
+            const Text(
+              '应用核心组件加载失败',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            const Text('请尝试重启应用或重新安装'),
+            const SizedBox(height: 24),
+            ElevatedButton(
+              onPressed: () {
+                // Restart logic (simplistic)
+                SystemNavigator.pop();
+              },
+              child: const Text('退出应用'),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -158,7 +204,6 @@ class _MainPageState extends State<MainPage> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _maybeLaunchOobe();
-      _initIntentListener();
       _initIntentListener();
     });
   }
