@@ -5,6 +5,7 @@ mod crypto;
 use std::fs;
 use std::path::Path;
 
+#[allow(unused_unsafe)]
 #[no_mangle]
 #[cfg(target_os = "ios")]
 pub extern "C" fn dummy_method_to_enforce_bundling() {
@@ -15,15 +16,17 @@ pub extern "C" fn dummy_method_to_enforce_bundling() {
         fn frb_init_frb_dart_api_dl(api_dl_data: *mut std::ffi::c_void) -> isize;
         fn frb_dart_opaque_new(opaque: *const std::ffi::c_void) -> isize;
         fn frb_dart_opaque_drop(opaque: isize);
+        fn frb_thread_spawner(func: *const std::ffi::c_void);
     }
     
     unsafe {
         // 使用 black_box 防止编译器优化掉这些引用
-        std::hint::black_box(frb_get_rust_content_hash as usize);
-        std::hint::black_box(store_dart_post_cobject as usize);
-        std::hint::black_box(frb_init_frb_dart_api_dl as usize);
-        std::hint::black_box(frb_dart_opaque_new as usize);
-        std::hint::black_box(frb_dart_opaque_drop as usize);
+        std::hint::black_box(frb_get_rust_content_hash as *const () as usize);
+        std::hint::black_box(store_dart_post_cobject as *const () as usize);
+        std::hint::black_box(frb_init_frb_dart_api_dl as *const () as usize);
+        std::hint::black_box(frb_dart_opaque_new as *const () as usize);
+        std::hint::black_box(frb_dart_opaque_drop as *const () as usize);
+        std::hint::black_box(frb_thread_spawner as *const () as usize);
     }
 }
 

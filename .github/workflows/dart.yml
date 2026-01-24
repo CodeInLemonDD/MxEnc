@@ -47,7 +47,7 @@ jobs:
           nm -g target/aarch64-apple-ios/release/libmxenc_core.a | grep " T _frb" || true
           
           echo "=== 验证关键符号 ==="
-          for symbol in frb_get_rust_content_hash store_dart_post_cobject frb_init_frb_dart_api_dl dummy_method_to_enforce_bundling frb_dart_opaque_new; do
+          for symbol in frb_get_rust_content_hash store_dart_post_cobject frb_init_frb_dart_api_dl dummy_method_to_enforce_bundling frb_dart_opaque_new frb_thread_spawner; do
             if nm -g target/aarch64-apple-ios/release/libmxenc_core.a | grep -q "_${symbol}"; then
               echo "✅ ${symbol}"
             else
@@ -71,7 +71,7 @@ jobs:
           nm -g build/ios/iphoneos/Runner.app/Runner | grep " T _frb" || true
           
           echo "=== 验证关键符号 ==="
-          for symbol in frb_get_rust_content_hash store_dart_post_cobject frb_init_frb_dart_api_dl dummy_method_to_enforce_bundling frb_dart_opaque_new; do
+          for symbol in frb_get_rust_content_hash store_dart_post_cobject frb_init_frb_dart_api_dl dummy_method_to_enforce_bundling frb_dart_opaque_new frb_thread_spawner; do
             if nm -g build/ios/iphoneos/Runner.app/Runner | grep -q "_${symbol}"; then
               echo "✅ ${symbol}"
             else
