@@ -13,6 +13,8 @@ pub extern "C" fn dummy_method_to_enforce_bundling() {
         fn frb_get_rust_content_hash() -> u64;
         fn store_dart_post_cobject(ptr: *const std::ffi::c_void);
         fn frb_init_frb_dart_api_dl(api_dl_data: *mut std::ffi::c_void) -> isize;
+        fn frb_dart_opaque_new(opaque: *const std::ffi::c_void) -> isize;
+        fn frb_dart_opaque_drop(opaque: isize);
     }
     
     unsafe {
@@ -20,6 +22,8 @@ pub extern "C" fn dummy_method_to_enforce_bundling() {
         std::hint::black_box(frb_get_rust_content_hash as usize);
         std::hint::black_box(store_dart_post_cobject as usize);
         std::hint::black_box(frb_init_frb_dart_api_dl as usize);
+        std::hint::black_box(frb_dart_opaque_new as usize);
+        std::hint::black_box(frb_dart_opaque_drop as usize);
     }
 }
 
