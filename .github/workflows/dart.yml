@@ -42,10 +42,12 @@ jobs:
 
       - name: Update Pods
         run: pod repo update
-        working-directory: mxenc/ios # 注意：这里叠加了默认路径
+        working-directory: ios
 
       - name: Build iOS
-        run: flutter build ios --release --no-codesign
+        run: |
+          export FLUTTER_ROOT="$FLUTTER_ROOT"
+          flutter build ios --release --no-codesign
 
       - name: Prepare IPA
         run: |
