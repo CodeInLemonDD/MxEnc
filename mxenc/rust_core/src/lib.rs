@@ -9,15 +9,22 @@ use std::path::Path;
 pub extern "C" fn dummy_method_to_enforce_bundling() -> i64 {
     // Force linker to keep FRB symbols
     unsafe {
-        let func_ptr = frb_get_rust_content_hash as *const ();
-        // Prevent compiler from optimizing out the reference
-        std::ptr::read_volatile(&func_ptr);
+        let func_ptr1 = frb_get_rust_content_hash as *const ();
+        let func_ptr2 = store_dart_post_cobject as *const ();
+        let func_ptr3 = wire_encrypt_file as *const ();
+        
+        // Prevent compiler from optimizing out the references
+        std::ptr::read_volatile(&func_ptr1);
+        std::ptr::read_volatile(&func_ptr2);
+        std::ptr::read_volatile(&func_ptr3);
     }
     dummy_var ^ 4611686018427387903
 }
 
 extern "C" {
     fn frb_get_rust_content_hash() -> i32;
+    fn store_dart_post_cobject(ptr: i64);
+    fn wire_encrypt_file(port: i64, plaintext: *mut u8, len: i32, pass: *mut u8, pass_len: i32, fname: *mut u8, fname_len: i32);
 }
 
 static dummy_var: i64 = 0;
