@@ -54,6 +54,7 @@ jobs:
             echo "_frb_get_rust_content_hash" > ios_exported_symbols.txt
             echo "_store_dart_post_cobject" >> ios_exported_symbols.txt
             echo "_frb_init_frb_dart_api_dl" >> ios_exported_symbols.txt
+            echo "_frb_create_shutdown_callback" >> ios_exported_symbols.txt
             echo "_dummy_method_to_enforce_bundling" >> ios_exported_symbols.txt
           fi
 
