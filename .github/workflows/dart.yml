@@ -23,6 +23,23 @@ jobs:
       - name: Get dependencies
         run: flutter pub get
 
+      - name: Extract version from pubspec.yaml
+        id: get_version
+        run: |
+          VERSION=$(grep '^version: ' pubspec.yaml | cut -d ' ' -f 2 | tr -d '\r')
+          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+          echo "TAG_NAME=v$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-ios
+
+      - name: Build Rust core for iOS
+        run: |
+          chmod +x scripts/build_rust.sh
+          ./scripts/build_rust.sh
+
       - name: Update Pods
         run: pod repo update
         working-directory: mxenc/ios # 注意：这里叠加了默认路径
@@ -31,19 +48,17 @@ jobs:
         run: flutter build ios --release --no-codesign
 
       - name: Prepare IPA
-        # 这里的路径也需要根据 mxenc 目录层级调整
         run: |
           cd build/ios/iphoneos
           mkdir Payload
           mv Runner.app/ Payload
-          zip -qq -r -9 FlutterIpaExport.ipa Payload
+          zip -qq -r -9 MxEnc.ipa Payload
 
       - name: Upload binaries to release
         uses: svenstaro/upload-release-action@v2
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
-          # 确保文件路径指向 mxenc 下的构建结果
-          file: mxenc/build/ios/iphoneos/FlutterIpaExport.ipa
-          tag: v1.0
+          file: mxenc/build/ios/iphoneos/MxEnc.ipa
+          tag: ${{ steps.get_version.outputs.TAG_NAME }}
           overwrite: true
-          body: "This is first release from mxenc directory"
+          body: "Release ${{ steps.get_version.outputs.TAG_NAME }} built from mxenc directory"
