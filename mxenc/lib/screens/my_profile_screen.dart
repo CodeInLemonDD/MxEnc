@@ -776,7 +776,10 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
       alignment: Alignment.center,
       child: Text(
         'MxEnc $_version',
-        style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+        style: TextStyle(
+          fontSize: 12,
+          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+        ),
       ),
     );
   }

@@ -11,18 +11,11 @@ RUST_DIR="$PROJECT_ROOT/rust_core"
 echo "[mxenc] Building Rust core..."
 pushd "$RUST_DIR" >/dev/null
 
-# Desktop targets
-cargo build --release
-
-# iOS target (Requires rustup target add aarch64-apple-ios)
+# iOS target only (Requires rustup target add aarch64-apple-ios)
 echo "[mxenc] Building for iOS (arm64)..."
 cargo build --release --target aarch64-apple-ios
 
-echo "[mxenc] Artifacts at: target/release"
-echo "- Linux: libmxenc_core.so"
-echo "- macOS: libmxenc_core.dylib"
-echo "- Windows: mxenc_core.dll"
-echo "- iOS: target/aarch64-apple-ios/release/libmxenc_core.a"
+echo "[mxenc] Artifacts at: target/aarch64-apple-ios/release/libmxenc_core.a"
 
 # Copy for iOS linkage (Helper)
 mkdir -p "$PROJECT_ROOT/ios/libs"
