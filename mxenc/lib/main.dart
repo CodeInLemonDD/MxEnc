@@ -25,6 +25,7 @@ import 'utils/storage_service.dart';
 import 'package:receive_sharing_intent/receive_sharing_intent.dart';
 import 'dart:async';
 import 'package:flutter/services.dart';
+import 'utils/platform_secure.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -70,6 +71,7 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: '猫鸮加密',
       debugShowCheckedModeBanner: false,
+      navigatorObservers: [SecureNavigatorObserver()],
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
           seedColor: themeProvider.seedColor ?? Colors.deepPurple,
@@ -747,5 +749,21 @@ class _MainPageState extends State<MainPage> {
         ),
       ),
     );
+  }
+}
+
+/// 导航观察器，用于在手势返回时临时关闭安全保护，修复黑屏问题
+class SecureNavigatorObserver extends NavigatorObserver {
+  @override
+  void didStartUserGesture(Route route, Route? previousRoute) {
+    // 开始滑动返回时，临时关闭防截图以允许系统渲染底层页面快照
+    PlatformSecure.disableSecureScreen();
+    super.didStartUserGesture(route, previousRoute);
+  }
+
+  @override
+  void didStopUserGesture() {
+    // 手势停止后，如果页面没有被 pop，Screen 会在下一帧决定是否重新开启
+    super.didStopUserGesture();
   }
 }

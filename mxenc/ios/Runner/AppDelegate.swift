@@ -50,19 +50,54 @@ func dummyMethodToEnforceBundling()
   private var secureField: UITextField?
 
   private func makeSecure(window: UIWindow?) {
-    guard let window = window else { return }
-    if secureField == nil {
-      let field = UITextField()
-      field.isSecureTextEntry = true
-      window.addSubview(field)
-      window.layer.superlayer?.addSublayer(field.layer)
-      field.layer.sublayers?.last?.addSublayer(window.layer)
-      secureField = field
+    guard let window = window, secureField == nil else { return }
+    
+    let field = UITextField()
+    field.isSecureTextEntry = true
+    field.isUserInteractionEnabled = false
+    field.translatesAutoresizingMaskIntoConstraints = false
+    
+    // 找到安全容器视图（通常是 _UITextFieldCanvasView）
+    let canvas = field.subviews.first { NSStringFromClass($0.classForCoder).contains("Canvas") }
+    guard let secureContainer = canvas ?? field.subviews.first else { return }
+    
+    // 强制更新布局以确保容器可用
+    field.layoutIfNeeded()
+    
+    window.addSubview(field)
+    
+    // 将根控制器的视图移入安全容器
+    if let rootViewController = window.rootViewController {
+        let flutterView = rootViewController.view!
+        secureContainer.addSubview(flutterView)
+        
+        flutterView.translatesAutoresizingMaskIntoConstraints = false
+        NSLayoutConstraint.activate([
+            flutterView.topAnchor.constraint(equalTo: window.topAnchor),
+            flutterView.bottomAnchor.constraint(equalTo: window.bottomAnchor),
+            flutterView.leadingAnchor.constraint(equalTo: window.leadingAnchor),
+            flutterView.trailingAnchor.constraint(equalTo: window.trailingAnchor),
+            field.centerXAnchor.constraint(equalTo: window.centerXAnchor),
+            field.centerYAnchor.constraint(equalTo: window.centerYAnchor)
+        ])
     }
+    
+    secureField = field
   }
 
   private func makeInsecure() {
-    secureField?.removeFromSuperview()
+    guard let field = secureField, let window = window else { return }
+    
+    // 恢复 Flutter 视图到 rootViewController
+    if let secureContainer = field.subviews.first,
+       let flutterView = secureContainer.subviews.first {
+        window.rootViewController?.view = flutterView
+        flutterView.translatesAutoresizingMaskIntoConstraints = true
+        flutterView.frame = window.bounds
+        window.addSubview(flutterView) // 显式放回 window 以确保可见性
+    }
+    
+    field.removeFromSuperview()
     secureField = nil
   }
 }
