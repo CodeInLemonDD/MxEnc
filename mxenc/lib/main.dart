@@ -124,14 +124,42 @@ class MyApp extends StatelessWidget {
           brightness: Brightness.dark,
         ),
         useMaterial3: true,
-        textTheme: const TextTheme(
-          headlineLarge: TextStyle(fontSize: 28, fontWeight: FontWeight.w700),
-          headlineMedium: TextStyle(fontSize: 24, fontWeight: FontWeight.w700),
-          titleLarge: TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
-          titleMedium: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-          bodyLarge: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
-          bodyMedium: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
-          bodySmall: TextStyle(fontSize: 12, fontWeight: FontWeight.w400),
+        textTheme: TextTheme(
+          headlineLarge: TextStyle(
+            fontSize: 28,
+            fontWeight: FontWeight.w700,
+            fontFamilyFallback: fallback,
+          ),
+          headlineMedium: TextStyle(
+            fontSize: 24,
+            fontWeight: FontWeight.w700,
+            fontFamilyFallback: fallback,
+          ),
+          titleLarge: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.w600,
+            fontFamilyFallback: fallback,
+          ),
+          titleMedium: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.w600,
+            fontFamilyFallback: fallback,
+          ),
+          bodyLarge: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w500,
+            fontFamilyFallback: fallback,
+          ),
+          bodyMedium: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+            fontFamilyFallback: fallback,
+          ),
+          bodySmall: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w400,
+            fontFamilyFallback: fallback,
+          ),
         ),
       ),
       themeMode: themeProvider.mode,

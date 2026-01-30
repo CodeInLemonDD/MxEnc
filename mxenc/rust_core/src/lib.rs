@@ -278,9 +278,11 @@ pub fn generate_device_fingerprint() -> String {
     crypto::generate_device_fingerprint()
 }
 
+#[frb]
 #[derive(Clone, Debug)]
 pub enum ProgressPhase { ReadHeader, DeriveKey, Decrypt, Decode, Done }
 
+#[frb]
 #[derive(Clone, Debug)]
 pub struct ProgressEvent { 
     pub phase: ProgressPhase, 
