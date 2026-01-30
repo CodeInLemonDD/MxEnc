@@ -15,14 +15,62 @@ pub extern "C" fn dummy_method_to_enforce_bundling() {
         fn store_dart_post_cobject(ptr: *const std::ffi::c_void);
         fn frb_init_frb_dart_api_dl(api_dl_data: *mut std::ffi::c_void) -> isize;
         fn frb_create_shutdown_callback() -> *const std::ffi::c_void;
+        fn frbgen_mxenc_cst_new_list_prim_u_8_loose(len: i32) -> *mut std::ffi::c_void;
+        fn frbgen_mxenc_cst_new_list_prim_u_8_strict(len: i32) -> *mut std::ffi::c_void;
+        fn frbgen_mxenc_wire__crate__crypto__generate_device_fingerprint(port: i64);
+        fn frbgen_mxenc_wire__crate__crypto__get_file_type_description(port: i64, file_type: i32);
+        fn frbgen_mxenc_wire__crate__decrypt_file(port: i64, mxenc_data: *mut std::ffi::c_void, password: *mut std::ffi::c_void);
+        fn frbgen_mxenc_wire__crate__decrypt_file_by_path_with_progress(port: i64, input_path: *mut std::ffi::c_void, password: *mut std::ffi::c_void, sink: *mut std::ffi::c_void);
+        fn frbgen_mxenc_wire__crate__decrypt_file_in_memory_by_path(port: i64, input_path: *mut std::ffi::c_void, password: *mut std::ffi::c_void);
+        fn frbgen_mxenc_wire__crate__decrypt_file_with_progress(port: i64, mxenc_data: *mut std::ffi::c_void, password: *mut std::ffi::c_void, sink: *mut std::ffi::c_void);
+        fn frbgen_mxenc_wire__crate__encrypt_file(port: i64, plaintext: *mut std::ffi::c_void, password: *mut std::ffi::c_void, original_filename: *mut std::ffi::c_void);
+        fn frbgen_mxenc_wire__crate__encrypt_file_by_path(port: i64, input_path: *mut std::ffi::c_void, output_path: *mut std::ffi::c_void, password: *mut std::ffi::c_void, original_filename: *mut std::ffi::c_void, file_type: u8, metadata: *mut std::ffi::c_void);
+        fn frbgen_mxenc_wire__crate__encrypt_file_with_metadata(port: i64, plaintext: *mut std::ffi::c_void, password: *mut std::ffi::c_void, original_filename: *mut std::ffi::c_void, file_type: u8, metadata: *mut std::ffi::c_void);
+        fn frbgen_mxenc_wire__crate__generate_device_fingerprint() -> *mut std::ffi::c_void;
+        fn frbgen_mxenc_wire__crate__get_file_type_comic() -> *mut std::ffi::c_void;
+        fn frbgen_mxenc_wire__crate__get_file_type_description(file_type: u8) -> *mut std::ffi::c_void;
+        fn frbgen_mxenc_wire__crate__get_file_type_generic() -> *mut std::ffi::c_void;
+        fn frbgen_mxenc_wire__crate__get_file_type_image() -> *mut std::ffi::c_void;
+        fn frbgen_mxenc_wire__crate__get_file_type_novel() -> *mut std::ffi::c_void;
+        fn frbgen_mxenc_wire__crate__get_file_type_other() -> *mut std::ffi::c_void;
+        fn frbgen_mxenc_wire__crate__get_file_type_rich_novel() -> *mut std::ffi::c_void;
+        fn frbgen_mxenc_wire__crate__parse_mxenc_full_header(mxenc_data: *mut std::ffi::c_void) -> *mut std::ffi::c_void;
+        fn frbgen_mxenc_wire__crate__parse_mxenc_full_header_by_path(port: i64, input_path: *mut std::ffi::c_void);
+        fn frbgen_mxenc_wire__crate__parse_mxenc_header(mxenc_data: *mut std::ffi::c_void) -> *mut std::ffi::c_void;
+        fn frbgen_mxenc_wire__crate__parse_mxenc_header_by_path(port: i64, input_path: *mut std::ffi::c_void);
+        fn frbgen_mxenc_wire__crate__parse_mxenc_header_extended(mxenc_data: *mut std::ffi::c_void) -> *mut std::ffi::c_void;
     }
     
     unsafe {
-        // 使用 black_box 防止编译器优化掉这些引用，先转为指针再转为 usize 避免警告
+        // 使用 black_box 防止编译器优化掉这些引用
         std::hint::black_box(frb_get_rust_content_hash as *const () as usize);
         std::hint::black_box(store_dart_post_cobject as *const () as usize);
         std::hint::black_box(frb_init_frb_dart_api_dl as *const () as usize);
         std::hint::black_box(frb_create_shutdown_callback as *const () as usize);
+        std::hint::black_box(frbgen_mxenc_cst_new_list_prim_u_8_loose as *const () as usize);
+        std::hint::black_box(frbgen_mxenc_cst_new_list_prim_u_8_strict as *const () as usize);
+        std::hint::black_box(frbgen_mxenc_wire__crate__crypto__generate_device_fingerprint as *const () as usize);
+        std::hint::black_box(frbgen_mxenc_wire__crate__crypto__get_file_type_description as *const () as usize);
+        std::hint::black_box(frbgen_mxenc_wire__crate__decrypt_file as *const () as usize);
+        std::hint::black_box(frbgen_mxenc_wire__crate__decrypt_file_by_path_with_progress as *const () as usize);
+        std::hint::black_box(frbgen_mxenc_wire__crate__decrypt_file_in_memory_by_path as *const () as usize);
+        std::hint::black_box(frbgen_mxenc_wire__crate__decrypt_file_with_progress as *const () as usize);
+        std::hint::black_box(frbgen_mxenc_wire__crate__encrypt_file as *const () as usize);
+        std::hint::black_box(frbgen_mxenc_wire__crate__encrypt_file_by_path as *const () as usize);
+        std::hint::black_box(frbgen_mxenc_wire__crate__encrypt_file_with_metadata as *const () as usize);
+        std::hint::black_box(frbgen_mxenc_wire__crate__generate_device_fingerprint as *const () as usize);
+        std::hint::black_box(frbgen_mxenc_wire__crate__get_file_type_comic as *const () as usize);
+        std::hint::black_box(frbgen_mxenc_wire__crate__get_file_type_description as *const () as usize);
+        std::hint::black_box(frbgen_mxenc_wire__crate__get_file_type_generic as *const () as usize);
+        std::hint::black_box(frbgen_mxenc_wire__crate__get_file_type_image as *const () as usize);
+        std::hint::black_box(frbgen_mxenc_wire__crate__get_file_type_novel as *const () as usize);
+        std::hint::black_box(frbgen_mxenc_wire__crate__get_file_type_other as *const () as usize);
+        std::hint::black_box(frbgen_mxenc_wire__crate__get_file_type_rich_novel as *const () as usize);
+        std::hint::black_box(frbgen_mxenc_wire__crate__parse_mxenc_full_header as *const () as usize);
+        std::hint::black_box(frbgen_mxenc_wire__crate__parse_mxenc_full_header_by_path as *const () as usize);
+        std::hint::black_box(frbgen_mxenc_wire__crate__parse_mxenc_header as *const () as usize);
+        std::hint::black_box(frbgen_mxenc_wire__crate__parse_mxenc_header_by_path as *const () as usize);
+        std::hint::black_box(frbgen_mxenc_wire__crate__parse_mxenc_header_extended as *const () as usize);
     }
 }
 
