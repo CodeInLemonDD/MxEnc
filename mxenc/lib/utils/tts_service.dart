@@ -1,5 +1,6 @@
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:flutter/foundation.dart';
+import 'dart:io';
 
 class TtsService {
   static final TtsService _instance = TtsService._internal();
@@ -18,19 +19,31 @@ class TtsService {
 
   Future<void> _initTts() async {
     try {
-      final engines = await _flutterTts.getEngines;
-      if (engines == null || engines.isEmpty) {
-        debugPrint("No TTS engines found on this device.");
-        if (_onError != null) {
-          _onError!("未检测到系统 TTS 引擎。请安装 Google 文字转语音或其他 TTS 引擎后重试。");
+      if (Platform.isIOS) {
+        // iOS 只有系统默认引擎，跳过 getEngines 避免 MissingPluginException
+        await _flutterTts.setIosAudioCategory(
+          IosTextToSpeechAudioCategory.playback,
+          [
+            IosTextToSpeechAudioCategoryOptions.defaultToSpeaker,
+            IosTextToSpeechAudioCategoryOptions.mixWithOthers,
+          ],
+          IosTextToSpeechAudioMode.defaultMode,
+        );
+      } else {
+        final engines = await _flutterTts.getEngines;
+        if (engines == null || engines.isEmpty) {
+          debugPrint("No TTS engines found on this device.");
+          if (_onError != null) {
+            _onError!("未检测到系统 TTS 引擎。请安装 Google 文字转语音或其他 TTS 引擎后重试。");
+          }
+          return;
         }
-        return;
-      }
 
-      if (kDebugMode) {
-        debugPrint("Available TTS Engines: $engines");
-        final defaultEngine = await _flutterTts.getDefaultEngine;
-        debugPrint("Default TTS Engine: $defaultEngine");
+        if (kDebugMode) {
+          debugPrint("Available TTS Engines: $engines");
+          final defaultEngine = await _flutterTts.getDefaultEngine;
+          debugPrint("Default TTS Engine: $defaultEngine");
+        }
       }
 
       final langResult = await _flutterTts.setLanguage("zh-CN");

@@ -295,12 +295,14 @@ class _MainPageState extends State<MainPage> {
     );
 
     // 检查应用启动时的分享意图
-    ReceiveSharingIntent.instance.getInitialMedia().then((
-      List<SharedMediaFile> value,
-    ) {
-      if (value.isNotEmpty) {
-        _handleSharedFile(value.first.path);
-      }
+    Future.delayed(const Duration(milliseconds: 500), () {
+      ReceiveSharingIntent.instance.getInitialMedia().then((
+        List<SharedMediaFile> value,
+      ) {
+        if (value.isNotEmpty) {
+          _handleSharedFile(value.first.path);
+        }
+      });
     });
   }
 
