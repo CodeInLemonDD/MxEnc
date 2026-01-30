@@ -370,6 +370,17 @@ class RustLibWire implements BaseWire {
   late final _store_dart_post_cobject = _store_dart_post_cobjectPtr
       .asFunction<void Function(DartPostCObjectFnType)>();
 
+  void dummy_method_to_enforce_bundling() {
+    return _dummy_method_to_enforce_bundling();
+  }
+
+  late final _dummy_method_to_enforce_bundlingPtr =
+      _lookup<ffi.NativeFunction<ffi.Void Function()>>(
+        'dummy_method_to_enforce_bundling',
+      );
+  late final _dummy_method_to_enforce_bundling =
+      _dummy_method_to_enforce_bundlingPtr.asFunction<void Function()>();
+
   void wire__crate__decrypt_file(
     int port_,
     ffi.Pointer<wire_cst_list_prim_u_8_loose> mxenc_data,
@@ -891,16 +902,16 @@ class RustLibWire implements BaseWire {
   late final _cst_new_list_prim_u_8_strict = _cst_new_list_prim_u_8_strictPtr
       .asFunction<ffi.Pointer<wire_cst_list_prim_u_8_strict> Function(int)>();
 
-  int dummy_method_to_enforce_bundling() {
-    return _dummy_method_to_enforce_bundling();
+  int dummy_method_to_enforce_bundling1() {
+    return _dummy_method_to_enforce_bundling1();
   }
 
-  late final _dummy_method_to_enforce_bundlingPtr =
+  late final _dummy_method_to_enforce_bundling1Ptr =
       _lookup<ffi.NativeFunction<ffi.Int64 Function()>>(
         'dummy_method_to_enforce_bundling',
       );
-  late final _dummy_method_to_enforce_bundling =
-      _dummy_method_to_enforce_bundlingPtr.asFunction<int Function()>();
+  late final _dummy_method_to_enforce_bundling1 =
+      _dummy_method_to_enforce_bundling1Ptr.asFunction<int Function()>();
 }
 
 typedef DartPostCObjectFnType =
