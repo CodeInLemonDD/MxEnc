@@ -88,13 +88,18 @@ func dummyMethodToEnforceBundling()
   private func makeInsecure() {
     guard let field = secureField, let window = window else { return }
     
-    // 恢复 Flutter 视图到 rootViewController
-    if let secureContainer = field.subviews.first,
-       let flutterView = secureContainer.subviews.first {
-        window.rootViewController?.view = flutterView
+    // Robustly restore the view:
+    // We grab the reference from rootViewController directly, ensuring we get the correct instance
+    // regardless of where it currently resides in the view hierarchy.
+    if let flutterView = window.rootViewController?.view {
+        flutterView.removeFromSuperview() // Detach from secure container
+        window.addSubview(flutterView)    // Re-attach to window
+        
+        // Reset constraints and layout
         flutterView.translatesAutoresizingMaskIntoConstraints = true
         flutterView.frame = window.bounds
-        window.addSubview(flutterView) // 显式放回 window 以确保可见性
+        
+        window.layoutIfNeeded()
     }
     
     field.removeFromSuperview()
