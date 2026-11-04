@@ -3,185 +3,67 @@ name: iOS-ipa-build
 on:
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   build-ios:
-    name: 🎉 iOS Build
+    name: iOS Build (unsigned ipa)
     runs-on: macos-latest
-    # 设置全局默认工作目录，这样后续的大部分步骤都不用重复写 working-directory
     defaults:
       run:
         working-directory: mxenc
 
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - uses: subosito/flutter-action@v2
-        with:
-          channel: 'stable'
-          architecture: x64
-
-      - name: Get dependencies
-        run: flutter pub get
-
-      - name: Extract version from pubspec.yaml
-        id: get_version
+      - name: Read version from pubspec
+        id: version
         run: |
-          VERSION=$(grep '^version: ' pubspec.yaml | cut -d ' ' -f 2 | tr -d '\r')
-          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
-          echo "TAG_NAME=v$VERSION" >> $GITHUB_OUTPUT
+          RAW=$(grep '^version:' pubspec.yaml | sed 's/^version:[[:space:]]*//' | tr -d '\r')
+          echo "raw=$RAW" >> "$GITHUB_OUTPUT"
+          echo "file=$(echo "$RAW" | tr '+' '-')" >> "$GITHUB_OUTPUT"
+          echo "IPA 版本: $RAW"
 
-      - name: Install Rust
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 3.44.7
+          channel: stable
+          cache: true
+
+      - name: Install Rust toolchain (iOS target)
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: aarch64-apple-ios
 
-      - name: Install FRB codegen
+      - name: Build Rust core (aarch64-apple-ios)
+        working-directory: mxenc/rust_core
         run: |
-          cargo install flutter_rust_bridge_codegen --version 2.11.1
-          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
-
-      - name: Generate FRB bindings
-        run: flutter_rust_bridge_codegen generate --config-file flutter_rust_bridge.yaml
-
-      # - name: Build Rust core for iOS
-      #   run: |
-      #     chmod +x scripts/build_rust.sh
-      #     ./scripts/build_rust.sh
-
-      - name: Setup and generate symbols
-        run: |
-          cd rust_core
-          # 确保 Cargo.toml 配置正确
-          if ! grep -q "crate-type.*staticlib" Cargo.toml; then
-            echo "Updating Cargo.toml to include staticlib..."
-            sed -i 's/crate-type = \[.*/crate-type = ["staticlib", "cdylib", "rlib"]/' Cargo.toml
-          fi
-          
-          # 检查符号列表文件是否存在
-          if [ ! -f "ios_exported_symbols.txt" ]; then
-            echo "_frb_get_rust_content_hash" > ios_exported_symbols.txt
-            echo "_store_dart_post_cobject" >> ios_exported_symbols.txt
-            echo "_frb_init_frb_dart_api_dl" >> ios_exported_symbols.txt
-            echo "_frb_create_shutdown_callback" >> ios_exported_symbols.txt
-            echo "_dummy_method_to_enforce_bundling" >> ios_exported_symbols.txt
-          fi
-
-      - name: Build and auto-fix missing symbols
-        run: |
-          cd rust_core
-          
-          MAX_ITERATIONS=5
-          SUCCESS=false
-          
-          for i in $(seq 1 $MAX_ITERATIONS); do
-            echo "=== 编译尝试 $i/$MAX_ITERATIONS ==="
-            echo "当前符号列表："
-            cat ios_exported_symbols.txt
-            echo ""
-            
-            # 清理之前的构建
-            if [ $i -gt 1 ]; then
-              cargo clean
-            fi
-            
-            # 尝试编译并保存退出码
-            set +e  # 临时允许错误
-            cargo build --lib --release --target aarch64-apple-ios 2>&1 | tee /tmp/build_$i.log
-            BUILD_EXIT_CODE=${PIPESTATUS[0]}  # 获取 cargo 的退出码，不是 tee 的
-            set -e
-            
-            if [ $BUILD_EXIT_CODE -eq 0 ]; then
-              echo "✅ Rust 编译成功！"
-              SUCCESS=true
-              break
-            fi
-            
-            echo "⚠️ 编译失败 (退出码: $BUILD_EXIT_CODE)，分析缺失符号..."
-            
-            # 从错误信息中提取所有 Undefined symbols
-            MISSING=$(grep -A 100 "Undefined symbols for architecture arm64:" /tmp/build_$i.log | \
-                      grep '  "_' | \
-                      sed 's/.*"_/_/' | \
-                      sed 's/".*//' | \
-                      grep -v "referenced from" | \
-                      grep -v "ld:" | \
-                      sort -u)
-            
-            if [ -z "$MISSING" ]; then
-              echo "❌ 编译失败但未发现符号缺失问题，可能是其他错误："
-              echo "=== 最后 50 行日志 ==="
-              tail -50 /tmp/build_$i.log
-              exit 1
-            fi
-            
-            MISSING_COUNT=$(echo "$MISSING" | wc -l | tr -d ' ')
-            echo "发现 $MISSING_COUNT 个缺失符号："
-            echo "$MISSING"
-            echo ""
-            
-            # 添加到符号列表
-            echo "$MISSING" >> ios_exported_symbols.txt
-            sort -u ios_exported_symbols.txt -o ios_exported_symbols.txt
-            
-            echo "=== 更新后的符号列表 ($(wc -l < ios_exported_symbols.txt | tr -d ' ') 个符号) ==="
-            cat ios_exported_symbols.txt
-            echo ""
-          done
-          
-          if [ "$SUCCESS" = false ]; then
-            echo "❌ 经过 $MAX_ITERATIONS 次尝试仍未成功"
-            exit 1
-          fi
-          
-          # 验证生成的库文件
-          echo "=== 验证编译产物 ==="
-          if [ ! -f "target/aarch64-apple-ios/release/libmxenc_core.a" ]; then
-            echo "❌ 错误：libmxenc_core.a 文件不存在！"
-            ls -la target/aarch64-apple-ios/release/
-            exit 1
-          fi
-          
-          ls -lh target/aarch64-apple-ios/release/libmxenc_core.a
-          
-          echo "=== 符号验证 ==="
-          nm -g target/aarch64-apple-ios/release/libmxenc_core.a | grep " T _frb" | head -20 || echo "警告：未找到 frb 符号"
-          
-          # 拷贝到 iOS 目录
+          cargo build --lib --release --target aarch64-apple-ios
           mkdir -p ../ios/libs
           cp target/aarch64-apple-ios/release/libmxenc_core.a ../ios/libs/
-          echo "✅ 已拷贝 libmxenc_core.a 到 ios/libs/"
-          
-          echo ""
-          echo "=== 最终符号列表 ($(wc -l < ios_exported_symbols.txt | tr -d ' ') 个符号) ==="
-          cat ios_exported_symbols.txt
+          ls -lh ../ios/libs/libmxenc_core.a
 
-      - name: Update Pods
-        run: pod repo update
-        working-directory: mxenc/ios
+      - name: Flutter pub get
+        run: flutter pub get
 
-      - name: Build iOS
-        run: |
-          export FLUTTER_ROOT="$FLUTTER_ROOT"
-          flutter build ios --release --no-codesign
+      - name: Build iOS (no codesign)
+        run: flutter build ios --release --no-codesign
 
-      - name: Verify final binary symbols
-        run: |
-          echo "=== 最终 iOS 打包产物符号检查 ==="
-          nm -g build/ios/iphoneos/Runner.app/Runner | grep -E "(_frb|_wire|_dummy)" | head -20 || echo "警告：最终产物中未发现关键符号"
-
-      - name: Prepare IPA
+      - name: Package IPA
         run: |
           cd build/ios/iphoneos
+          rm -rf Payload
           mkdir Payload
-          mv Runner.app/ Payload
-          zip -qq -r -9 "MxEnc_${{ steps.get_version.outputs.TAG_NAME }}.ipa" Payload
+          mv Runner.app Payload/
+          zip -qry -9 "MxEnc_${{ steps.version.outputs.file }}.ipa" Payload
+          ls -lh "MxEnc_${{ steps.version.outputs.file }}.ipa"
 
-      - name: Upload binaries to release
-        uses: svenstaro/upload-release-action@v2
+      - name: Upload IPA artifact
+        uses: actions/upload-artifact@v4
         with:
-          repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: mxenc/build/ios/iphoneos/MxEnc_${{ steps.get_version.outputs.TAG_NAME }}.ipa
-          asset_name: MxEnc_${{ steps.get_version.outputs.TAG_NAME }}.ipa
-          tag: ${{ steps.get_version.outputs.TAG_NAME }}
-          overwrite: true
-          body: "Release ${{ steps.get_version.outputs.TAG_NAME }} built from mxenc directory"
+          name: MxEnc-${{ steps.version.outputs.file }}
+          path: mxenc/build/ios/iphoneos/MxEnc_*.ipa
+          if-no-files-found: error
