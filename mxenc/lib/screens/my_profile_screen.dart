@@ -174,11 +174,11 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text('官方QQ群：250788720'),
+            const Text('官方QQ群：1030250930'),
             const SizedBox(height: 16),
             ElevatedButton(
               onPressed: () async {
-                await Clipboard.setData(const ClipboardData(text: '250788720'));
+                await Clipboard.setData(const ClipboardData(text: '1030250930'));
                 _showToast('群号已复制到剪贴板');
                 if (!context.mounted) return;
                 Navigator.pop(context);
@@ -768,7 +768,7 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
         ),
         title: const Text('用户群'),
         subtitle: Text(
-          '250788720',
+          '1030250930',
           style: theme.textTheme.bodySmall?.copyWith(
             color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
           ),

@@ -104,7 +104,7 @@ class StaticWatermark extends StatelessWidget {
   const StaticWatermark({
     super.key,
     this.opacity = 0.1,
-    this.groupText = 'QQ群：250788720',
+    this.groupText = 'QQ群：1030250930',
   });
 
   @override
