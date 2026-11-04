@@ -174,11 +174,11 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text('官方QQ群：868140659'),
+            const Text('官方QQ群：250788720'),
             const SizedBox(height: 16),
             ElevatedButton(
               onPressed: () async {
-                await Clipboard.setData(const ClipboardData(text: '868140659'));
+                await Clipboard.setData(const ClipboardData(text: '250788720'));
                 _showToast('群号已复制到剪贴板');
                 if (!context.mounted) return;
                 Navigator.pop(context);
@@ -510,6 +510,18 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
               }
             },
           ),
+          const Divider(height: 1, indent: 72),
+          _buildFeatureItem(
+            icon: Icons.swap_horiz,
+            title: '换手机传输',
+            subtitle: '把书架和个人资料搬到新手机',
+            onTap: () async {
+              await Navigator.pushNamed(context, '/device_transfer');
+              if (!context.mounted) return;
+              // 迁移可能改写了昵称 / 头像，回到本页时刷新
+              _loadUserInfo();
+            },
+          ),
         ],
       ),
     );
@@ -756,7 +768,7 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
         ),
         title: const Text('用户群'),
         subtitle: Text(
-          '868140659',
+          '250788720',
           style: theme.textTheme.bodySmall?.copyWith(
             color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
           ),

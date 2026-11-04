@@ -44,6 +44,9 @@ class StorageService {
   static final _shelfUpdateController = StreamController<void>.broadcast();
   static Stream<void> get onShelfChanged => _shelfUpdateController.stream;
 
+  /// 外部直接改写 bookshelf.json 后（如换机迁移），通知书架刷新
+  static void notifyShelfChanged() => _shelfUpdateController.add(null);
+
   static Future<StoragePaths> _paths() async {
     final dir = await getApplicationDocumentsDirectory();
     final dataDir = Directory(p.join(dir.path, 'app_data'));

@@ -251,7 +251,7 @@ class _PermissionScreenState extends State<PermissionScreen> {
             const SizedBox(height: 16),
 
             // QQ联系方式
-            const Text('QQ：868140659', style: TextStyle(fontSize: 16)),
+            const Text('QQ：250788720', style: TextStyle(fontSize: 16)),
             const SizedBox(height: 24),
 
             // 设备序列号

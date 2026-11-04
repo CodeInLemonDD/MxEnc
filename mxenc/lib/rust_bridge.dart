@@ -1,5 +1,4 @@
 import 'dart:ffi' as ffi;
-import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'bridge_generated/frb_generated.dart';
 import 'bridge_generated/lib.dart' as rust_lib;

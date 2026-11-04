@@ -391,9 +391,6 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
   // 处理排序
   void _onReorder(int oldIndex, int newIndex) {
     setState(() {
-      if (newIndex > oldIndex) {
-        newIndex -= 1;
-      }
       final item = _metadata!.volumes.removeAt(oldIndex);
       _metadata!.volumes.insert(newIndex, item);
     });
@@ -769,7 +766,7 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
                     buildDefaultDragHandles: false,
                     padding: const EdgeInsets.fromLTRB(16, 8, 16, 80),
                     itemCount: _metadata!.volumes.length,
-                    onReorder: _onReorder,
+                    onReorderItem: _onReorder,
                     itemBuilder: (context, index) {
                       final vol = _metadata!.volumes[index];
                       final hasPwd = _metadata!.passwords.containsKey(vol.id);

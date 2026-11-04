@@ -684,11 +684,8 @@ class _ComicEditorScreenState extends State<ComicEditorScreen> {
                               : ReorderableListView(
                                   shrinkWrap: true,
                                   physics: const NeverScrollableScrollPhysics(),
-                                  onReorder: (oldIndex, newIndex) {
+                                  onReorderItem: (oldIndex, newIndex) {
                                     setState(() {
-                                      if (oldIndex < newIndex) {
-                                        newIndex -= 1;
-                                      }
                                       final item = images.removeAt(oldIndex);
                                       images.insert(newIndex, item);
                                     });

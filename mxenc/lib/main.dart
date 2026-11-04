@@ -1,6 +1,5 @@
 import 'package:mxenc/widgets/loading_dialog.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
 import 'dart:io';
 import 'screens/comic_editor_screen.dart';
 import 'screens/rich_editor_screen.dart';
@@ -12,6 +11,7 @@ import 'screens/viewer_screen.dart';
 import 'screens/permission_screen.dart';
 import 'screens/bookshelf_screen.dart';
 import 'screens/my_profile_screen.dart';
+import 'screens/device_transfer_screen.dart';
 import 'screens/encrypt_entry_screen.dart';
 import 'screens/encrypt_image_screen.dart';
 import 'screens/novel_upload_screen.dart';
@@ -189,6 +189,9 @@ class MyApp extends StatelessWidget {
             ? BookshelfScreen(rustBridge: rustBridge!)
             : _buildErrorPage(context, initLogs),
         '/profile': (context) => const MyProfileScreen(),
+        '/device_transfer': (context) => rustBridge != null
+            ? DeviceTransferScreen(rustBridge: rustBridge!)
+            : _buildErrorPage(context, initLogs),
         '/comic_editor': (context) => const ComicEditorScreen(),
         '/rich_editor': (context) => const RichEditorScreen(),
       },
