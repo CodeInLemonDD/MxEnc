@@ -84,7 +84,7 @@ class _DynamicWatermarkState extends State<DynamicWatermark>
           builder: (context, child) {
             return CustomPaint(
               painter: WatermarkPainter(
-                text: widget.receiverId,
+                text: '${widget.receiverId}\n倒狗死马永世不得超生',
                 angle: _angleAnimation.value,
                 opacity: _opacityAnimation.value,
                 offset: _positionAnimation.value,
@@ -115,7 +115,7 @@ class StaticWatermark extends StatelessWidget {
         : Colors.black.withValues(alpha: opacity);
     return CustomPaint(
       painter: StaticWatermarkPainter(
-        text: '未经允许禁止盗用\n$groupText',
+        text: '未经允许禁止盗用\n$groupText\n倒狗死马永世不得超生',
         color: baseColor,
       ),
       size: Size.infinite,

@@ -540,7 +540,7 @@ class DynamicWatermarkPainter extends CustomPainter {
     // 绘制动态水印
     // 实际应用中应该包含用户设备ID或其他唯一标识
     final textSpan = const TextSpan(
-      text: 'MxEnc 受保护内容',
+      text: 'MxEnc 受保护内容\n倒狗死马永世不得超生',
       style: TextStyle(color: Color.fromRGBO(0, 0, 0, 0.1), fontSize: 14),
     );
     final textPainter = TextPainter(
